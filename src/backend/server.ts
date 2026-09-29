@@ -1,8 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
   : resolve(process.cwd(), "src/frontend");
@@ -119,10 +117,11 @@ async function handleApiP2P(response: ServerResponse, url: URL): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
-    sendJson(response, status, {
-      error: status === 500 ? message : "No se pudo contactar con QvaPay",
-      detail: status === 502 ? message : undefined
-    });
+    if (status === 500) {
+      sendJson(response, status, { error: message });
+    } else {
+      sendJson(response, status, { error: "No se pudo contactar con QvaPay", detail: message });
+    }
   }
 }
 
