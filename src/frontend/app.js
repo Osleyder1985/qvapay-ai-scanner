@@ -19,7 +19,7 @@ function renderOffers(data){
     tbody.appendChild(tr);
   }
 }
-function queryString(){
+function syncBestRateOption(){const option=[...$("orderBy").options].find(item=>item.value==="best_rate");const valid=Boolean($("type").value&&$("coin").value.trim());option.disabled=!valid;if(!valid&&$("orderBy").value==="best_rate")$("orderBy").value="updated_at"}\nfunction queryString(){
   const params=new URLSearchParams({page:String(state.page),take:String(state.take),orderBy:$("orderBy").value,orderType:$("orderType").value});
   for(const id of ["type","coin","min","max"]){const value=$(id).value.trim();if(value)params.set(id,value)}
   if($("onlyVip").checked)params.set("only_vip","1");return params;
@@ -34,7 +34,7 @@ async function loadOffers(){
     $("previousButton").disabled=state.page<=1;$("nextButton").disabled=state.page>=lastPage;$("updatedAt").textContent=new Date().toLocaleTimeString("es-ES");$("status").textContent="Mercado actualizado.";
   }catch(error){$("status").textContent="⚠️ "+error.message}finally{$("refreshButton").disabled=false}
 }
-$("filters").addEventListener("submit",event=>{event.preventDefault();state.page=1;loadOffers()});
+["type","coin"].forEach(id=>$(id).addEventListener("input",syncBestRateOption));\nsyncBestRateOption();\n$("filters").addEventListener("submit",event=>{event.preventDefault();state.page=1;loadOffers()});
 $("refreshButton").addEventListener("click",loadOffers);
 $("previousButton").addEventListener("click",()=>{state.page--;loadOffers()});
 $("nextButton").addEventListener("click",()=>{state.page++;loadOffers()});
