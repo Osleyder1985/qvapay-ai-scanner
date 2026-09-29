@@ -1,0 +1,14 @@
+:root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17202a;background:#f4f6f8}
+*{box-sizing:border-box}body{margin:0}.topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px;background:#111827;color:white}
+.eyebrow{margin:0 0 4px;opacity:.7;font-size:12px;text-transform:uppercase;letter-spacing:.08em}h1{margin:0;font-size:24px}.subtitle{margin:4px 0 0;opacity:.75}
+main{max-width:1600px;margin:auto;padding:16px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.metrics article,.panel{background:white;border:1px solid #e5e7eb;border-radius:12px;padding:16px}.metrics span{display:block;color:#6b7280;font-size:12px}.metrics strong{display:block;margin-top:5px;font-size:20px}
+.panel{margin-bottom:16px}.panel-title{margin-bottom:16px}.panel-title h2{margin:0;font-size:18px}.panel-title p{margin:5px 0 0;color:#6b7280;font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end}label{display:grid;gap:5px;font-size:12px;color:#4b5563;min-width:135px}
+input,select,button{min-height:40px;border:1px solid #d1d5db;border-radius:8px;padding:8px 10px;background:white;font:inherit}button{cursor:pointer;font-weight:600}
+.primary{background:white;color:#111827;border-color:white}.secondary{background:white}.checkbox{display:flex;align-items:center;min-width:auto;min-height:40px}.checkbox input{min-height:auto}
+.status{min-height:22px;margin-bottom:8px;color:#4b5563;font-size:13px}.table-wrap{overflow-x:auto}table{width:100%;min-width:1050px;border-collapse:collapse}
+th,td{padding:10px 8px;border-bottom:1px solid #eef0f2;text-align:left;white-space:nowrap;font-size:13px}th{position:sticky;top:0;background:#f9fafb;font-size:12px;color:#4b5563}
+.rate{font-weight:700}.badge{display:inline-block;padding:3px 7px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase}.badge.sell{background:#ecfdf5;color:#047857}.badge.buy{background:#eff6ff;color:#1d4ed8}
+.verified{color:#047857}.unverified{color:#9ca3af}.empty{text-align:center;padding:30px;color:#6b7280}.pagination{display:flex;justify-content:center;align-items:center;gap:12px;padding-top:16px}code{background:#f3f4f6;padding:2px 5px;border-radius:5px}
+@media(max-width:700px){.topbar{align-items:flex-start;flex-direction:column}.topbar button{width:100%}.metrics{grid-template-columns:1fr}.filters label{width:100%}.filters button{width:100%}main{padding:10px}}
