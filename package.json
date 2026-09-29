@@ -1,0 +1,19 @@
+{
+  "name": "qvapay-ai-scanner",
+  "private": true,
+  "version": "0.1.0",
+  "description": "QvaPay AI Scanner",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/backend/server.js",
+    "dev": "npm run build && npm start"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
+}

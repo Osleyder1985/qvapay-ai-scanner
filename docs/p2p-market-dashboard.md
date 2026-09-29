@@ -4,6 +4,15 @@
 
 Proporcionar una vista de solo lectura del mercado P2P abierto de QvaPay para que el operador pueda revisar las ofertas disponibles, compararlas y posteriormente construir capacidades de análisis.
 
+## Implementación
+
+- Backend: Node.js + TypeScript.
+- Frontend: HTML, CSS y JavaScript sin framework en esta primera versión.
+- Credenciales QvaPay: variables de entorno del proceso backend.
+- El backend sirve el frontend y actúa como proxy controlado hacia QvaPay.
+
+La decisión tecnológica está registrada en `architecture/ADR-001-backend-technology-selection.md`.
+
 ## Fuente de datos
 
 La fuente primaria es la API oficial de QvaPay:
@@ -64,7 +73,7 @@ No se implementan en este incremento:
 
 ## Limitación deliberada
 
-La primera versión utiliza consultas bajo demanda. No se activa el Feed del mercado P2P ni SSE porque QvaPay documenta ese servicio como una suscripción de 10 USD por 30 días. La necesidad de tiempo real se evaluará después de medir el valor del dashboard con la API estándar.
+La primera versión utiliza consultas bajo demanda. No se activa el Feed del mercado P2P ni SSE porque la documentación actual de QvaPay lo ofrece dentro de una suscripción de 10 USD por 30 días. La necesidad de tiempo real se evaluará después de medir el valor del dashboard con la API estándar.
 
 ## Próximas extensiones
 
