@@ -3,8 +3,9 @@ import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const projectSrcDir = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
-const frontendDir = resolve(projectSrcDir, "frontend");
+const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
+  ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
+  : resolve(process.cwd(), "src/frontend");
 
 const QVAPAY_API_BASE_URL = (process.env.QVAPAY_API_BASE_URL ?? "https://api.qvapay.com").replace(/\/$/, "");
 const HOST = process.env.DASHBOARD_HOST ?? "127.0.0.1";
