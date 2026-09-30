@@ -17,6 +17,7 @@
 | FR-009 | Finance ledger | `src/backend/finance-ledger.ts`, `finance-reconciliation.ts` | Finance unit/integration tests | Implemented |
 | FR-010 | Account snapshot | `src/backend/account.ts`, account route in `server.ts` | Account-related tests where present | Implemented; identity availability remains explicit |
 | FR-011 | Dashboard app shell | `src/frontend/app.js`, frontend assets | Build/integration baseline | Implemented |
+| FR-012 | Complete paginated operations history | `src/backend/server.ts`, `src/backend/operations-ledger.ts` | Operations integration + ledger tests | Implemented |
 
 | Req. | Architecture / decision | Implementation | Verification evidence | Status |
 |---|---|---|---|---|
@@ -50,6 +51,7 @@
 | FIN-003 | Fee-aware settlement metadata | `finance-ledger.ts`, received route | Finance tests | Implemented |
 | FIN-004 | Unknown historical fees | `finance-ledger.ts` migration/model | Finance tests | Implemented |
 | FIN-005 | No unsupported fiat fee valuation | Finance model | Finance documentation/code review | Implemented |
+| FIN-006 | Operation-history persistence and reconciliation | `src/backend/operations-ledger.ts` | Operations integration + ledger tests | Implemented |
 | INT-001 | QvaPay API integration | `src/backend/server.ts` | Backend integration market test | Implemented |
 | INT-002 | Backend mutation proxy | `src/backend/server.ts` | Apply/action integration tests | Implemented |
 | INT-003 | Controlled upstream errors | Backend request layer | 429 + timeout integration tests | Implemented |
