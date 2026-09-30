@@ -1,3 +1,10 @@
+/**
+ * @file market-history.ts
+ * @path src/backend/market-history.ts
+ * @description Implements market history for QvaPay AI Scanner.
+ * @module backend
+ * @status active
+ */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
@@ -22,6 +29,12 @@ interface Offer { type?: unknown; coin?: unknown; amount?: unknown; receive?: un
 const n=(v:unknown)=>Number.isFinite(Number(v))?Number(v):NaN;
 const median=(a:number[]):number|null=>{if(!a.length)return null;const x=[...a].sort((p,q)=>p-q),m=Math.floor(x.length/2),lower=x[m-1],upper=x[m];return x.length%2?upper??null:(lower!==undefined&&upper!==undefined?(lower+upper)/2:null);};
 
+/**
+ * Implements the summarizeMarket operation for this module.
+ * @param offers Input used by the operation.
+ * @param timestamp Input used by the operation.
+ * @returns The operation result.
+ */
 export function summarizeMarket(offers: Offer[], timestamp=new Date().toISOString()): MarketHistoryPoint[] {
   const groups=new Map<string,{rates:number[],coin:string,type:string}>();
   for(const offer of offers){
