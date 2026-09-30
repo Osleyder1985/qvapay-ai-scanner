@@ -14,6 +14,7 @@ export interface MarketSnapshotStats {
   queuedRequests: number;
   upstreamRequests: number;
   lastUpstreamAt: string | null;
+  rateLimitedResponses: number;
 }
 
 export interface MarketSnapshotOptions { cacheTtlMs?: number; minIntervalMs?: number; }
@@ -28,7 +29,7 @@ export class MarketSnapshotService {
   private readonly minIntervalMs: number;
   private nextAvailableAt = 0;
   private queue: Promise<void> = Promise.resolve();
-  private stats: MarketSnapshotStats = { cacheHits: 0, cacheMisses: 0, queuedRequests: 0, upstreamRequests: 0, lastUpstreamAt: null };
+  private stats: MarketSnapshotStats = { cacheHits: 0, cacheMisses: 0, queuedRequests: 0, upstreamRequests: 0, lastUpstreamAt: null, rateLimitedResponses: 0 };
 
   constructor(options: MarketSnapshotOptions = {}) {
     this.cacheTtlMs = Math.max(0, Math.trunc(options.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS));
@@ -51,6 +52,10 @@ export class MarketSnapshotService {
       if (waitMs > 0) await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
       const response = await upstream(url);
       this.nextAvailableAt = Date.now() + this.minIntervalMs;
+      if (response.status === 429) {
+        this.stats.rateLimitedResponses += 1;
+        this.nextAvailableAt = Math.max(this.nextAvailableAt, Date.now() + 10_000);
+      }
       this.stats.upstreamRequests += 1; this.stats.lastUpstreamAt = new Date().toISOString();
       if (response.ok) this.cache.set(key, { response: response.clone(), expiresAt: Date.now() + this.cacheTtlMs });
       return response;
