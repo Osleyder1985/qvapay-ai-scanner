@@ -1,0 +1,1 @@
+{\n  "enabled": false,\n  "type": "sell",\n  "coin": "",\n  "rateMin": null,\n  "rateMax": null,\n  "amountMin": null,\n  "amountMax": null,\n  "dailyMaxQusd": null,\n  "maxConcurrent": 1\n}
