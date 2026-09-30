@@ -117,6 +117,32 @@ async function fetchBalance(): Promise<Response> {
   });
 }
 
+async function fetchP2PAction(uuid: string, action: string, method: "POST" | "GET", body?: unknown): Promise<Response> {
+  const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}/${action}`, QVAPAY_API_BASE_URL);
+  const headers = qvapayHeaders();
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  return fetch(endpoint, {
+    method,
+    headers,
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    signal: AbortSignal.timeout(20_000)
+  });
+}
+
+async function fetchOperations(): Promise<Response> {
+  const endpoint = new URL("/p2p", QVAPAY_API_BASE_URL);
+  endpoint.search = new URLSearchParams({
+    my: "1",
+    take: "100",
+    sortByStatus: "true"
+  }).toString();
+  return fetch(endpoint, {
+    method: "GET",
+    headers: qvapayHeaders(),
+    signal: AbortSignal.timeout(20_000)
+  });
+}
+
 async function fetchP2POffer(uuid: string): Promise<Response> {
   const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}`, QVAPAY_API_BASE_URL);
 
@@ -278,6 +304,85 @@ async function handleApiP2POffer(response: ServerResponse, uuid: string): Promis
   }
 }
 
+async function handleApiOperations(response: ServerResponse): Promise<void> {
+  try {
+    const upstream = await fetchOperations();
+    const payload = await readUpstreamPayload(upstream);
+    sendJson(response, upstream.status, upstream.ok
+      ? { operations: payload }
+      : { error: "No se pudieron consultar las operaciones", detail: payload });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
+    sendJson(response, status, status === 500
+      ? { error: message }
+      : { error: "No se pudo contactar con QvaPay", detail: message });
+  }
+}
+
+async function handleApiOperationAction(
+  response: ServerResponse,
+  uuid: string,
+  action: "paid" | "received" | "cancel" | "chat" | "rate",
+  method: "POST" | "GET",
+  request: IncomingMessage,
+): Promise<void> {
+  if (!uuid || uuid.length > 200) {
+    sendJson(response, 400, { error: "Identificador de operación inválido." });
+    return;
+  }
+
+  try {
+    const body = method === "POST" ? await readJsonBody(request) : undefined;
+    if (action === "paid") {
+      const txId = body && typeof body === "object" ? String((body as Record<string, unknown>).tx_id ?? "").trim() : "";
+      if (!txId) {
+        sendJson(response, 400, { error: "tx_id es obligatorio para marcar la operación como pagada." });
+        return;
+      }
+      if (txId.length > 500) {
+        sendJson(response, 400, { error: "tx_id es demasiado largo." });
+        return;
+      }
+    }
+    if (action === "chat" && method === "POST") {
+      const message = body && typeof body === "object" ? String((body as Record<string, unknown>).message ?? "").trim() : "";
+      if (!message) {
+        sendJson(response, 400, { error: "El mensaje es obligatorio." });
+        return;
+      }
+      if (message.length > 599) {
+        sendJson(response, 400, { error: "El mensaje no puede superar 599 caracteres." });
+        return;
+      }
+    }
+    if (action === "rate" && method === "POST") {
+      const value = body && typeof body === "object" ? Number((body as Record<string, unknown>).rating) : NaN;
+      if (!Number.isFinite(value) || value < 1 || value > 5) {
+        sendJson(response, 400, { error: "La calificación debe estar entre 1 y 5." });
+        return;
+      }
+      const comment = body && typeof body === "object" ? String((body as Record<string, unknown>).comment ?? "") : "";
+      if (comment.length > 120) {
+        sendJson(response, 400, { error: "El comentario no puede superar 120 caracteres." });
+        return;
+      }
+    }
+
+    const upstream = await fetchP2PAction(uuid, action, method, body);
+    const payload = await readUpstreamPayload(upstream);
+    sendJson(response, upstream.status, upstream.ok
+      ? { ok: true, action, offer_uuid: uuid, qvapay: payload }
+      : { error: "QvaPay API error", detail: payload });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
+    sendJson(response, status, status === 500
+      ? { error: message }
+      : { error: "No se pudo contactar con QvaPay", detail: message });
+  }
+}
+
 async function handleApiApplyP2P(response: ServerResponse, uuid: string): Promise<void> {
   if (!uuid || uuid.length > 200) {
     sendJson(response, 400, { error: "Identificador de oferta inválido." });
@@ -403,6 +508,11 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     return;
   }
 
+  if (request.method === "GET" && url.pathname === "/api/operations") {
+    await handleApiOperations(response);
+    return;
+  }
+
   if (request.method === "GET" && url.pathname === "/api/finance") {
     try {
       const upstream = await fetchOwnP2P("completed");
@@ -459,7 +569,36 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     }
   }
 
+  if (request.method === "GET") {
+    const chatMatch = url.pathname.match(/^\/api\/operations\/([^/]+)\/chat$/);
+    if (chatMatch?.[1]) {
+      let uuid: string;
+      try {
+        uuid = decodeURIComponent(chatMatch[1]);
+      } catch {
+        sendJson(response, 400, { error: "Identificador de operación inválido." });
+        return;
+      }
+      await handleApiOperationAction(response, uuid, "chat", "GET", request);
+      return;
+    }
+  }
+
   if (request.method === "POST") {
+    const operationMatch = url.pathname.match(/^\/api\/operations\/([^/]+)\/(paid|received|cancel|chat|rate)$/);
+    if (operationMatch?.[1] && operationMatch[2]) {
+      let uuid: string;
+      try {
+        uuid = decodeURIComponent(operationMatch[1]);
+      } catch {
+        sendJson(response, 400, { error: "Identificador de operación inválido." });
+        return;
+      }
+      const action = operationMatch[2] as "paid" | "received" | "cancel" | "chat" | "rate";
+      await handleApiOperationAction(response, uuid, action, "POST", request);
+      return;
+    }
+
     const match = url.pathname.match(/^\/api\/p2p\/([^/]+)\/apply$/);
     if (match) {
       const encodedUuid = match[1];
