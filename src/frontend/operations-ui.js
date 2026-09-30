@@ -115,6 +115,23 @@ function drawOperationDetail(){
 
  * @returns The operation result.
  */
+/**
+ * Mounts the operation-detail panel after the operation list when the route
+ * was rendered before an operation became active.
+ * @returns Whether the detail mount exists after this call.
+ */
+function mountOperationDetail(){
+  if($('operationDetail'))return true;
+  const list=$('operationsList');
+  if(!list)return false;
+  const section=document.createElement('section');
+  section.className='card';
+  section.innerHTML='<div class="card-head"><div><h2>Detalle de operación</h2><p>Acciones disponibles según tu rol y el estado actual.</p></div></div><div id="operationDetail"><div class="empty-inline">Cargando detalles de la operación…</div></div>';
+  const listCard=list.closest('.card');
+  if(listCard)listCard.insertAdjacentElement('afterend',section);
+  else document.getElementById('app')?.append(section);
+  return Boolean($('operationDetail'));
+}
 function drawChat(){
   const e=$('chatMessages');if(!e)return;
   e.innerHTML=S.chat.length?S.chat.map(m=>'<div class="chat-message"><p>'+esc(m.message||'')+'</p><small>'+time(m.created_at||m.createdAt)+'</small></div>').join(''):'<div class="empty-inline">Sin mensajes todavía.</div>';
@@ -125,7 +142,7 @@ function drawChat(){
  * @param id Input used by the operation.
  * @returns The operation result.
  */
-async function selectOperation(id){S.active=id;localStorage.setItem('qvapay.activeOperationId',id);const loaded=await loadOperation(id);if(!loaded)return;if((location.hash.slice(1)||'/')==='/operations'&&!$('operationDetail'))nav();else{drawOperations();drawOperationDetail()}toast('Operación seleccionada','success')}
+async function selectOperation(id){S.active=id;localStorage.setItem('qvapay.activeOperationId',id);const loaded=await loadOperation(id);if(!loaded)return;if((location.hash.slice(1)||'/')==='/operations'){if(!mountOperationDetail()){nav();return}drawOperations();drawOperationDetail()}else nav();toast('Operación seleccionada','success')}
 /**
  * Implements the loadOperations operation for this module.
 
@@ -144,7 +161,7 @@ async function loadOperations(){try{const p=await api('/api/operations');const q
  * @returns The synchronized operation, or null while QvaPay is still propagating it.
  */
 async function waitForOperation(id,attempts=3){for(let attempt=0;attempt<attempts;attempt+=1){await loadOperations();const operation=S.operations.find(o=>String(o.uuid)===String(id));if(operation)return operation;if(attempt<attempts-1)await new Promise(resolve=>setTimeout(resolve,750*(attempt+1)))}return null}
-async function loadOperation(id=S.active,fallback=null,notify=true){if(!id)return false;try{const local=S.operations.find(o=>String(o.uuid)===String(id));const operation=local||fallback||(String(S.operation?.uuid||'')===String(id)?S.operation:null);if(!operation){if(notify)toast('La operación aún no aparece en el listado autenticado.','error');return false}S.operation=operation;S.active=id;S.operationRole=operationRole(S.operation);await loadChat();if((location.hash.slice(1)||'/')==='/operations'){drawOperations();drawOperationDetail()}return true}catch(e){if(notify)toast(e.message,'error');return false}}
+async function loadOperation(id=S.active,fallback=null,notify=true){if(!id)return false;try{const local=S.operations.find(o=>String(o.uuid)===String(id));const operation=local||fallback||(String(S.operation?.uuid||'')===String(id)?S.operation:null);if(!operation){if(notify)toast('La operación aún no aparece en el listado autenticado.','error');return false}S.operation=operation;S.active=id;S.operationRole=operationRole(S.operation);await loadChat();if((location.hash.slice(1)||'/')==='/operations'){mountOperationDetail();drawOperations();drawOperationDetail()}return true}catch(e){if(notify)toast(e.message,'error');return false}}
 /**
  * Implements the loadChat operation for this module.
 
