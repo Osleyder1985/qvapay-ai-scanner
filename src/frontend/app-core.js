@@ -1,7 +1,7 @@
 /**
  * @file app-core.js
  * @path src/frontend/app-core.js
- * @description Shared frontend state, utilities, routing metadata, and page templates.
+ * @description Shared frontend state, utilities, routing metadata, and navigation.
  * @module frontend/core
  * @status active
  */
