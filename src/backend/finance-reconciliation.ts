@@ -11,12 +11,24 @@ export interface P2PPage {
   perPage: number;
 }
 
+/**
+
+ * Public interface ReconciliationResult used by the module.
+
+ */
+
 export interface ReconciliationResult {
   offers: Record<string, unknown>[];
   total: number;
   pagesFetched: number;
   truncated: boolean;
 }
+
+/**
+
+ * Public type FetchCompletedPage used by the module.
+
+ */
 
 export type FetchCompletedPage = (page: number) => Promise<P2PPage>;
 
