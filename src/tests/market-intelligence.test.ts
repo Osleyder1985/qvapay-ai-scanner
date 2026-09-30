@@ -1,3 +1,10 @@
+/**
+ * @file market-intelligence.test.ts
+ * @path src/tests/market-intelligence.test.ts
+ * @description Test coverage for market-intelligence.test.ts in QvaPay AI Scanner.
+ * @module tests
+ * @status test
+ */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { calculateMarketIntelligence } from "../backend/market-intelligence.js";
