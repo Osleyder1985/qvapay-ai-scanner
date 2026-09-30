@@ -1,3 +1,10 @@
+/**
+ * @file dashboard-security.test.ts
+ * @path src/tests/dashboard-security.test.ts
+ * @description dashboard-security.test.ts source for QvaPay AI Scanner.
+ * @module tests
+ * @status test
+ */
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { assertDashboardHostIsSafe, isLoopbackHost } from "../backend/dashboard-security.js";
