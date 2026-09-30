@@ -142,7 +142,7 @@ function drawChat(){
  * @param id Input used by the operation.
  * @returns The operation result.
  */
-async function selectOperation(id){S.active=id;localStorage.setItem('qvapay.activeOperationId',id);const loaded=await loadOperation(id);if(!loaded)return;if((location.hash.slice(1)||'/')==='/operations'){if(!mountOperationDetail()){nav();return}drawOperations();drawOperationDetail()}else nav();toast('Operación seleccionada','success')}
+function selectOperation(id){S.active=id;localStorage.setItem('qvapay.activeOperationId',id);location.hash='#/operations/'+encodeURIComponent(id)}
 /**
  * Implements the loadOperations operation for this module.
 
@@ -161,7 +161,7 @@ async function loadOperations(){try{const p=await api('/api/operations');const q
  * @returns The synchronized operation, or null while QvaPay is still propagating it.
  */
 async function waitForOperation(id,attempts=3){for(let attempt=0;attempt<attempts;attempt+=1){await loadOperations();const operation=S.operations.find(o=>String(o.uuid)===String(id));if(operation)return operation;if(attempt<attempts-1)await new Promise(resolve=>setTimeout(resolve,750*(attempt+1)))}return null}
-async function loadOperation(id=S.active,fallback=null,notify=true){if(!id)return false;try{const local=S.operations.find(o=>String(o.uuid)===String(id));const operation=local||fallback||(String(S.operation?.uuid||'')===String(id)?S.operation:null);if(!operation){if(notify)toast('La operación aún no aparece en el listado autenticado.','error');return false}S.operation=operation;S.active=id;S.operationRole=operationRole(S.operation);await loadChat();if((location.hash.slice(1)||'/')==='/operations'){mountOperationDetail();drawOperations();drawOperationDetail()}return true}catch(e){if(notify)toast(e.message,'error');return false}}
+async function loadOperation(id=S.active,fallback=null,notify=true){if(!id)return false;try{const local=S.operations.find(o=>String(o.uuid)===String(id));const operation=local||fallback||(String(S.operation?.uuid||'')===String(id)?S.operation:null);if(!operation){if(notify)toast('La operación aún no aparece en el listado autenticado.','error');return false}S.operation=operation;S.active=id;S.operationRole=operationRole(S.operation);await loadChat();const raw=location.hash.slice(1)||'/';if(raw==='/operations'||raw.startsWith('/operations/')){if(raw.startsWith('/operations/'))drawOperationDetail();else{mountOperationDetail();drawOperations();drawOperationDetail()}}return true}catch(e){if(notify)toast(e.message,'error');return false}}
 /**
  * Implements the loadChat operation for this module.
 
