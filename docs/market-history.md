@@ -54,3 +54,7 @@ A trend is not statistically meaningful immediately after activation. The system
 `GET /api/trends` groups historical observations by coin and type and calculates the first/last observed median, absolute change, percentage change, observed median range, and direction. Direction is descriptive (`up`, `down`, `flat`) and is not a prediction. A group with no valid median observations is reported as `insufficient`.
 
 The UI presents these measurements only after observations exist; it does not extrapolate future prices or claim predictive accuracy.
+
+## Baselines
+
+`GET /api/baselines` calculates a recent arithmetic baseline from stored median observations (24 points by default) and reports the current deviation from that baseline. This is a descriptive reference, not a forecast or recommendation. The lookback can be changed with the `lookback` query parameter.
