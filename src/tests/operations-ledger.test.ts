@@ -31,7 +31,9 @@ test("operations ledger deduplicates UUIDs and preserves recordedAt", async () =
     assert.equal(second.recordedAt, first.recordedAt);
     assert.equal(second.status, "completed");
 
-    const persisted = JSON.parse(await readFile(path, "utf8")) as Array<{ uuid: string }>;
+    const persisted = JSON.parse(await readFile(path, "utf8")) as Array<{
+      uuid: string;
+    }>;
     assert.equal(persisted.length, 1);
     assert.equal(persisted[0]?.uuid, "op-1");
   } finally {
@@ -51,7 +53,10 @@ test("operations ledger reconciliation identifies missing and stale IDs", async 
     await store.initialize();
     await store.upsert([{ uuid: "remote-1" }, { uuid: "stale-local" }]);
 
-    const result = store.reconcile([{ uuid: "remote-1" }, { uuid: "remote-2" }]);
+    const result = store.reconcile([
+      { uuid: "remote-1" },
+      { uuid: "remote-2" },
+    ]);
     assert.deepEqual(result.missingInLedger, ["remote-2"]);
     assert.deepEqual(result.staleLocal, ["stale-local"]);
   } finally {

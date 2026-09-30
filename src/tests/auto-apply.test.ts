@@ -38,54 +38,58 @@ test("detects VIP-only offers from boolean and serialized API values", () => {
 test("Auto-Apply never sends an application for a VIP-only offer", async () => {
   const directory = await mkdtemp(join(tmpdir(), "qvapay-auto-apply-"));
   const configPath = join(directory, "auto-apply.json");
-  await writeFile(configPath, JSON.stringify({
-    config: {
-      enabled: true,
-      type: "sell",
-      coin: "BANK_CUP",
-      rateMin: null,
-      rateMax: null,
-      amountMin: null,
-      amountMax: null,
-      dailyMaxQusd: null,
-      maxConcurrent: 1,
-    },
-    state: {
-      dailyDate: new Date().toISOString().slice(0, 10),
-      dailyAppliedQusd: 0,
-      recentApplyAttempts: [],
-      appliedOfferIds: [],
-      vipRejectedOffers: {},
-    },
-  }));
+  await writeFile(
+    configPath,
+    JSON.stringify({
+      config: {
+        enabled: true,
+        type: "sell",
+        coin: "BANK_CUP",
+        rateMin: null,
+        rateMax: null,
+        amountMin: null,
+        amountMax: null,
+        dailyMaxQusd: null,
+        maxConcurrent: 1,
+      },
+      state: {
+        dailyDate: new Date().toISOString().slice(0, 10),
+        dailyAppliedQusd: 0,
+        recentApplyAttempts: [],
+        appliedOfferIds: [],
+        vipRejectedOffers: {},
+      },
+    }),
+  );
 
   const applied: string[] = [];
   const previousConfigPath = process.env.AUTO_APPLY_CONFIG_PATH;
   process.env.AUTO_APPLY_CONFIG_PATH = configPath;
 
   const engine = new AutoApplyEngine({
-    fetchMarket: async () => response({
-      data: [
-        {
-          uuid: "vip-offer",
-          status: "open",
-          type: "sell",
-          coin: "BANK_CUP",
-          amount: 10,
-          receive: 10000,
-          only_vip: true,
-        },
-        {
-          uuid: "public-offer",
-          status: "open",
-          type: "sell",
-          coin: "BANK_CUP",
-          amount: 10,
-          receive: 10100,
-          only_vip: false,
-        },
-      ],
-    }),
+    fetchMarket: async () =>
+      response({
+        data: [
+          {
+            uuid: "vip-offer",
+            status: "open",
+            type: "sell",
+            coin: "BANK_CUP",
+            amount: 10,
+            receive: 10000,
+            only_vip: true,
+          },
+          {
+            uuid: "public-offer",
+            status: "open",
+            type: "sell",
+            coin: "BANK_CUP",
+            amount: 10,
+            receive: 10100,
+            only_vip: false,
+          },
+        ],
+      }),
     applyOffer: async (uuid) => {
       applied.push(uuid);
       return response({ ok: true });

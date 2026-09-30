@@ -101,7 +101,10 @@ function today(): string {
 
  * @returns The operation result.
  */
-function asNullablePositiveNumber(value: unknown, field: string): number | null {
+function asNullablePositiveNumber(
+  value: unknown,
+  field: string,
+): number | null {
   if (value === null || value === undefined || value === "") return null;
 
   const number = Number(value);
@@ -120,7 +123,9 @@ function asNullablePositiveNumber(value: unknown, field: string): number | null 
 function asPositiveInteger(value: unknown, field: string, minimum = 1): number {
   const number = Number(value);
   if (!Number.isInteger(number) || number < minimum) {
-    throw new Error(field + " debe ser un entero mayor o igual que " + minimum + ".");
+    throw new Error(
+      field + " debe ser un entero mayor o igual que " + minimum + ".",
+    );
   }
 
   return number;
@@ -133,8 +138,15 @@ function asPositiveInteger(value: unknown, field: string, minimum = 1): number {
  */
 export function isVipOnlyOffer(offer: Record<string, unknown>): boolean {
   const value = offer.only_vip;
-  return value === true || value === 1 ||
-    ["true", "1", "yes"].includes(String(value ?? "").trim().toLowerCase());
+  return (
+    value === true ||
+    value === 1 ||
+    ["true", "1", "yes"].includes(
+      String(value ?? "")
+        .trim()
+        .toLowerCase(),
+    )
+  );
 }
 
 /**
@@ -143,9 +155,10 @@ export function isVipOnlyOffer(offer: Record<string, unknown>): boolean {
  * @returns The operation result.
  */
 export function normalizeAutoApplyConfig(input: unknown): AutoApplyConfig {
-  const value = input && typeof input === "object"
-    ? input as Record<string, unknown>
-    : {};
+  const value =
+    input && typeof input === "object"
+      ? (input as Record<string, unknown>)
+      : {};
 
   const type = String(value.type ?? DEFAULT_CONFIG.type).toLowerCase();
   if (type !== "sell" && type !== "buy") {
@@ -156,7 +169,10 @@ export function normalizeAutoApplyConfig(input: unknown): AutoApplyConfig {
   const rateMax = asNullablePositiveNumber(value.rateMax, "rateMax");
   const amountMin = asNullablePositiveNumber(value.amountMin, "amountMin");
   const amountMax = asNullablePositiveNumber(value.amountMax, "amountMax");
-  const dailyMaxQusd = asNullablePositiveNumber(value.dailyMaxQusd, "dailyMaxQusd");
+  const dailyMaxQusd = asNullablePositiveNumber(
+    value.dailyMaxQusd,
+    "dailyMaxQusd",
+  );
   const maxConcurrent = asPositiveInteger(
     value.maxConcurrent ?? DEFAULT_CONFIG.maxConcurrent,
     "maxConcurrent",
@@ -175,7 +191,9 @@ export function normalizeAutoApplyConfig(input: unknown): AutoApplyConfig {
   return {
     enabled: Boolean(value.enabled),
     type: normalizedType,
-    coin: String(value.coin ?? "").trim().toUpperCase(),
+    coin: String(value.coin ?? "")
+      .trim()
+      .toUpperCase(),
     rateMin,
     rateMax,
     amountMin,
@@ -218,7 +236,7 @@ export class AutoApplyEngine {
 
    * @returns Promise<void> returned by the method.
    */
-  async initialize(): Promise<void>  {
+  async initialize(): Promise<void> {
     await mkdir(dirname(this.configPath), { recursive: true });
 
     try {
@@ -238,15 +256,15 @@ export class AutoApplyEngine {
         appliedOfferIds: Array.isArray(parsed.state?.appliedOfferIds)
           ? parsed.state.appliedOfferIds.map(String)
           : [],
-        vipRejectedOffers: parsed.state?.vipRejectedOffers &&
-            typeof parsed.state.vipRejectedOffers === "object"
-          ? Object.fromEntries(
-              Object.entries(parsed.state.vipRejectedOffers).map(([uuid, timestamp]) => [
-                String(uuid),
-                String(timestamp),
-              ]),
-            )
-          : {},
+        vipRejectedOffers:
+          parsed.state?.vipRejectedOffers &&
+          typeof parsed.state.vipRejectedOffers === "object"
+            ? Object.fromEntries(
+                Object.entries(parsed.state.vipRejectedOffers).map(
+                  ([uuid, timestamp]) => [String(uuid), String(timestamp)],
+                ),
+              )
+            : {},
       };
     } catch {
       await this.persist();
@@ -265,7 +283,7 @@ export class AutoApplyEngine {
 
    * @returns AutoApplyConfig returned by the method.
    */
-  getConfig(): AutoApplyConfig  {
+  getConfig(): AutoApplyConfig {
     return { ...this.config };
   }
 
@@ -274,7 +292,7 @@ export class AutoApplyEngine {
 
    * @returns AutoApplyStatus returned by the method.
    */
-  getStatus(): AutoApplyStatus  {
+  getStatus(): AutoApplyStatus {
     return {
       running: this.timer !== null,
       lastScanAt: this.lastScanAt,
@@ -292,7 +310,7 @@ export class AutoApplyEngine {
    * @param input Input used by the method.
    * @returns Promise<AutoApplyConfig> returned by the method.
    */
-  async updateConfig(input: unknown): Promise<AutoApplyConfig>  {
+  async updateConfig(input: unknown): Promise<AutoApplyConfig> {
     const next = normalizeAutoApplyConfig(input);
     this.config = next;
     await this.persist();
@@ -313,7 +331,7 @@ export class AutoApplyEngine {
 
    * @returns void returned by the method.
    */
-  start(): void  {
+  start(): void {
     if (this.timer !== null) return;
 
     this.statusMessage = "Auto-Apply activo; esperando el próximo escaneo.";
@@ -327,7 +345,7 @@ export class AutoApplyEngine {
 
    * @returns void returned by the method.
    */
-  stop(): void  {
+  stop(): void {
     if (this.timer !== null) {
       clearInterval(this.timer);
       this.timer = null;
@@ -353,7 +371,9 @@ export class AutoApplyEngine {
 
   private pruneVipRejectedOffers(now = Date.now()): void {
     const threshold = now - VIP_REJECTION_COOLDOWN_MS;
-    for (const [uuid, timestamp] of Object.entries(this.state.vipRejectedOffers)) {
+    for (const [uuid, timestamp] of Object.entries(
+      this.state.vipRejectedOffers,
+    )) {
       if (Number(timestamp) < threshold) {
         delete this.state.vipRejectedOffers[uuid];
       }
@@ -362,8 +382,10 @@ export class AutoApplyEngine {
 
   private wasRecentlyVipRejected(uuid: string): boolean {
     const timestamp = Number(this.state.vipRejectedOffers[uuid]);
-    return Number.isFinite(timestamp) &&
-      Date.now() - timestamp < VIP_REJECTION_COOLDOWN_MS;
+    return (
+      Number.isFinite(timestamp) &&
+      Date.now() - timestamp < VIP_REJECTION_COOLDOWN_MS
+    );
   }
 
   private markVipRejected(uuid: string): void {
@@ -371,7 +393,11 @@ export class AutoApplyEngine {
   }
 
   private async persist(): Promise<void> {
-    const payload = JSON.stringify({ config: this.config, state: this.state }, null, 2);
+    const payload = JSON.stringify(
+      { config: this.config, state: this.state },
+      null,
+      2,
+    );
     await mkdir(dirname(this.configPath), { recursive: true });
     await writeFile(this.configPath, payload + "\n", "utf8");
   }
@@ -380,10 +406,15 @@ export class AutoApplyEngine {
     const response = await this.dependencies.fetchOwnProcessing();
 
     if (!response.ok) {
-      throw new Error("No se pudo consultar las operaciones propias: HTTP " + response.status);
+      throw new Error(
+        "No se pudo consultar las operaciones propias: HTTP " + response.status,
+      );
     }
 
-    const payload = await this.dependencies.readPayload(response) as Record<string, unknown>;
+    const payload = (await this.dependencies.readPayload(response)) as Record<
+      string,
+      unknown
+    >;
     const data = Array.isArray(payload?.data) ? payload.data : [];
     return data.length;
   }
@@ -401,12 +432,18 @@ export class AutoApplyEngine {
     if (isVipOnlyOffer(offer)) return false;
     if (this.config.coin && coin !== this.config.coin) return false;
     if (!Number.isFinite(amount) || !Number.isFinite(currentRate)) return false;
-    if (this.config.rateMin !== null && currentRate < this.config.rateMin) return false;
-    if (this.config.rateMax !== null && currentRate > this.config.rateMax) return false;
-    if (this.config.amountMin !== null && amount < this.config.amountMin) return false;
-    if (this.config.amountMax !== null && amount > this.config.amountMax) return false;
-    if (this.config.dailyMaxQusd !== null &&
-        this.state.dailyAppliedQusd + amount > this.config.dailyMaxQusd) {
+    if (this.config.rateMin !== null && currentRate < this.config.rateMin)
+      return false;
+    if (this.config.rateMax !== null && currentRate > this.config.rateMax)
+      return false;
+    if (this.config.amountMin !== null && amount < this.config.amountMin)
+      return false;
+    if (this.config.amountMax !== null && amount > this.config.amountMax)
+      return false;
+    if (
+      this.config.dailyMaxQusd !== null &&
+      this.state.dailyAppliedQusd + amount > this.config.dailyMaxQusd
+    ) {
       return false;
     }
 
@@ -418,7 +455,7 @@ export class AutoApplyEngine {
 
    * @returns Promise<void> returned by the method.
    */
-  async scan(): Promise<void>  {
+  async scan(): Promise<void> {
     if (!this.config.enabled || this.scanning) return;
 
     this.scanning = true;
@@ -431,8 +468,11 @@ export class AutoApplyEngine {
       const processingCount = await this.ownProcessingCount();
       if (processingCount >= this.config.maxConcurrent) {
         this.statusMessage =
-          "Pausado por límite de operaciones simultáneas (" + processingCount + "/" +
-          this.config.maxConcurrent + ").";
+          "Pausado por límite de operaciones simultáneas (" +
+          processingCount +
+          "/" +
+          this.config.maxConcurrent +
+          ").";
         return;
       }
 
@@ -448,21 +488,27 @@ export class AutoApplyEngine {
 
       const marketResponse = await this.dependencies.fetchMarket(params);
       if (!marketResponse.ok) {
-        throw new Error("No se pudo consultar el mercado: HTTP " + marketResponse.status);
+        throw new Error(
+          "No se pudo consultar el mercado: HTTP " + marketResponse.status,
+        );
       }
 
-      const payload = await this.dependencies.readPayload(marketResponse) as Record<string, unknown>;
+      const payload = (await this.dependencies.readPayload(
+        marketResponse,
+      )) as Record<string, unknown>;
       const offers = Array.isArray(payload?.data)
-        ? payload.data as Array<Record<string, unknown>>
+        ? (payload.data as Array<Record<string, unknown>>)
         : [];
 
       const candidates = offers
         .filter((offer) => {
           const uuid = String(offer.uuid ?? offer.id ?? "");
-          return uuid &&
+          return (
+            uuid &&
             !this.state.appliedOfferIds.includes(uuid) &&
             !this.wasRecentlyVipRejected(uuid) &&
-            this.matches(offer);
+            this.matches(offer)
+          );
         })
         .sort((a, b) => {
           const rateA = Number(a.receive) / Number(a.amount);
@@ -471,7 +517,8 @@ export class AutoApplyEngine {
         });
 
       if (!candidates.length) {
-        this.statusMessage = "Escaneo completado: no hay ofertas que cumplan las reglas.";
+        this.statusMessage =
+          "Escaneo completado: no hay ofertas que cumplan las reglas.";
         return;
       }
 
@@ -482,15 +529,18 @@ export class AutoApplyEngine {
 
         this.pruneAttempts();
         if (this.state.recentApplyAttempts.length >= APPLY_LIMIT) {
-          this.statusMessage = "Escaneo pausado por el límite de QvaPay: 2 aplicaciones cada 60 segundos.";
+          this.statusMessage =
+            "Escaneo pausado por el límite de QvaPay: 2 aplicaciones cada 60 segundos.";
           break;
         }
 
         const uuid = String(offer.uuid ?? offer.id ?? "");
         const amount = Number(offer.amount);
 
-        if (this.config.dailyMaxQusd !== null &&
-            this.state.dailyAppliedQusd + amount > this.config.dailyMaxQusd) {
+        if (
+          this.config.dailyMaxQusd !== null &&
+          this.state.dailyAppliedQusd + amount > this.config.dailyMaxQusd
+        ) {
           continue;
         }
 
@@ -505,26 +555,34 @@ export class AutoApplyEngine {
           availableConcurrent -= 1;
           this.lastActionAt = new Date().toISOString();
           this.statusMessage =
-            "Oferta " + uuid + " aceptada automáticamente (" + amount + " QUSD).";
+            "Oferta " +
+            uuid +
+            " aceptada automáticamente (" +
+            amount +
+            " QUSD).";
           await this.persist();
           continue;
         }
 
-        const detail = responsePayload && typeof responsePayload === "object"
-          ? JSON.stringify(responsePayload)
-          : String(responsePayload);
+        const detail =
+          responsePayload && typeof responsePayload === "object"
+            ? JSON.stringify(responsePayload)
+            : String(responsePayload);
 
         this.statusMessage =
-          "QvaPay rechazó la aplicación automática de " + uuid + ": HTTP " +
-          response.status + " " + detail;
+          "QvaPay rechazó la aplicación automática de " +
+          uuid +
+          ": HTTP " +
+          response.status +
+          " " +
+          detail;
 
-        if (
-          response.status === 400 &&
-          detail.toLowerCase().includes("vip")
-        ) {
+        if (response.status === 400 && detail.toLowerCase().includes("vip")) {
           this.markVipRejected(uuid);
           this.statusMessage =
-            "Oferta " + uuid + " descartada: QvaPay exige VIP para aplicar. " +
+            "Oferta " +
+            uuid +
+            " descartada: QvaPay exige VIP para aplicar. " +
             "No se volverá a intentar durante 5 minutos.";
         }
 
@@ -536,7 +594,8 @@ export class AutoApplyEngine {
       await this.persist();
     } catch (error) {
       this.statusMessage =
-        "⚠️ Auto-Apply: " + (error instanceof Error ? error.message : String(error));
+        "⚠️ Auto-Apply: " +
+        (error instanceof Error ? error.message : String(error));
     } finally {
       this.scanning = false;
     }
