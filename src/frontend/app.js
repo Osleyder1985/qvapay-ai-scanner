@@ -1,6 +1,80 @@
-const state = { page: 1, take: 100 };
+const state = { page: 1, take: 100, markedOffers: loadMarkedOffers() };
+const MARKED_STORAGE_KEY = "qvapay-ai-scanner.marked-p2p-offers.v1";
 
 const $ = (id) => document.getElementById(id);
+
+function loadMarkedOffers() {
+  try {
+    const raw = localStorage.getItem(MARKED_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return new Map(Array.isArray(parsed) ? parsed.map((offer) => [String(offer.id), offer]) : []);
+  } catch {
+    return new Map();
+  }
+}
+
+function persistMarkedOffers() {
+  localStorage.setItem(
+    MARKED_STORAGE_KEY,
+    JSON.stringify([...state.markedOffers.values()])
+  );
+}
+
+function offerId(offer) {
+  return String(offer.id ?? offer.uuid ?? "");
+}
+
+function toggleMarkedOffer(offer) {
+  const id = offerId(offer);
+  if (!id) {
+    $("status").textContent = "⚠️ La oferta no tiene un identificador disponible para marcarla.";
+    return;
+  }
+
+  if (state.markedOffers.has(id)) {
+    state.markedOffers.delete(id);
+    $("status").textContent = "Oferta desmarcada.";
+  } else {
+    state.markedOffers.set(id, offer);
+    $("status").textContent = "⭐ Oferta marcada para seguimiento.";
+  }
+
+  persistMarkedOffers();
+  renderMarkedOffers();
+  renderOffers(window.currentOffersPayload);
+}
+
+function renderMarkedOffers() {
+  const container = $("markedOffers");
+  container.innerHTML = "";
+
+  if (!state.markedOffers.size) {
+    container.innerHTML = '<p class="marked-empty">No tienes ofertas marcadas.</p>';
+    return;
+  }
+
+  for (const offer of state.markedOffers.values()) {
+    const user = offer.User || {};
+    const currentRate = rate(offer);
+    const item = document.createElement("div");
+    item.className = "marked-item";
+    item.innerHTML =
+      '<div><strong>' + escapeHtml(user.username || user.name || "—") + "</strong>" +
+      "<span>" + escapeHtml(offer.type) + " · " + escapeHtml(offer.coin) + "</span>" +
+      "<span>Tasa: " + (currentRate === null ? "—" : number(currentRate, 4)) + "</span></div>" +
+      '<button class="secondary unmark-button" type="button">Quitar</button>';
+
+    item.querySelector(".unmark-button").addEventListener("click", () => {
+      state.markedOffers.delete(offerId(offer));
+      persistMarkedOffers();
+      renderMarkedOffers();
+      renderOffers(window.currentOffersPayload);
+      $("status").textContent = "Oferta desmarcada.";
+    });
+
+    container.appendChild(item);
+  }
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -38,6 +112,7 @@ function verification(user) {
 }
 
 function renderOffers(data) {
+  window.currentOffersPayload = data;
   const tbody = $("offers");
   tbody.innerHTML = "";
 
@@ -99,10 +174,13 @@ function renderOffers(data) {
         0
       ) +
       "</td>" +
-      "<td>" +
-      verification(user) +
-      "</td>";
+      '<td><button class="mark-button secondary" type="button" data-offer-id="' +
+      escapeHtml(offerId(offer)) +
+      '">' +
+      (state.markedOffers.has(offerId(offer)) ? "★ Marcada" : "☆ Marcar") +
+      "</button></td>";
 
+    tr.querySelector(".mark-button").addEventListener("click", () => toggleMarkedOffer(offer));
     tbody.appendChild(tr);
   }
 }
@@ -183,6 +261,7 @@ async function loadOffers() {
 );
 
 syncBestRateOption();
+renderMarkedOffers();
 
 $("filters").addEventListener("submit", (event) => {
   event.preventDefault();
