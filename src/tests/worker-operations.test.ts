@@ -104,7 +104,6 @@ test("D1 health remains available without dashboard authorization", async () => 
   });
 });
 
-
 test("finance D1 read rejects unauthenticated requests", async () => {
   const response = await worker.fetch(
     new Request(
