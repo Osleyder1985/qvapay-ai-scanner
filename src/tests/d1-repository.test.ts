@@ -109,7 +109,7 @@ class FakeD1 implements D1DatabaseLike {
     return null;
   }
 
-  all<T>(): T[] {
+  all<T>(sql: string, values: unknown[]): T[] {
     return [...this.operations.values()] as T[];
   }
 }
@@ -151,8 +151,8 @@ test("D1 operations upsert is idempotent and preserves recordedAt", async () => 
 
   assert.ok(first);
   assert.ok(second);
-  assert.equal(first.recordedAt, "2026-09-30T12:00:00.000Z");
-  assert.equal(second?.recordedAt, first.recordedAt);
+  assert.equal(first.recorded_at, "2026-09-30T12:00:00.000Z");
+  assert.equal(second?.recorded_at, first.recorded_at);
   assert.equal(second?.status, "completed");
   assert.equal(db.operations.size, 1);
 });
@@ -171,9 +171,9 @@ test("D1 finance upsert preserves a previously confirmed fee", async () => {
   await repo.upsertFinance([updated]);
 
   const row = await repo.getFinance("op-1");
-  assert.equal(row?.feeSource, "qvapay_received");
-  assert.equal(row?.feeQusd, 0.1);
-  assert.equal(row?.netAmountQusd, 9.9);
+  assert.equal(row?.fee_source, "qvapay_received");
+  assert.equal(row?.fee_qusd, 0.1);
+  assert.equal(row?.net_amount_qusd, 9.9);
 });
 
 test("D1 applied-offer idempotency does not duplicate an offer", async () => {
