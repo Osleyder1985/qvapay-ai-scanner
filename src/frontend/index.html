@@ -45,6 +45,13 @@
         <button class="secondary" type="submit">Aplicar filtros</button>
       </form>
     </section>
+    <section class="panel marked-panel">
+      <div class="panel-title">
+        <h2>⭐ Mis ofertas marcadas</h2>
+        <p>Ofertas que seleccionaste para darles seguimiento. La marca se conserva en este navegador.</p>
+      </div>
+      <div id="markedOffers" class="marked-offers"></div>
+    </section>
     <section class="panel">
       <div id="status" class="status" role="status"></div>
       <div class="table-wrap">
@@ -52,7 +59,7 @@
           <thead><tr>
             <th>Tipo</th><th>Moneda</th><th>Tasa</th><th>QUSD</th><th>Recibe</th>
             <th>Disponible</th><th>Oferta</th><th>Usuario</th><th>Rating</th>
-            <th>Operaciones</th><th>Verificaciones</th>
+            <th>Operaciones</th><th>Verificaciones</th><th>Marca</th>
           </tr></thead>
           <tbody id="offers"></tbody>
         </table>
@@ -64,7 +71,7 @@
       </nav>
     </section>
   </main>
-  <template id="emptyTemplate"><tr><td colspan="11" class="empty">No hay ofertas para los filtros seleccionados.</td></tr></template>
+  <template id="emptyTemplate"><tr><td colspan="12" class="empty">No hay ofertas para los filtros seleccionados.</td></tr></template>
   <script src="/app.js"></script>
-</body>
+<script>/* Frontend interactions are in app.js. */</script>\n</body>
 </html>
