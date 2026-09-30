@@ -1,3 +1,10 @@
+/**
+ * @file account.ts
+ * @path src/backend/account.ts
+ * @description Implements account for QvaPay AI Scanner.
+ * @module backend
+ * @status active
+ */
 export interface AccountSnapshot {
   balanceUsd: number | null;
   user: Record<string, unknown> | null;
@@ -5,6 +12,11 @@ export interface AccountSnapshot {
   fetchedAt: string;
 }
 
+/**
+ * Implements the firstProfile operation for this module.
+
+ * @returns The operation result.
+ */
 async function firstProfile(
   response: Response,
   readPayload: (response: Response) => Promise<unknown>,
@@ -33,6 +45,11 @@ async function firstProfile(
   return null;
 }
 
+/**
+ * Implements the fetchAccountSnapshot operation for this module.
+
+ * @returns The operation result.
+ */
 export async function fetchAccountSnapshot(
   fetchBalance: () => Promise<Response>,
   fetchOwnOpen: () => Promise<Response>,
