@@ -20,7 +20,7 @@ export interface MarketHistoryStoreOptions {
 interface Offer { type?: unknown; coin?: unknown; amount?: unknown; receive?: unknown; }
 
 const n=(v:unknown)=>Number.isFinite(Number(v))?Number(v):NaN;
-const median=(a:number[])=>{if(!a.length)return null;const x=[...a].sort((p,q)=>p-q),m=Math.floor(x.length/2);return x.length%2?x[m]:(x[m-1]+x[m])/2;};
+const median=(a:number[]):number|null=>{if(!a.length)return null;const x=[...a].sort((p,q)=>p-q),m=Math.floor(x.length/2),lower=x[m-1],upper=x[m];return x.length%2?upper??null:(lower!==undefined&&upper!==undefined?(lower+upper)/2:null);};
 
 export function summarizeMarket(offers: Offer[], timestamp=new Date().toISOString()): MarketHistoryPoint[] {
   const groups=new Map<string,{rates:number[],coin:string,type:string}>();
