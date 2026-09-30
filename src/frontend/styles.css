@@ -60,3 +60,44 @@
 .coin-history small{display:block;color:#68768e;font-size:9px;margin-top:6px;line-height:1.4}
 .market-filters select option:disabled{color:#4f5d73}
 @media(max-width:720px){.coin-history{grid-template-columns:1fr}.coin-history>div{grid-column:auto}}
+
+/* Operations center */
+.operation-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.operation-filters label{display:grid;gap:7px;color:#8a97ab;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.operation-filters input,.operation-filters select{width:100%;height:42px;background:#080e19;border:1px solid #29364d;border-radius:10px;color:#edf2fb;padding:0 12px;outline:0;font-size:12px}
+.operations-list{display:grid;gap:8px}
+.operation-row{display:grid;grid-template-columns:1fr 120px 34px;align-items:center;gap:12px;width:100%;padding:14px;text-align:left;border:1px solid var(--line);border-radius:11px;background:#080e19;color:inherit;cursor:pointer}
+.operation-row:hover,.operation-row.selected{border-color:rgba(124,108,255,.45);background:#0c1422}
+.operation-row>div:first-child{min-width:0}
+.operation-status{display:inline-block;margin-bottom:5px;padding:4px 7px;border-radius:6px;background:#111b2a;color:#8290a6;font-size:8px;font-weight:800;letter-spacing:.06em}
+.operation-row b,.operation-row small{display:block}
+.operation-row b{font-family:'Space Grotesk';font-size:13px;color:#f0f4fb}
+.operation-row small{margin-top:4px;color:#68768e;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.operation-row-rate{text-align:right}
+.operation-row-rate b{font-size:13px}
+.operation-row-rate small{font-size:10px;color:#718097}
+.operation-row-action{font-size:18px;color:#8794a9;text-align:center}
+.operation-detail-head{display:flex;justify-content:space-between;gap:18px;margin-bottom:16px}
+.operation-detail-head h2{font-family:'Space Grotesk';font-size:21px;margin:6px 0}
+.operation-detail-head p{margin:0;color:#718097;font-size:11px}
+.operation-details-block{margin-top:14px;padding:14px;background:#080e19;border:1px solid var(--line);border-radius:10px}
+.operation-details-block>span{display:block;color:#6e7b91;font-size:9px;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+.operation-details-block pre{margin:8px 0 0;color:#c8d1df;font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.operation-chat{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+.chat-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.chat-messages{display:grid;gap:7px;max-height:230px;overflow:auto;padding-right:3px}
+.chat-message{padding:9px 11px;background:#080e19;border:1px solid var(--line);border-radius:9px}
+.chat-message p{margin:0;color:#d8dfeb;font-size:11px;line-height:1.45}
+.chat-message small{display:block;margin-top:5px;color:#5f6d83;font-size:8px}
+.chat-form{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:9px}
+.chat-form input{height:38px;background:#080e19;border:1px solid #29364d;border-radius:9px;color:#edf2fb;padding:0 11px;outline:0;font-size:11px}
+.button.danger{border-color:rgba(255,100,124,.28);color:#ff9aaa;background:rgba(255,100,124,.05)}
+@media(max-width:720px){
+  .operation-filters{grid-template-columns:1fr}
+  .operation-row{grid-template-columns:1fr 80px 25px;gap:7px;padding:11px}
+  .operation-row b{font-size:12px}
+  .operation-detail-head{align-items:flex-start}
+  .operation-detail-head .status-chip{display:none}
+  .chat-form{grid-template-columns:1fr}
+  .chat-form .button{width:100%}
+}
