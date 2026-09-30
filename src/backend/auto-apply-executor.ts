@@ -30,7 +30,9 @@ export interface AutoApplyExecutor {
  * Node, Cron, Workflows, or another external scheduler.
  */
 export function createAutoApplyExecutor(
-  execute: () => Promise<Omit<AutoApplyExecutionResult, "startedAt" | "finishedAt">>,
+  execute: () => Promise<
+    Omit<AutoApplyExecutionResult, "startedAt" | "finishedAt">
+  >,
 ): AutoApplyExecutor {
   return {
     async executeOnce(): Promise<AutoApplyExecutionResult> {
