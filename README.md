@@ -41,4 +41,4 @@ Los nombres de archivos, directorios, ramas, etiquetas, Issues y Pull Requests s
 
 ## Estado
 
-El proyecto se encuentra en fase de fundación e investigación.
+El proyecto se encuentra en **Sanitation & Engineering Baseline**: el núcleo funcional ya está implementado y la prioridad actual es cerrar riesgos de seguridad, deuda arquitectónica, reproducibilidad, pruebas, trazabilidad y documentación antes de ampliar capacidades de IA o automatización financiera.
