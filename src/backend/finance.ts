@@ -1,3 +1,10 @@
+/**
+ * @file finance.ts
+ * @path src/backend/finance.ts
+ * @description Implements finance for QvaPay AI Scanner.
+ * @module backend
+ * @status active
+ */
 export interface FinanceLot {
   acquiredAt: string;
   quantity: number;
@@ -31,6 +38,11 @@ const num = (value: unknown): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
+/**
+ * Implements the calculateFinanceSummary operation for this module.
+
+ * @returns The operation result.
+ */
 export function calculateFinanceSummary(offers: unknown[]): FinanceSummary {
   const completed = offers
     .filter((value): value is P2POffer => !!value && typeof value === "object")
