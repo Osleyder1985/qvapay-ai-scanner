@@ -34,3 +34,27 @@ test("ignores non-completed operations", () => {
   assert.equal(result.fiatIncome, 0);
   assert.equal(result.fiatExpense, 0);
 });
+
+import { fetchAllCompletedP2P, reconcileCompletedIds } from "../backend/finance-reconciliation.js";
+
+test("paginated reconciliation fetches every remote page", async () => {
+  const calls: number[] = [];
+  const result = await fetchAllCompletedP2P(async (page) => {
+    calls.push(page);
+    if (page === 1) return { data: [{ uuid: "a" }], total: 3, perPage: 1 };
+    if (page === 2) return { data: [{ uuid: "b" }], total: 3, perPage: 1 };
+    return { data: [{ uuid: "c" }], total: 3, perPage: 1 };
+  });
+  assert.deepEqual(calls, [1, 2, 3]);
+  assert.equal(result.offers.length, 3);
+  assert.equal(result.truncated, false);
+});
+
+test("reconciliation identifies missing and stale ledger entries", () => {
+  const result = reconcileCompletedIds(
+    [{ uuid: "a" }, { uuid: "b" }],
+    [{ uuid: "a" }, { uuid: "old" }],
+  );
+  assert.deepEqual(result.missingInLedger, ["b"]);
+  assert.deepEqual(result.staleLocal, ["old"]);
+});
