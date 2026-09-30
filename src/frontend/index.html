@@ -1,110 +1,32 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>QvaPay P2P Market Dashboard</title>
-  <link rel="stylesheet" href="/styles.css">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070b14">
+<title>QvaPay AI Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <p class="eyebrow">QvaPay AI Scanner</p>
-      <h1>P2P Market Dashboard</h1>
-      <p class="subtitle">Observación del mercado · aplicación P2P manual y Auto-Apply configurable</p>
-    </div>
-    <button id="refreshButton" class="primary">↻ Actualizar</button>
-  </header>
-  <main>
-    <section class="metrics">
-      <article><span>Ofertas</span><strong id="totalOffers">—</strong></article>
-      <article><span>Página</span><strong id="pageInfo">—</strong></article>
-      <article><span>Actualizado</span><strong id="updatedAt">—</strong></article>
-    </section>
-    <section class="panel">
-      <div class="panel-title">
-        <h2>Filtros del mercado</h2>
-        <p>Consulta sobre <code>GET /p2p</code>. La aplicación manual a una oferta es una operación independiente.</p>
-      </div>
-      <form id="filters" class="filters">
-        <label>Tipo
-          <select id="type"><option value="">Todos</option><option value="sell">Sell</option><option value="buy">Buy</option></select>
-        </label>
-        <label>Moneda <input id="coin" placeholder="Ej. BANK_CUP"></label>
-        <label>Ordenar por
-          <select id="orderBy">
-            <option value="updated_at">Actualización</option><option value="best_rate">Mejor tasa</option><option value="ratio">Ratio</option>
-            <option value="created_at">Creación</option><option value="amount">Monto</option><option value="receive">Recepción</option>
-            <option value="rating">Valoración</option><option value="trades">Operaciones</option>
-          </select>
-        </label>
-        <label>Orden <select id="orderType"><option value="desc">Descendente</option><option value="asc">Ascendente</option></select></label>
-        <label>Mín. monto <input id="min" type="number" step="any" min="0"></label>
-        <label>Máx. monto <input id="max" type="number" step="any" min="0"></label>
-        <label class="checkbox"><input id="onlyVip" type="checkbox"> Solo VIP</label>
-        <button class="secondary" type="submit">Aplicar filtros</button>
-      </form>
-    </section>
-    <section class="panel auto-apply-panel">
-      <div class="panel-title">
-        <h2>🤖 Auto-Apply P2P</h2>
-        <p>Configura las reglas que el backend utilizará para aplicar automáticamente a ofertas P2P. Está desactivado por defecto.</p>
-      </div>
-      <form id="autoApplyForm" class="auto-apply-form">
-        <label class="toggle-field">Estado
-          <span class="toggle-row"><input id="autoApplyEnabled" type="checkbox"><strong>Activar Auto-Apply</strong></span>
-        </label>
-        <label>Tipo
-          <select id="autoApplyType"><option value="sell">Sell</option><option value="buy">Buy</option></select>
-        </label>
-        <label>Moneda <input id="autoApplyCoin" placeholder="Vacío = cualquier moneda"></label>
-        <label>Tasa mínima <input id="autoApplyRateMin" type="number" step="any" min="0" placeholder="Sin mínimo"></label>
-        <label>Tasa máxima <input id="autoApplyRateMax" type="number" step="any" min="0" placeholder="Sin máximo"></label>
-        <label>Monto mínimo (QUSD) <input id="autoApplyAmountMin" type="number" step="any" min="0" placeholder="Sin mínimo"></label>
-        <label>Monto máximo (QUSD) <input id="autoApplyAmountMax" type="number" step="any" min="0" placeholder="Sin máximo"></label>
-        <label>Máximo diario (QUSD) <input id="autoApplyDailyMax" type="number" step="any" min="0" placeholder="Sin máximo"></label>
-        <label>Máx. simultáneas <input id="autoApplyConcurrent" type="number" step="1" min="1" value="1"></label>
-        <button id="autoApplySaveButton" class="primary" type="submit">Guardar configuración</button>
-      </form>
-      <div class="auto-apply-runtime">
-        <div><span>Motor</span><strong id="autoApplyRuntimeState">—</strong></div>
-        <div><span>Aplicado hoy</span><strong id="autoApplyDailyValue">—</strong></div>
-        <div><span>Último escaneo</span><strong id="autoApplyLastScan">—</strong></div>
-        <div><span>Última acción</span><strong id="autoApplyLastAction">—</strong></div>
-      </div>
-      <p id="autoApplyMessage" class="auto-apply-message">—</p>
-      <p id="autoApplyConfigStatus" class="status">—</p>
-    </section>
-    <section id="operationPanel" class="panel operation-panel" hidden>
-      <div class="panel-title">
-        <h2>🔄 Operación activa</h2>
-        <p>Estado consultado desde QvaPay. Las acciones posteriores se habilitarán en una fase posterior.</p>
-      </div>
-      <div id="operationDetails" class="operation-details"></div>
-      <div class="operation-actions">
-        <button id="refreshOperationButton" class="secondary" type="button">↻ Actualizar operación</button>
-      </div>
-    </section>
-    <section class="panel">
-      <div id="status" class="status" role="status"></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th>Tipo</th><th>Moneda</th><th>Tasa</th><th>QUSD</th><th>Recibe</th>
-            <th>Disponible</th><th>Oferta</th><th>Usuario</th><th>Rating</th>
-            <th>Operaciones</th><th>Verificaciones</th><th>Acción</th>
-          </tr></thead>
-          <tbody id="offers"></tbody>
-        </table>
-      </div>
-      <nav class="pagination">
-        <button id="previousButton" class="secondary">← Anterior</button>
-        <span id="paginationLabel">Página 1</span>
-        <button id="nextButton" class="secondary">Siguiente →</button>
-      </nav>
-    </section>
-  </main>
-  <template id="emptyTemplate"><tr><td colspan="12" class="empty">No hay ofertas para los filtros seleccionados.</td></tr></template>
-  <script src="/app.js"></script>
-</body>
-</html>
+<div class="app-shell">
+<aside class="sidebar" id="sidebar">
+  <div class="brand"><div class="brand-mark">Q</div><div><strong>QvaPay</strong><span>AI Scanner</span></div></div>
+  <nav class="nav" aria-label="Principal">
+    <a href="#/" data-route><span>⌂</span>Inicio</a><a href="#/market" data-route><span>◈</span>Mercado</a>
+    <a href="#/auto-apply" data-route><span>✦</span>Auto-Apply</a><a href="#/operations" data-route><span>↻</span>Operaciones</a>
+    <a href="#/analytics" data-route><span>⌁</span>Analytics</a><a href="#/alerts" data-route><span>◉</span>Alertas<span class="nav-dot"></span></a>
+    <div class="nav-label">Sistema</div><a href="#/account" data-route><span>◎</span>Cuenta</a><a href="#/settings" data-route><span>⚙</span>Configuración</a>
+  </nav>
+  <div class="sidebar-foot"><span class="status-dot"></span><span>Motor conectado</span><small>QvaPay API</small></div>
+</aside>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+<section class="workspace">
+<header class="topbar"><button class="icon-btn mobile-menu" id="menuButton" aria-label="Abrir menú">☰</button>
+<div class="breadcrumb"><span id="pageKicker">OVERVIEW</span><strong id="pageTitle">Inicio</strong></div>
+<div class="top-actions"><div class="live-pill"><i></i> LIVE</div><button class="icon-btn" id="refreshButton" title="Actualizar">↻</button><div class="avatar">O</div></div></header>
+<main id="app"></main>
+</section></div>
+<div class="toast-stack" id="toasts" aria-live="polite"></div>
+<script src="/app.js"></script>
+</body></html>
