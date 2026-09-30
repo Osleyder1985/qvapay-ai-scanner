@@ -142,11 +142,11 @@ async function fetchOperations(): Promise<Response> {
     take: "100",
     sortByStatus: "true"
   }).toString();
-  return fetch(endpoint, {
+  return marketSnapshot.fetch(endpoint, async (target) => fetch(target, {
     method: "GET",
     headers: qvapayHeaders(),
     signal: AbortSignal.timeout(20_000)
-  });
+  }));
 }
 
 async function fetchP2POffer(uuid: string): Promise<Response> {
@@ -459,6 +459,11 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
 
   if (request.method === "GET" && url.pathname === "/api/health") {
     sendJson(response, 200, { ok: true, service: "p2p-market-dashboard" });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/market/snapshot") {
+    sendJson(response, 200, { marketSnapshot: marketSnapshot.getStats() });
     return;
   }
 
