@@ -175,7 +175,21 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
   if (request.method === "POST") {
     const match = url.pathname.match(/^\/api\/p2p\/([^/]+)\/apply$/);
     if (match) {
-      await handleApiApplyP2P(response, decodeURIComponent(match[1]));
+      const encodedUuid = match[1];
+      if (!encodedUuid) {
+        sendJson(response, 400, { error: "Identificador de oferta inválido." });
+        return;
+      }
+
+      let uuid: string;
+      try {
+        uuid = decodeURIComponent(encodedUuid);
+      } catch {
+        sendJson(response, 400, { error: "Identificador de oferta inválido." });
+        return;
+      }
+
+      await handleApiApplyP2P(response, uuid);
       return;
     }
   }
