@@ -67,8 +67,10 @@ export function createAutoApplyScheduledHandler(
     const qvapayConfig: QvaPayClientConfig = {
       appId,
       appSecret,
-      baseUrl: env.QVAPAY_BASE_URL,
     };
+    if (env.QVAPAY_BASE_URL) {
+      qvapayConfig.baseUrl = env.QVAPAY_BASE_URL;
+    }
     const qvapay = createClient(qvapayConfig);
     const executor = createExecutor({
       repository,
