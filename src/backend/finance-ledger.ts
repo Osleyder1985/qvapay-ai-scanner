@@ -11,6 +11,10 @@ export interface FinanceLedgerEntry {
   createdAt: string;
   updatedAt: string;
   recordedAt: string;
+  grossAmountQusd: number;
+  feeQusd: number | null;
+  netAmountQusd: number | null;
+  feeSource: "qvapay_received" | "unknown";
 }
 
 const defaultPath = resolve(process.cwd(), "data/finance-ledger.json");
@@ -50,6 +54,12 @@ export class FinanceLedgerStore {
       if (previous) {
         entry.recordedAt = previous.recordedAt;
       }
+      if (previous) {
+        entry.grossAmountQusd = previous.grossAmountQusd;
+        entry.feeQusd = previous.feeQusd;
+        entry.netAmountQusd = previous.netAmountQusd;
+        entry.feeSource = previous.feeSource;
+      }
       if (!previous || JSON.stringify(previous) !== JSON.stringify(entry)) {
         this.entries.set(entry.uuid, entry);
         changed++;
@@ -57,6 +67,22 @@ export class FinanceLedgerStore {
     }
     if (changed) await this.persist();
     return changed;
+  }
+
+  async recordSettlement(uuid: string, settlement: unknown): Promise<boolean> {
+    await this.initialize();
+    const entry = this.entries.get(uuid);
+    if (!entry || !settlement || typeof settlement !== "object") return false;
+    const value = settlement as Record<string, unknown>;
+    const fee = Number(value.fee);
+    const gross = Number(value.gross_amount);
+    const net = Number(value.amount);
+    if (!Number.isFinite(fee) || fee < 0 || !Number.isFinite(gross) || gross < 0 || !Number.isFinite(net) || net < 0) return false;
+    const next = { ...entry, grossAmountQusd: gross, feeQusd: fee, netAmountQusd: net, feeSource: "qvapay_received" as const };
+    if (JSON.stringify(next) === JSON.stringify(entry)) return false;
+    this.entries.set(uuid, next);
+    await this.persist();
+    return true;
   }
 
   list(): FinanceLedgerEntry[] {
