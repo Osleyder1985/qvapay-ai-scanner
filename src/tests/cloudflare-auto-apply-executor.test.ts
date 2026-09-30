@@ -9,6 +9,8 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
 import { createCloudflareAutoApplyExecutor } from "../backend/cloudflare/cloudflare-auto-apply-executor.js";
+import type { D1AutoApplyConfigRow } from "../backend/cloudflare/d1-repository.js";
+import type { QvaPayHttpResult } from "../backend/cloudflare/qvapay-client.js";
 
 function dependencies(overrides: Record<string, unknown> = {}) {
   let applied = 0;
@@ -17,7 +19,7 @@ function dependencies(overrides: Record<string, unknown> = {}) {
   let stateMessage = "";
 
   const repository = {
-    getAutoApplyConfig: async () => ({
+    getAutoApplyConfig: async (): Promise<D1AutoApplyConfigRow> => ({
       id: 1 as const,
       enabled: 1,
       type: "sell" as const,
@@ -59,10 +61,10 @@ function dependencies(overrides: Record<string, unknown> = {}) {
   };
 
   const qvapay = {
-    getOwnP2P: async () =>
-      overrides.own ?? { status: 200, ok: true, payload: { data: [] }, headers: new Headers() },
-    getP2P: async () =>
-      overrides.market ?? {
+    getOwnP2P: async (): Promise<QvaPayHttpResult> =>
+      (overrides.own as QvaPayHttpResult | undefined) ?? { status: 200, ok: true, payload: { data: [] }, headers: new Headers() },
+    getP2P: async (): Promise<QvaPayHttpResult> =>
+      (overrides.market as QvaPayHttpResult | undefined) ?? {
         status: 200,
         ok: true,
         payload: {
@@ -80,7 +82,7 @@ function dependencies(overrides: Record<string, unknown> = {}) {
         },
         headers: new Headers(),
       },
-    applyP2POffer: async () => {
+    applyP2POffer: async (): Promise<QvaPayHttpResult> => {
       applied += 100;
       return overrides.apply ?? {
         status: 200,
@@ -100,7 +102,7 @@ function dependencies(overrides: Record<string, unknown> = {}) {
 
 test("disabled configuration never calls QvaPay mutation", async () => {
   const deps = dependencies();
-  deps.repository.getAutoApplyConfig = async () => ({
+  deps.repository.getAutoApplyConfig = async (): Promise<D1AutoApplyConfigRow> => ({
     id: 1,
     enabled: 0,
     type: "sell",
