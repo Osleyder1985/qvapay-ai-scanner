@@ -8,6 +8,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
+/**
+
+ * Public interface FinanceLedgerEntry used by the module.
+
+ */
+
 export interface FinanceLedgerEntry {
   uuid: string;
   status: "completed";
@@ -35,11 +41,22 @@ function pathFromEnv(): string {
   return process.env.FINANCE_LEDGER_PATH ? resolve(process.env.FINANCE_LEDGER_PATH) : defaultPath;
 }
 
+/**
+
+ * Public class FinanceLedgerStore used by the module.
+
+ */
+
 export class FinanceLedgerStore {
   private entries = new Map<string, FinanceLedgerEntry>();
   private initialized = false;
 
-  async initialize(): Promise<void> {
+  /**
+   * Executes the initialize method and preserves the module's documented invariants.
+
+   * @returns Promise<void> returned by the method.
+   */
+  async initialize(): Promise<void>  {
     if (this.initialized) return;
     this.initialized = true;
     try {
@@ -56,7 +73,12 @@ export class FinanceLedgerStore {
     }
   }
 
-  async upsert(offers: unknown[]): Promise<number> {
+  /**
+   * Executes the upsert method and preserves the module's documented invariants.
+   * @param offers Input used by the method.
+   * @returns Promise<number> returned by the method.
+   */
+  async upsert(offers: unknown[]): Promise<number>  {
     await this.initialize();
     let changed = 0;
     for (const offer of offers) {
@@ -81,7 +103,13 @@ export class FinanceLedgerStore {
     return changed;
   }
 
-  async recordSettlement(uuid: string, settlement: unknown): Promise<boolean> {
+  /**
+   * Executes the recordSettlement method and preserves the module's documented invariants.
+   * @param uuid Input used by the method.
+   * @param settlement Input used by the method.
+   * @returns Promise<boolean> returned by the method.
+   */
+  async recordSettlement(uuid: string, settlement: unknown): Promise<boolean>  {
     await this.initialize();
     const entry = this.entries.get(uuid);
     if (!entry || !settlement || typeof settlement !== "object") return false;
@@ -97,7 +125,12 @@ export class FinanceLedgerStore {
     return true;
   }
 
-  list(): FinanceLedgerEntry[] {
+  /**
+   * Executes the list method and preserves the module's documented invariants.
+
+   * @returns FinanceLedgerEntry[] returned by the method.
+   */
+  list(): FinanceLedgerEntry[]  {
     return [...this.entries.values()].sort((a, b) => Date.parse(a.updatedAt) - Date.parse(b.updatedAt));
   }
 
