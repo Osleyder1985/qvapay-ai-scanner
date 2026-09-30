@@ -82,18 +82,18 @@ class FakeD1 implements D1DatabaseLike {
         status,
         amount,
         receive,
-        currentUserId,
-        userUuid,
-        userId,
-        userUsername,
-        userName,
-        peerUuid,
-        peerId,
-        peerUsername,
-        peerName,
-        recordedAt: previous?.recordedAt ?? recordedAt,
-        lastSeenAt,
-        rawJson,
+        current_user_id: currentUserId,
+        user_uuid: userUuid,
+        user_id: userId,
+        user_username: userUsername,
+        user_name: userName,
+        peer_uuid: peerUuid,
+        peer_id: peerId,
+        peer_username: peerUsername,
+        peer_name: peerName,
+        recorded_at: previous?.recorded_at ?? recordedAt,
+        last_seen_at: lastSeenAt,
+        raw_json: rawJson,
       });
       return;
     }
@@ -114,7 +114,7 @@ class FakeD1 implements D1DatabaseLike {
         feeSource,
       ] = values;
       const previous = this.finance.get(String(uuid));
-      const confirmed = previous?.feeSource === "qvapay_received";
+      const confirmed = previous?.fee_source === "qvapay_received";
       this.finance.set(String(uuid), {
         uuid,
         status: "completed",
@@ -122,13 +122,15 @@ class FakeD1 implements D1DatabaseLike {
         coin,
         amount,
         receive,
-        createdAt,
-        updatedAt,
-        recordedAt,
-        grossAmountQusd: confirmed ? previous?.grossAmountQusd : gross,
-        feeQusd: confirmed ? previous?.feeQusd : fee,
-        netAmountQusd: confirmed ? previous?.netAmountQusd : net,
-        feeSource: confirmed ? previous?.feeSource : feeSource,
+        created_at: createdAt,
+        updated_at: updatedAt,
+        recorded_at: recordedAt,
+        gross_amount_qusd: confirmed
+          ? previous?.gross_amount_qusd
+          : gross,
+        fee_qusd: confirmed ? previous?.fee_qusd : fee,
+        net_amount_qusd: confirmed ? previous?.net_amount_qusd : net,
+        fee_source: confirmed ? previous?.fee_source : feeSource,
       });
       return;
     }
