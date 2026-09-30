@@ -182,7 +182,6 @@ test("finance D1 read returns 404 when the entry does not exist", async () => {
   });
 });
 
-
 test("Auto-Apply D1 read rejects unauthenticated requests", async () => {
   const response = await worker.fetch(
     new Request("https://scanner.example/api/cloudflare/d1/auto-apply"),
