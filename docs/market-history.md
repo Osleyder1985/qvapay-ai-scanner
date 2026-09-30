@@ -48,3 +48,9 @@ This is an initial persistence layer. PostgreSQL remains a later evolution when 
 ## Important limitation
 
 A trend is not statistically meaningful immediately after activation. The system must accumulate observations first. The UI therefore distinguishes the historical layer from the current snapshot and does not manufacture missing history.
+
+## Trend engine
+
+`GET /api/trends` groups historical observations by coin and type and calculates the first/last observed median, absolute change, percentage change, observed median range, and direction. Direction is descriptive (`up`, `down`, `flat`) and is not a prediction. A group with no valid median observations is reported as `insufficient`.
+
+The UI presents these measurements only after observations exist; it does not extrapolate future prices or claim predictive accuracy.
