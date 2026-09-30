@@ -1,1 +1,344 @@
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";\nimport { readFile } from "node:fs/promises";\nimport { extname, resolve } from "node:path";\nimport { AutoApplyEngine } from "./auto-apply.js";\n\nconst frontendDir = process.env.DASHBOARD_FRONTEND_DIR\n  ? resolve(process.env.DASHBOARD_FRONTEND_DIR)\n  : resolve(process.cwd(), "src/frontend");\n\nconst QVAPAY_API_BASE_URL = (process.env.QVAPAY_API_BASE_URL ?? "https://api.qvapay.com").replace(/\/$/, "");\nconst HOST = process.env.DASHBOARD_HOST ?? "127.0.0.1";\nconst PORT = Number(process.env.DASHBOARD_PORT ?? "8080");\n\nconst allowedQueryParameters = new Set([\n  "page", "take", "type", "coin", "orderBy", "orderType",\n  "min", "max", "ratio_min", "ratio_max", "only_vip", "my", "status"\n]);\n\nfunction sendJson(response: ServerResponse, status: number, payload: unknown): void {\n  const body = JSON.stringify(payload);\n  response.writeHead(status, {\n    "Content-Type": "application/json; charset=utf-8",\n    "Cache-Control": "no-store",\n    "Content-Length": Buffer.byteLength(body)\n  });\n  response.end(body);\n}\n\nfunction contentType(path: string): string {\n  switch (extname(path)) {\n    case ".html": return "text/html; charset=utf-8";\n    case ".css": return "text/css; charset=utf-8";\n    case ".js": return "text/javascript; charset=utf-8";\n    default: return "application/octet-stream";\n  }\n}\n\nasync function sendFile(response: ServerResponse, path: string): Promise<void> {\n  try {\n    const body = await readFile(path);\n    response.writeHead(200, {\n      "Content-Type": contentType(path),\n      "Cache-Control": "no-store",\n      "Content-Length": body.byteLength\n    });\n    response.end(body);\n  } catch {\n    sendJson(response, 404, { error: "Archivo no encontrado" });\n  }\n}\n\nfunction qvapayHeaders(): Record<string, string> {\n  const appId = process.env.QVAPAY_APP_ID;\n  const appSecret = process.env.QVAPAY_APP_SECRET;\n\n  if (!appId || !appSecret) {\n    throw new Error("Faltan QVAPAY_APP_ID y QVAPAY_APP_SECRET en las variables de entorno.");\n  }\n\n  return {\n    Accept: "application/json",\n    "app-id": appId,\n    "app-secret": appSecret,\n    "User-Agent": "qvapay-ai-scanner-p2p-dashboard/0.4"\n  };\n}\n\nfunction sanitizeQuery(url: URL): URLSearchParams {\n  const params = new URLSearchParams();\n\n  for (const [key, value] of url.searchParams) {\n    if (allowedQueryParameters.has(key) && value) {\n      params.set(key, value);\n    }\n  }\n\n  const take = Number(params.get("take") ?? "100");\n  if (!Number.isFinite(take)) {\n    params.set("take", "100");\n  } else {\n    params.set("take", String(Math.min(Math.max(Math.trunc(take), 1), 100)));\n  }\n\n  if (params.get("orderBy") === "best_rate" &&\n      (!params.get("type") || !params.get("coin"))) {\n    params.set("orderBy", "updated_at");\n  }\n\n  return params;\n}\n\nasync function fetchP2P(url: URL): Promise<Response> {\n  const params = sanitizeQuery(url);\n  const endpoint = new URL("/p2p", QVAPAY_API_BASE_URL);\n  endpoint.search = params.toString();\n\n  return fetch(endpoint, {\n    method: "GET",\n    headers: qvapayHeaders(),\n    signal: AbortSignal.timeout(20_000)\n  });\n}\n\nasync function fetchP2POffer(uuid: string): Promise<Response> {\n  const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}`, QVAPAY_API_BASE_URL);\n\n  return fetch(endpoint, {\n    method: "GET",\n    headers: qvapayHeaders(),\n    signal: AbortSignal.timeout(20_000)\n  });\n}\n\nasync function applyP2POffer(uuid: string): Promise<Response> {\n  const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}/apply`, QVAPAY_API_BASE_URL);\n\n  return fetch(endpoint, {\n    method: "POST",\n    headers: qvapayHeaders(),\n    signal: AbortSignal.timeout(20_000)\n  });\n}\n\nasync function readUpstreamPayload(upstream: Response): Promise<unknown> {\n  const text = await upstream.text();\n\n  try {\n    return JSON.parse(text);\n  } catch {\n    return text ? { message: text } : {};\n  }\n}\n\nasync function readJsonBody(request: IncomingMessage): Promise<unknown> {\n  const chunks: Buffer[] = [];\n  let size = 0;\n\n  for await (const chunk of request) {\n    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);\n    size += buffer.length;\n    if (size > 1_000_000) {\n      throw new Error("Cuerpo de solicitud demasiado grande.");\n    }\n    chunks.push(buffer);\n  }\n\n  const text = Buffer.concat(chunks).toString("utf8");\n  if (!text) return {};\n\n  try {\n    return JSON.parse(text);\n  } catch {\n    throw new Error("JSON inválido.");\n  }\n}\n\nasync function handleApiP2P(response: ServerResponse, url: URL): Promise<void> {\n  try {\n    const upstream = await fetchP2P(url);\n    const payload = await readUpstreamPayload(upstream);\n\n    sendJson(response, upstream.status, upstream.ok\n      ? payload\n      : { error: "QvaPay API error", detail: payload });\n  } catch (error) {\n    const message = error instanceof Error ? error.message : String(error);\n    const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;\n    sendJson(response, status, status === 500\n      ? { error: message }\n      : { error: "No se pudo contactar con QvaPay", detail: message });\n  }\n}\n\nasync function handleApiP2POffer(response: ServerResponse, uuid: string): Promise<void> {\n  if (!uuid || uuid.length > 200) {\n    sendJson(response, 400, { error: "Identificador de oferta inválido." });\n    return;\n  }\n\n  try {\n    const upstream = await fetchP2POffer(uuid);\n    const payload = await readUpstreamPayload(upstream);\n\n    sendJson(response, upstream.status, upstream.ok\n      ? { offer_uuid: uuid, qvapay: payload }\n      : { error: "No se pudo consultar la oferta", detail: payload });\n  } catch (error) {\n    const message = error instanceof Error ? error.message : String(error);\n    const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;\n    sendJson(response, status, status === 500\n      ? { error: message }\n      : { error: "No se pudo contactar con QvaPay", detail: message });\n  }\n}\n\nasync function handleApiApplyP2P(response: ServerResponse, uuid: string): Promise<void> {\n  if (!uuid || uuid.length > 200) {\n    sendJson(response, 400, { error: "Identificador de oferta inválido." });\n    return;\n  }\n\n  try {\n    const upstream = await applyP2POffer(uuid);\n    const payload = await readUpstreamPayload(upstream);\n\n    sendJson(response, upstream.status, upstream.ok\n      ? { applied: true, offer_uuid: uuid, qvapay: payload }\n      : { error: "No se pudo aplicar a la oferta", detail: payload });\n  } catch (error) {\n    const message = error instanceof Error ? error.message : String(error);\n    const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;\n    sendJson(response, status, status === 500\n      ? { error: message }\n      : { error: "No se pudo contactar con QvaPay", detail: message });\n  }\n}\n\nconst autoApplyEngine = new AutoApplyEngine({\n  fetchMarket: (params) => fetchP2P(new URL("/p2p?" + params.toString(), "http://127.0.0.1")),\n  applyOffer: applyP2POffer,\n  fetchOwnProcessing: () => fetchP2P(new URL("/p2p?my=1&status=processing&take=100", "http://127.0.0.1")),\n  readPayload: readUpstreamPayload,\n});\n\nasync function handleAutoApplyConfig(response: ServerResponse, method: string, request: IncomingMessage): Promise<void> {\n  try {\n    if (method === "GET") {\n      sendJson(response, 200, { config: autoApplyEngine.getConfig() });\n      return;\n    }\n\n    const body = await readJsonBody(request);\n    const config = await autoApplyEngine.updateConfig(body);\n    sendJson(response, 200, { config });\n  } catch (error) {\n    const message = error instanceof Error ? error.message : String(error);\n    sendJson(response, 400, { error: message });\n  }\n}\n\nasync function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {\n  const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`);\n\n  if (request.method === "GET" && url.pathname === "/api/health") {\n    sendJson(response, 200, { ok: true, service: "p2p-market-dashboard" });\n    return;\n  }\n\n  if (url.pathname === "/api/auto-apply/config" &&\n      (request.method === "GET" || request.method === "PUT" || request.method === "PATCH")) {\n    await handleAutoApplyConfig(response, request.method, request);\n    return;\n  }\n\n  if (request.method === "GET" && url.pathname === "/api/auto-apply/status") {\n    sendJson(response, 200, { status: autoApplyEngine.getStatus() });\n    return;\n  }\n\n  if (request.method === "GET" && url.pathname === "/api/p2p") {\n    await handleApiP2P(response, url);\n    return;\n  }\n\n  if (request.method === "GET") {\n    const match = url.pathname.match(/^\/api\/p2p\/([^/]+)$/);\n    if (match) {\n      const encodedUuid = match[1];\n      if (!encodedUuid) {\n        sendJson(response, 400, { error: "Identificador de oferta inválido." });\n        return;\n      }\n\n      let uuid: string;\n      try {\n        uuid = decodeURIComponent(encodedUuid);\n      } catch {\n        sendJson(response, 400, { error: "Identificador de oferta inválido." });\n        return;\n      }\n\n      await handleApiP2POffer(response, uuid);\n      return;\n    }\n  }\n\n  if (request.method === "POST") {\n    const match = url.pathname.match(/^\/api\/p2p\/([^/]+)\/apply$/);\n    if (match) {\n      const encodedUuid = match[1];\n      if (!encodedUuid) {\n        sendJson(response, 400, { error: "Identificador de oferta inválido." });\n        return;\n      }\n\n      let uuid: string;\n      try {\n        uuid = decodeURIComponent(encodedUuid);\n      } catch {\n        sendJson(response, 400, { error: "Identificador de oferta inválido." });\n        return;\n      }\n\n      await handleApiApplyP2P(response, uuid);\n      return;\n    }\n  }\n\n  if (request.method !== "GET") {\n    sendJson(response, 405, { error: "Método no permitido" });\n    return;\n  }\n\n  const staticFiles: Record<string, string> = {\n    "/": "index.html",\n    "/index.html": "index.html",\n    "/styles.css": "styles.css",\n    "/app.js": "app.js"\n  };\n\n  const file = staticFiles[url.pathname];\n  if (file) {\n    await sendFile(response, resolve(frontendDir, file));\n    return;\n  }\n\n  sendJson(response, 404, { error: "Ruta no encontrada" });\n}\n\nconst server = createServer((request, response) => {\n  void handleRequest(request, response).catch((error: unknown) => {\n    const message = error instanceof Error ? error.message : String(error);\n    sendJson(response, 500, { error: "Error interno", detail: message });\n  });\n});\n\nvoid autoApplyEngine.initialize().then(() => {\n  server.listen(PORT, HOST, () => {\n    console.log(`QvaPay P2P Dashboard: http://${HOST}:${PORT}`);\n  });\n}).catch((error: unknown) => {\n  console.error("No se pudo inicializar Auto-Apply:", error);\n  process.exitCode = 1;\n});
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { readFile } from "node:fs/promises";
+import { extname, resolve } from "node:path";
+import { AutoApplyEngine } from "./auto-apply.js";
+
+const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
+  ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
+  : resolve(process.cwd(), "src/frontend");
+
+const QVAPAY_API_BASE_URL = (process.env.QVAPAY_API_BASE_URL ?? "https://api.qvapay.com").replace(/\/$/, "");
+const HOST = process.env.DASHBOARD_HOST ?? "127.0.0.1";
+const PORT = Number(process.env.DASHBOARD_PORT ?? "8080");
+
+const allowedQueryParameters = new Set([
+  "page", "take", "type", "coin", "orderBy", "orderType",
+  "min", "max", "ratio_min", "ratio_max", "only_vip", "my", "status"
+]);
+
+function sendJson(response: ServerResponse, status: number, payload: unknown): void {
+  const body = JSON.stringify(payload);
+  response.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Content-Length": Buffer.byteLength(body)
+  });
+  response.end(body);
+}
+
+function contentType(path: string): string {
+  switch (extname(path)) {
+    case ".html": return "text/html; charset=utf-8";
+    case ".css": return "text/css; charset=utf-8";
+    case ".js": return "text/javascript; charset=utf-8";
+    default: return "application/octet-stream";
+  }
+}
+
+async function sendFile(response: ServerResponse, path: string): Promise<void> {
+  try {
+    const body = await readFile(path);
+    response.writeHead(200, {
+      "Content-Type": contentType(path),
+      "Cache-Control": "no-store",
+      "Content-Length": body.byteLength
+    });
+    response.end(body);
+  } catch {
+    sendJson(response, 404, { error: "Archivo no encontrado" });
+  }
+}
+
+function qvapayHeaders(): Record<string, string> {
+  const appId = process.env.QVAPAY_APP_ID;
+  const appSecret = process.env.QVAPAY_APP_SECRET;
+
+  if (!appId || !appSecret) {
+    throw new Error("Faltan QVAPAY_APP_ID y QVAPAY_APP_SECRET en las variables de entorno.");
+  }
+
+  return {
+    Accept: "application/json",
+    "app-id": appId,
+    "app-secret": appSecret,
+    "User-Agent": "qvapay-ai-scanner-p2p-dashboard/0.4"
+  };
+}
+
+function sanitizeQuery(url: URL): URLSearchParams {
+  const params = new URLSearchParams();
+
+  for (const [key, value] of url.searchParams) {
+    if (allowedQueryParameters.has(key) && value) {
+      params.set(key, value);
+    }
+  }
+
+  const take = Number(params.get("take") ?? "100");
+  if (!Number.isFinite(take)) {
+    params.set("take", "100");
+  } else {
+    params.set("take", String(Math.min(Math.max(Math.trunc(take), 1), 100)));
+  }
+
+  if (params.get("orderBy") === "best_rate" &&
+      (!params.get("type") || !params.get("coin"))) {
+    params.set("orderBy", "updated_at");
+  }
+
+  return params;
+}
+
+async function fetchP2P(url: URL): Promise<Response> {
+  const params = sanitizeQuery(url);
+  const endpoint = new URL("/p2p", QVAPAY_API_BASE_URL);
+  endpoint.search = params.toString();
+
+  return fetch(endpoint, {
+    method: "GET",
+    headers: qvapayHeaders(),
+    signal: AbortSignal.timeout(20_000)
+  });
+}
+
+async function fetchP2POffer(uuid: string): Promise<Response> {
+  const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}`, QVAPAY_API_BASE_URL);
+
+  return fetch(endpoint, {
+    method: "GET",
+    headers: qvapayHeaders(),
+    signal: AbortSignal.timeout(20_000)
+  });
+}
+
+async function applyP2POffer(uuid: string): Promise<Response> {
+  const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}/apply`, QVAPAY_API_BASE_URL);
+
+  return fetch(endpoint, {
+    method: "POST",
+    headers: qvapayHeaders(),
+    signal: AbortSignal.timeout(20_000)
+  });
+}
+
+async function readUpstreamPayload(upstream: Response): Promise<unknown> {
+  const text = await upstream.text();
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text ? { message: text } : {};
+  }
+}
+
+async function readJsonBody(request: IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.length;
+    if (size > 1_000_000) {
+      throw new Error("Cuerpo de solicitud demasiado grande.");
+    }
+    chunks.push(buffer);
+  }
+
+  const text = Buffer.concat(chunks).toString("utf8");
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("JSON inválido.");
+  }
+}
+
+async function handleApiP2P(response: ServerResponse, url: URL): Promise<void> {
+  try {
+    const upstream = await fetchP2P(url);
+    const payload = await readUpstreamPayload(upstream);
+
+    sendJson(response, upstream.status, upstream.ok
+      ? payload
+      : { error: "QvaPay API error", detail: payload });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
+    sendJson(response, status, status === 500
+      ? { error: message }
+      : { error: "No se pudo contactar con QvaPay", detail: message });
+  }
+}
+
+async function handleApiP2POffer(response: ServerResponse, uuid: string): Promise<void> {
+  if (!uuid || uuid.length > 200) {
+    sendJson(response, 400, { error: "Identificador de oferta inválido." });
+    return;
+  }
+
+  try {
+    const upstream = await fetchP2POffer(uuid);
+    const payload = await readUpstreamPayload(upstream);
+
+    sendJson(response, upstream.status, upstream.ok
+      ? { offer_uuid: uuid, qvapay: payload }
+      : { error: "No se pudo consultar la oferta", detail: payload });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
+    sendJson(response, status, status === 500
+      ? { error: message }
+      : { error: "No se pudo contactar con QvaPay", detail: message });
+  }
+}
+
+async function handleApiApplyP2P(response: ServerResponse, uuid: string): Promise<void> {
+  if (!uuid || uuid.length > 200) {
+    sendJson(response, 400, { error: "Identificador de oferta inválido." });
+    return;
+  }
+
+  try {
+    const upstream = await applyP2POffer(uuid);
+    const payload = await readUpstreamPayload(upstream);
+
+    sendJson(response, upstream.status, upstream.ok
+      ? { applied: true, offer_uuid: uuid, qvapay: payload }
+      : { error: "No se pudo aplicar a la oferta", detail: payload });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
+    sendJson(response, status, status === 500
+      ? { error: message }
+      : { error: "No se pudo contactar con QvaPay", detail: message });
+  }
+}
+
+const autoApplyEngine = new AutoApplyEngine({
+  fetchMarket: (params) => fetchP2P(new URL("/p2p?" + params.toString(), "http://127.0.0.1")),
+  applyOffer: applyP2POffer,
+  fetchOwnProcessing: () => fetchP2P(new URL("/p2p?my=1&status=processing&take=100", "http://127.0.0.1")),
+  readPayload: readUpstreamPayload,
+});
+
+async function handleAutoApplyConfig(response: ServerResponse, method: string, request: IncomingMessage): Promise<void> {
+  try {
+    if (method === "GET") {
+      sendJson(response, 200, { config: autoApplyEngine.getConfig() });
+      return;
+    }
+
+    const body = await readJsonBody(request);
+    const config = await autoApplyEngine.updateConfig(body);
+    sendJson(response, 200, { config });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    sendJson(response, 400, { error: message });
+  }
+}
+
+async function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
+  const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`);
+
+  if (request.method === "GET" && url.pathname === "/api/health") {
+    sendJson(response, 200, { ok: true, service: "p2p-market-dashboard" });
+    return;
+  }
+
+  if (url.pathname === "/api/auto-apply/config" &&
+      (request.method === "GET" || request.method === "PUT" || request.method === "PATCH")) {
+    await handleAutoApplyConfig(response, request.method, request);
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/auto-apply/status") {
+    sendJson(response, 200, { status: autoApplyEngine.getStatus() });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/p2p") {
+    await handleApiP2P(response, url);
+    return;
+  }
+
+  if (request.method === "GET") {
+    const match = url.pathname.match(/^\/api\/p2p\/([^/]+)$/);
+    if (match) {
+      const encodedUuid = match[1];
+      if (!encodedUuid) {
+        sendJson(response, 400, { error: "Identificador de oferta inválido." });
+        return;
+      }
+
+      let uuid: string;
+      try {
+        uuid = decodeURIComponent(encodedUuid);
+      } catch {
+        sendJson(response, 400, { error: "Identificador de oferta inválido." });
+        return;
+      }
+
+      await handleApiP2POffer(response, uuid);
+      return;
+    }
+  }
+
+  if (request.method === "POST") {
+    const match = url.pathname.match(/^\/api\/p2p\/([^/]+)\/apply$/);
+    if (match) {
+      const encodedUuid = match[1];
+      if (!encodedUuid) {
+        sendJson(response, 400, { error: "Identificador de oferta inválido." });
+        return;
+      }
+
+      let uuid: string;
+      try {
+        uuid = decodeURIComponent(encodedUuid);
+      } catch {
+        sendJson(response, 400, { error: "Identificador de oferta inválido." });
+        return;
+      }
+
+      await handleApiApplyP2P(response, uuid);
+      return;
+    }
+  }
+
+  if (request.method !== "GET") {
+    sendJson(response, 405, { error: "Método no permitido" });
+    return;
+  }
+
+  const staticFiles: Record<string, string> = {
+    "/": "index.html",
+    "/index.html": "index.html",
+    "/styles.css": "styles.css",
+    "/app.js": "app.js"
+  };
+
+  const file = staticFiles[url.pathname];
+  if (file) {
+    await sendFile(response, resolve(frontendDir, file));
+    return;
+  }
+
+  sendJson(response, 404, { error: "Ruta no encontrada" });
+}
+
+const server = createServer((request, response) => {
+  void handleRequest(request, response).catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    sendJson(response, 500, { error: "Error interno", detail: message });
+  });
+});
+
+void autoApplyEngine.initialize().then(() => {
+  server.listen(PORT, HOST, () => {
+    console.log(`QvaPay P2P Dashboard: http://${HOST}:${PORT}`);
+  });
+}).catch((error: unknown) => {
+  console.error("No se pudo inicializar Auto-Apply:", error);
+  process.exitCode = 1;
+});
