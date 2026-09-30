@@ -31,7 +31,7 @@ export function calculateTrend(points: TrendPoint[]): TrendSummary {
   const valid=sorted.filter(p=>finite(p.medianRate));
   const first=valid[0]?.medianRate??null,last=valid.at(-1)?.medianRate??null;
   const change=first!==null&&last!==null?last-first:null;
-  const pct=change!==null&&first!==0?change/first*100:null;
+  const pct=change!==null&&first!==null&&first!==0?change/first*100:null;
   let direction:"up"|"down"|"flat"|"insufficient"="insufficient";
   if(change!==null) direction=change>0?"up":change<0?"down":"flat";
   const medians=valid.map(p=>p.medianRate as number);
