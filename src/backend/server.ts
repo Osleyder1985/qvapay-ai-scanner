@@ -336,7 +336,12 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
 
   if (request.method === "GET" && url.pathname === "/api/account") {
     try {
-      const snapshot = await fetchAccountSnapshot(fetchBalance, () => fetchOwnP2P(), readUpstreamPayload);
+      const snapshot = await fetchAccountSnapshot(
+        fetchBalance,
+        () => fetchOwnP2P("open"),
+        () => fetchOwnP2P(),
+        readUpstreamPayload,
+      );
       sendJson(response, 200, { account: snapshot });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
