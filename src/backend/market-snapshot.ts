@@ -7,6 +7,12 @@
  */
 interface CacheEntry { response: Response; expiresAt: number; }
 
+/**
+
+ * Public interface MarketSnapshotStats used by the module.
+
+ */
+
 export interface MarketSnapshotStats {
   cacheHits: number;
   cacheMisses: number;
@@ -16,11 +22,23 @@ export interface MarketSnapshotStats {
   rateLimitedResponses: number;
 }
 
+/**
+
+ * Public interface MarketSnapshotOptions used by the module.
+
+ */
+
 export interface MarketSnapshotOptions { cacheTtlMs?: number; minIntervalMs?: number; }
 type UpstreamFetcher = (url: URL) => Promise<Response>;
 
 const DEFAULT_CACHE_TTL_MS = 2500;
 const DEFAULT_MIN_INTERVAL_MS = 2600;
+
+/**
+
+ * Public class MarketSnapshotService used by the module.
+
+ */
 
 export class MarketSnapshotService {
   private readonly cache = new Map<string, CacheEntry>();
@@ -35,7 +53,13 @@ export class MarketSnapshotService {
     this.minIntervalMs = Math.max(0, Math.trunc(options.minIntervalMs ?? DEFAULT_MIN_INTERVAL_MS));
   }
 
-  async fetch(url: URL, upstream: UpstreamFetcher): Promise<Response> {
+  /**
+   * Executes the fetch method and preserves the module's documented invariants.
+   * @param url Input used by the method.
+   * @param upstream Input used by the method.
+   * @returns Promise<Response> returned by the method.
+   */
+  async fetch(url: URL, upstream: UpstreamFetcher): Promise<Response>  {
     const key = url.toString();
     const cached = this.cache.get(key);
     if (cached && cached.expiresAt > Date.now()) { this.stats.cacheHits += 1; return cached.response.clone(); }
@@ -61,6 +85,16 @@ export class MarketSnapshotService {
     } finally { release?.(); }
   }
 
-  getStats(): MarketSnapshotStats { return { ...this.stats }; }
-  clear(): void { this.cache.clear(); }
+  /**
+   * Executes the getStats method and preserves the module's documented invariants.
+
+   * @returns MarketSnapshotStats returned by the method.
+   */
+  getStats(): MarketSnapshotStats  { return { ...this.stats }; }
+  /**
+   * Executes the clear method and preserves the module's documented invariants.
+
+   * @returns void returned by the method.
+   */
+  clear(): void  { this.cache.clear(); }
 }
