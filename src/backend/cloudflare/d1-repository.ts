@@ -191,7 +191,6 @@ ON CONFLICT(offer_uuid) DO UPDATE SET
   reason = excluded.reason
 `;
 
-
 const INSERT_EXECUTION_LEASE_SQL = `
 INSERT OR IGNORE INTO auto_apply_execution_lease (
   id, owner_id, acquired_at, expires_at, updated_at
