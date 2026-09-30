@@ -49,7 +49,12 @@ function verification(user) {
 }
 
 function operationPayload(payload) {
-  return payload?.qvapay?.data ?? payload?.qvapay ?? payload?.data ?? payload;
+  return payload?.qvapay?.p2p ??
+    payload?.qvapay?.data ??
+    payload?.qvapay ??
+    payload?.data?.p2p ??
+    payload?.data ??
+    payload;
 }
 
 function operationValue(operation, keys, fallback = "—") {
@@ -86,8 +91,8 @@ function renderOperation(operation) {
   const amount = operationValue(operation, ["amount", "offer.amount"]);
   const receive = operationValue(operation, ["receive", "offer.receive"]);
   const username = operationValue(operation, [
-    "User.username", "User.name", "user.username", "user.name",
-    "peer.username", "peer.name", "offer.User.username"
+    "Peer.username", "Peer.name", "peer.username", "peer.name",
+    "User.username", "User.name", "user.username", "user.name"
   ]);
   const updatedAt = operationValue(operation, ["updated_at", "updatedAt", "offer.updated_at"]);
 
