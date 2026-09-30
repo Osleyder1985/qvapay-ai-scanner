@@ -1,3 +1,10 @@
+/**
+ * @file finance.test.ts
+ * @path src/tests/finance.test.ts
+ * @description finance.test.ts source for QvaPay AI Scanner.
+ * @module tests
+ * @status test
+ */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { calculateFinanceSummary } from "../backend/finance.js";
