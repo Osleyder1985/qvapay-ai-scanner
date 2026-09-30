@@ -124,7 +124,10 @@ export function createCloudflareAutoApplyExecutor(
     const config = await dependencies.repository.getAutoApplyConfig();
 
     if (!config) {
-      return { status: "disabled", message: "Auto-Apply configuration is absent." };
+      return {
+        status: "disabled",
+        message: "Auto-Apply configuration is absent.",
+      };
     }
     if (config.enabled !== 1) {
       return { status: "disabled", message: "Auto-Apply is disabled." };
@@ -152,7 +155,10 @@ export function createCloudflareAutoApplyExecutor(
     });
 
     if (!claimed) {
-      return { status: "skipped", message: "Another Auto-Apply execution owns the lease." };
+      return {
+        status: "skipped",
+        message: "Another Auto-Apply execution owns the lease.",
+      };
     }
 
     let lastActionAt = state.last_action_at;
@@ -168,7 +174,8 @@ export function createCloudflareAutoApplyExecutor(
 
       const own = await dependencies.qvapay.getOwnP2P("processing");
       if (!own.ok) {
-        const message = `Unable to read own processing operations: HTTP ${own.status}`;
+        const message = 
+          `Unable to read own processing operations: HTTP ${own.status}`;
         await dependencies.repository.updateAutoApplyState({
           dailyDate,
           dailyAppliedQusd,
@@ -182,7 +189,8 @@ export function createCloudflareAutoApplyExecutor(
 
       const processingCount = payloadData(own).length;
       if (processingCount >= config.max_concurrent) {
-        const message = `Paused by concurrent-operation limit (${processingCount}/${config.max_concurrent}).`;
+        const message =
+          `Paused by concurrent-operation limit (${processingCount}/${config.max_concurrent}).`;
         await dependencies.repository.updateAutoApplyState({
           dailyDate,
           dailyAppliedQusd,
@@ -218,7 +226,9 @@ export function createCloudflareAutoApplyExecutor(
       }
 
       const candidates = (payloadData(market) as MarketOffer[])
-        .filter((offer) => offerUuid(offer) && matches(offer, config, dailyAppliedQusd))
+        .filter(
+          (offer) => offerUuid(offer) && matches(offer, config, dailyAppliedQusd),
+        )
         .sort(
           (a, b) =>
             Number(a.receive) / Number(a.amount) -
@@ -245,10 +255,15 @@ export function createCloudflareAutoApplyExecutor(
         });
 
         if (response.ok) {
-          await dependencies.repository.recordAppliedOffer(uuid, attemptedAt, amount);
+          await dependencies.repository.recordAppliedOffer(
+            uuid,
+            attemptedAt,
+            amount,
+          );
           dailyAppliedQusd += amount;
           lastActionAt = attemptedAt;
-          const message = `Offer ${uuid} accepted automatically (${amount} QUSD).`;
+          const message =
+            `Offer ${uuid} accepted automatically (${amount} QUSD).`;
           await dependencies.repository.updateAutoApplyState({
             dailyDate,
             dailyAppliedQusd,
