@@ -100,6 +100,16 @@ async function fetchP2P(url: URL): Promise<Response> {
   });
 }
 
+async function fetchP2POffer(uuid: string): Promise<Response> {
+  const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}`, QVAPAY_API_BASE_URL);
+
+  return fetch(endpoint, {
+    method: "GET",
+    headers: qvapayHeaders(),
+    signal: AbortSignal.timeout(20_000)
+  });
+}
+
 async function applyP2POffer(uuid: string): Promise<Response> {
   const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}/apply`, QVAPAY_API_BASE_URL);
 
@@ -128,6 +138,28 @@ async function handleApiP2P(response: ServerResponse, url: URL): Promise<void> {
     sendJson(response, upstream.status, upstream.ok
       ? payload
       : { error: "QvaPay API error", detail: payload });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
+    sendJson(response, status, status === 500
+      ? { error: message }
+      : { error: "No se pudo contactar con QvaPay", detail: message });
+  }
+}
+
+async function handleApiP2POffer(response: ServerResponse, uuid: string): Promise<void> {
+  if (!uuid || uuid.length > 200) {
+    sendJson(response, 400, { error: "Identificador de oferta inválido." });
+    return;
+  }
+
+  try {
+    const upstream = await fetchP2POffer(uuid);
+    const payload = await readUpstreamPayload(upstream);
+
+    sendJson(response, upstream.status, upstream.ok
+      ? { offer_uuid: uuid, qvapay: payload }
+      : { error: "No se pudo consultar la oferta", detail: payload });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
@@ -170,6 +202,28 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
   if (request.method === "GET" && url.pathname === "/api/p2p") {
     await handleApiP2P(response, url);
     return;
+  }
+
+  if (request.method === "GET") {
+    const match = url.pathname.match(/^\/api\/p2p\/([^/]+)$/);
+    if (match) {
+      const encodedUuid = match[1];
+      if (!encodedUuid) {
+        sendJson(response, 400, { error: "Identificador de oferta inválido." });
+        return;
+      }
+
+      let uuid: string;
+      try {
+        uuid = decodeURIComponent(encodedUuid);
+      } catch {
+        sendJson(response, 400, { error: "Identificador de oferta inválido." });
+        return;
+      }
+
+      await handleApiP2POffer(response, uuid);
+      return;
+    }
   }
 
   if (request.method === "POST") {

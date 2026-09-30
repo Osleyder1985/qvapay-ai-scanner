@@ -3,6 +3,8 @@ const state = {
   take: 100,
   applyingOfferId: null,
   appliedOfferIds: new Set(),
+  activeOperationId: localStorage.getItem("qvapay.activeOperationId") || null,
+  operationTimer: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -44,6 +46,117 @@ function verification(user) {
   return checks.length
     ? '<span class="verified">' + checks.join(" · ") + "</span>"
     : '<span class="unverified">—</span>';
+}
+
+function operationPayload(payload) {
+  return payload?.qvapay?.p2p ??
+    payload?.qvapay?.data ??
+    payload?.qvapay ??
+    payload?.data?.p2p ??
+    payload?.data ??
+    payload;
+}
+
+function operationValue(operation, keys, fallback = "—") {
+  for (const key of keys) {
+    const value = key.split(".").reduce((current, part) => current?.[part], operation);
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+  return fallback;
+}
+
+function operationState(operation) {
+  return String(
+    operationValue(operation, ["status", "state", "p2p_status", "offer.status"], "unknown")
+  ).toLowerCase();
+}
+
+function isTerminalOperationState(state) {
+  return ["completed", "cancelled", "canceled", "rejected", "expired"].includes(state);
+}
+
+function renderOperation(operation) {
+  const panel = $("operationPanel");
+  const details = $("operationDetails");
+
+  if (!operation || !state.activeOperationId) {
+    panel.hidden = true;
+    details.innerHTML = "";
+    return;
+  }
+
+  const status = operationState(operation);
+  const type = String(operationValue(operation, ["type", "offer.type"], "")).toUpperCase();
+  const coin = operationValue(operation, ["coin", "offer.coin"]);
+  const amount = operationValue(operation, ["amount", "offer.amount"]);
+  const receive = operationValue(operation, ["receive", "offer.receive"]);
+  const username = operationValue(operation, [
+    "Peer.username", "Peer.name", "peer.username", "peer.name",
+    "User.username", "User.name", "user.username", "user.name"
+  ]);
+  const updatedAt = operationValue(operation, ["updated_at", "updatedAt", "offer.updated_at"]);
+
+  details.innerHTML =
+    '<div><span>UUID</span><strong>' + escapeHtml(state.activeOperationId) + "</strong></div>" +
+    '<div><span>Tipo</span><strong>' + escapeHtml(type || "—") + "</strong></div>" +
+    '<div><span>Estado</span><strong class="operation-status">' + escapeHtml(status.toUpperCase()) + "</strong></div>" +
+    '<div><span>Moneda</span><strong>' + escapeHtml(coin) + "</strong></div>" +
+    '<div><span>Monto</span><strong>' + escapeHtml(number(amount)) + "</strong></div>" +
+    '<div><span>Recibe</span><strong>' + escapeHtml(number(receive)) + "</strong></div>" +
+    '<div><span>Contraparte</span><strong>' + escapeHtml(username) + "</strong></div>" +
+    '<div><span>Actualizado</span><strong>' + escapeHtml(updatedAt === "—" ? "—" : new Date(updatedAt).toLocaleString("es-ES")) + "</strong></div>";
+
+  panel.hidden = false;
+
+  if (isTerminalOperationState(status)) {
+    stopOperationTracking();
+  }
+}
+
+function stopOperationTracking() {
+  if (state.operationTimer !== null) {
+    window.clearInterval(state.operationTimer);
+    state.operationTimer = null;
+  }
+}
+
+async function loadOperation(updateStatus = false) {
+  if (!state.activeOperationId) {
+    renderOperation(null);
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      "/api/p2p/" + encodeURIComponent(state.activeOperationId),
+      { cache: "no-store" }
+    );
+    const payload = await response.json();
+
+    if (!response.ok) {
+      throw new Error(describeQvaPayError(payload));
+    }
+
+    const operation = operationPayload(payload);
+    renderOperation(operation);
+    if (updateStatus) {
+      $("status").textContent = "Operación actualizada desde QvaPay.";
+    }
+  } catch (error) {
+    $("status").textContent =
+      "⚠️ No se pudo actualizar la operación: " +
+      (error instanceof Error ? error.message : String(error));
+  }
+}
+
+function startOperationTracking() {
+  stopOperationTracking();
+  if (!state.activeOperationId) return;
+
+  void loadOperation();
+  state.operationTimer = window.setInterval(() => {
+    void loadOperation();
+  }, 10000);
 }
 
 function describeQvaPayError(payload) {
@@ -129,9 +242,13 @@ async function applyToOffer(offer) {
     }
 
     state.appliedOfferIds.add(uuid);
+    state.activeOperationId = uuid;
+    localStorage.setItem("qvapay.activeOperationId", uuid);
     $("status").textContent =
       "✅ Aplicación aceptada por QvaPay. La oferta queda asignada a tu operación.";
     await loadOffers(false);
+    await loadOperation(true);
+    startOperationTracking();
   } catch (error) {
     $("status").textContent =
       "⚠️ " + (error instanceof Error ? error.message : String(error));
@@ -317,10 +434,15 @@ $("filters").addEventListener("submit", (event) => {
   event.preventDefault();
   state.page = 1;
   void loadOffers();
+startOperationTracking();
 });
 
 $("refreshButton").addEventListener("click", () => {
   void loadOffers();
+});
+
+$("refreshOperationButton").addEventListener("click", () => {
+  void loadOperation(true);
 });
 
 $("previousButton").addEventListener("click", () => {

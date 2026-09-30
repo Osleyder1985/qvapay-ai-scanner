@@ -45,6 +45,16 @@
         <button class="secondary" type="submit">Aplicar filtros</button>
       </form>
     </section>
+    <section id="operationPanel" class="panel operation-panel" hidden>
+      <div class="panel-title">
+        <h2>🔄 Operación activa</h2>
+        <p>Estado consultado directamente desde QvaPay. Las acciones de pago, recepción y cancelación se habilitarán en una fase posterior.</p>
+      </div>
+      <div id="operationDetails" class="operation-details"></div>
+      <div class="operation-actions">
+        <button id="refreshOperationButton" class="secondary" type="button">↻ Actualizar operación</button>
+      </div>
+    </section>
     <section class="panel">
       <div id="status" class="status" role="status"></div>
       <div class="table-wrap">
