@@ -22,7 +22,7 @@ function createDb(rows: Record<string, unknown>[] = []): WorkerEnv["DB"] {
         },
         async first<T>() {
           if (sql.includes("SELECT 1")) return { ok: 1 } as T;
-          return null;
+          return (rows[0] ?? null) as T | null;
         },
         async all<T>() {
           return { results: rows as T[] };
