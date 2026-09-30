@@ -1,11 +1,10 @@
 /**
  * @file market-snapshot.ts
  * @path src/backend/market-snapshot.ts
- * @description Central cache, deduplication and pacing for QvaPay market requests.
- * @module backend/market
+ * @description Implements market snapshot for QvaPay AI Scanner.
+ * @module backend
  * @status active
  */
-
 interface CacheEntry { response: Response; expiresAt: number; }
 
 export interface MarketSnapshotStats {
