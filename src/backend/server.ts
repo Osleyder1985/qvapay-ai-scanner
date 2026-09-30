@@ -203,6 +203,7 @@ async function fetchAllMarketPages(url: URL): Promise<{
   let total = 0;
   let perPage = 100;
   let lastPage = 1;
+  let pagesFetched = 0;
 
   for (let page = 1; page <= MAX_INTELLIGENCE_PAGES; page += 1) {
     const params = new URLSearchParams(base);
@@ -222,6 +223,7 @@ async function fetchAllMarketPages(url: URL): Promise<{
       : [];
 
     offers.push(...pageOffers);
+    pagesFetched = page;
     total = Number(record.total ?? offers.length);
     perPage = Math.max(1, Number(record.per_page ?? pageOffers.length ?? 100));
     lastPage = Math.max(1, Math.ceil(total / perPage));
@@ -232,7 +234,7 @@ async function fetchAllMarketPages(url: URL): Promise<{
   return {
     offers,
     total,
-    pagesFetched: Math.min(lastPage, MAX_INTELLIGENCE_PAGES),
+    pagesFetched,
     truncated: lastPage > MAX_INTELLIGENCE_PAGES
   };
 }
@@ -241,7 +243,7 @@ async function handleApiIntelligence(response: ServerResponse, url: URL): Promis
   try {
     const result = await fetchAllMarketPages(url);
     sendJson(response, 200, {
-      intelligence: calculateMarketIntelligence(result.offers),
+      intelligence: calculateMarketIntelligence(result.offers as Parameters<typeof calculateMarketIntelligence>[0]),
       coverage: {
         total: result.total,
         pagesFetched: result.pagesFetched,
