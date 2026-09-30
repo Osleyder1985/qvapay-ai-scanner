@@ -103,3 +103,83 @@ test("D1 health remains available without dashboard authorization", async () => 
     d1: "ok",
   });
 });
+
+
+test("finance D1 read rejects unauthenticated requests", async () => {
+  const response = await worker.fetch(
+    new Request(
+      "https://scanner.example/api/cloudflare/d1/finance?uuid=op-1",
+    ),
+    { DB: createDb(), DASHBOARD_API_TOKEN: "test-token" },
+  );
+
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), { error: "No autorizado" });
+});
+
+test("finance D1 read validates the operation UUID", async () => {
+  const response = await worker.fetch(
+    new Request("https://scanner.example/api/cloudflare/d1/finance", {
+      headers: { authorization: "Bearer test-token" },
+    }),
+    { DB: createDb(), DASHBOARD_API_TOKEN: "test-token" },
+  );
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    error: "El parámetro uuid es obligatorio",
+  });
+});
+
+test("finance D1 read returns the fee-aware durable projection", async () => {
+  const row = {
+    uuid: "op-1",
+    status: "completed",
+    type: "sell",
+    coin: "QUSD",
+    amount: 10,
+    receive: 10400,
+    created_at: "2026-09-30T00:00:00.000Z",
+    updated_at: "2026-09-30T00:01:00.000Z",
+    recorded_at: "2026-09-30T00:00:00.000Z",
+    gross_amount_qusd: 10,
+    fee_qusd: 0.2,
+    net_amount_qusd: 9.8,
+    fee_source: "qvapay_received",
+  };
+
+  const response = await worker.fetch(
+    new Request(
+      "https://scanner.example/api/cloudflare/d1/finance?uuid=op-1",
+      { headers: { authorization: "Bearer test-token" } },
+    ),
+    { DB: createDb([row]), DASHBOARD_API_TOKEN: "test-token" },
+  );
+
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as {
+    finance: Record<string, unknown>;
+    source: { persistence: string };
+  };
+
+  assert.equal(body.finance.uuid, "op-1");
+  assert.equal(body.finance.fee_qusd, 0.2);
+  assert.equal(body.finance.net_amount_qusd, 9.8);
+  assert.equal(body.finance.fee_source, "qvapay_received");
+  assert.equal(body.source.persistence, "d1");
+});
+
+test("finance D1 read returns 404 when the entry does not exist", async () => {
+  const response = await worker.fetch(
+    new Request(
+      "https://scanner.example/api/cloudflare/d1/finance?uuid=missing",
+      { headers: { authorization: "Bearer test-token" } },
+    ),
+    { DB: createDb(), DASHBOARD_API_TOKEN: "test-token" },
+  );
+
+  assert.equal(response.status, 404);
+  assert.deepEqual(await response.json(), {
+    error: "Entrada financiera no encontrada",
+  });
+});
