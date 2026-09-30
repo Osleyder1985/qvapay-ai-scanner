@@ -393,7 +393,9 @@ export class D1Repository {
   /** Returns true when an offer UUID has already been recorded as applied. */
   async hasAppliedOffer(offerUuid: string): Promise<boolean> {
     const row = await this.db
-      .prepare("SELECT 1 AS present FROM auto_apply_applied_offers WHERE offer_uuid = ? LIMIT 1")
+      .prepare(
+        "SELECT 1 AS present FROM auto_apply_applied_offers WHERE offer_uuid = ? LIMIT 1",
+      )
       .bind(offerUuid)
       .first<{ present: number }>();
     return row !== null;
