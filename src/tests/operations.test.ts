@@ -39,6 +39,13 @@ test("buy reverses the payment/receipt roles", () => {
   assert.ok(!availableOperationActions(paid, "owner").includes("received"));
 });
 
+test("revision can be cancelled only by the fiat payer", () => {
+  assert.ok(availableOperationActions({ ...base, status: "revision" }, "peer").includes("cancel"));
+  assert.ok(!availableOperationActions({ ...base, status: "revision" }, "owner").includes("cancel"));
+  assert.ok(availableOperationActions({ ...base, type: "buy", status: "revision" }, "owner").includes("cancel"));
+  assert.ok(!availableOperationActions({ ...base, type: "buy", status: "revision" }, "peer").includes("cancel"));
+});
+
 test("completed operations expose rating and status buckets are normalized", () => {
   assert.ok(availableOperationActions({ ...base, status: "completed" }, "owner").includes("rate"));
   assert.equal(operationBucket("revision"), "revision");
