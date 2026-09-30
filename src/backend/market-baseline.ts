@@ -13,6 +13,12 @@ export interface BaselinePoint {
   samples: number;
 }
 
+/**
+
+ * Public interface MarketBaseline used by the module.
+
+ */
+
 export interface MarketBaseline {
   coin: string;
   type: string;
