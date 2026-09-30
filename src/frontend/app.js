@@ -40,9 +40,11 @@ function baselineSummary(){if(!S.baselines.length)return '';return S.baselines.s
 function changePage(d){if(S.page+d<1||S.page+d>S.lastPage)return;S.page+=d;refreshMarket()}
 function operationRole(o){
   const current=o?.currentUserId;
+  const username=String(S.account?.user?.username||'').replace(/^@/,'').toLowerCase();
   const same=(a,b)=>a!=null&&b!=null&&String(a)===String(b);
-  if(same(o?.User?.uuid,current)||same(o?.User?.id,current))return'owner';
-  if(same(o?.Peer?.uuid,current)||same(o?.Peer?.id,current))return'peer';
+  const sameUsername=(a)=>username&&String(a||'').replace(/^@/,'').toLowerCase()===username;
+  if(same(o?.User?.uuid,current)||same(o?.User?.id,current)||sameUsername(o?.User?.username))return'owner';
+  if(same(o?.Peer?.uuid,current)||same(o?.Peer?.id,current)||sameUsername(o?.Peer?.username))return'peer';
   return'unknown';
 }
 function operationActions(o,role=operationRole(o)){
@@ -50,6 +52,7 @@ function operationActions(o,role=operationRole(o)){
   if(status==='processing'&&((type==='buy'&&role==='owner')||(type==='sell'&&role==='peer')))a.unshift('paid');
   if(status==='paid'&&((type==='sell'&&role==='owner')||(type==='buy'&&role==='peer')))a.unshift('received');
   if(['processing','paid'].includes(status))a.push('cancel');
+  if(status==='revision'&&((type==='buy'&&role==='owner')||(type==='sell'&&role==='peer')))a.push('cancel');
   if(status==='completed')a.unshift('rate');
   return [...new Set(a)];
 }
@@ -87,7 +90,7 @@ function drawChat(){
   e.scrollTop=e.scrollHeight;
 }
 async function selectOperation(id){S.active=id;localStorage.setItem('qvapay.activeOperationId',id);await loadOperation(id);drawOperations();toast('Operación seleccionada','success')}
-async function loadOperations(){try{const p=await api('/api/operations');const q=p.operations||{};S.operations=Array.isArray(q)?q:(q.data||[]);if(S.active&&!S.operations.some(o=>String(o.uuid)===String(S.active)))S.active=null;if(!S.active){const pending=S.operations.find(o=>['processing','paid','revision'].includes(String(o.status||'').toLowerCase()));if(pending){S.active=String(pending.uuid);localStorage.setItem('qvapay.activeOperationId',S.active)}}}catch(e){S.operations=[]}}
+async function loadOperations(){try{const p=await api('/api/operations');const q=p.operations||{};S.operations=Array.isArray(q)?q:(q.data||[]);if(S.active&&!S.operations.some(o=>String(o.uuid)===String(S.active))){S.active=null;S.operation=null;S.chat=[];localStorage.removeItem('qvapay.activeOperationId')}if(!S.active){const pending=S.operations.find(o=>['processing','paid','revision'].includes(String(o.status||'').toLowerCase()));if(pending){S.active=String(pending.uuid);localStorage.setItem('qvapay.activeOperationId',S.active)}}}catch(e){S.operations=[]}}
 async function loadOperation(id=S.active){if(!id)return;try{const p=await api('/api/p2p/'+encodeURIComponent(id));S.operation=p?.qvapay?.p2p??p?.qvapay?.data??p?.qvapay??p?.data??p;S.active=id;S.operationRole=operationRole(S.operation);await loadChat();if((location.hash.slice(1)||'/')==='/operations'){drawOperations();drawOperationDetail()}}catch(e){toast(e.message,'error')}}
 async function loadChat(){if(!S.active)return;try{const p=await api('/api/operations/'+encodeURIComponent(S.active)+'/chat');const q=p?.qvapay;S.chat=Array.isArray(q?.chat)?q.chat:Array.isArray(q?.data)?q.data:Array.isArray(q)?q:[]}catch(e){S.chat=[]}}
 async function markOperationPaid(){if(!S.active)return;const tx=prompt('Introduce el identificador/referencia del pago (tx_id):','');if(tx==null||!tx.trim())return;try{await api('/api/operations/'+encodeURIComponent(S.active)+'/paid',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tx_id:tx.trim()})});toast('Pago registrado en QvaPay','success');await refreshOperations()}catch(e){toast(e.message,'error')}}
