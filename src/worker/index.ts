@@ -87,7 +87,10 @@ const handler: WorkerHandler = {
       });
     }
 
-    if (request.method === "GET" && url.pathname === "/api/cloudflare/d1/health") {
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/cloudflare/d1/health"
+    ) {
       try {
         const row = await env.DB
           .prepare("SELECT 1 AS ok")
@@ -101,10 +104,13 @@ const handler: WorkerHandler = {
           row?.ok === 1 ? 200 : 503,
         );
       } catch {
-        return json({
-          service: "qvapay-ai-scanner",
-          d1: "error",
-        }, 503);
+        return json(
+          {
+            service: "qvapay-ai-scanner",
+            d1: "error",
+          },
+          503,
+        );
       }
     }
 
