@@ -14,5 +14,5 @@ test("dashboard rejects non-loopback bind addresses", () => {
   assert.doesNotThrow(() => assertDashboardHostIsSafe("127.0.0.1"));
   assert.doesNotThrow(() => assertDashboardHostIsSafe("::1"));
   assert.throws(() => assertDashboardHostIsSafe("0.0.0.0"), /local-only/);
-  assert.throws(() => assertDashboardHostIsSafe("192.168.1.10"), /autenticación/autorización/);
+  assert.throws(() => assertDashboardHostIsSafe("192.168.1.10"), /autenticación\/autorización/);
 });
