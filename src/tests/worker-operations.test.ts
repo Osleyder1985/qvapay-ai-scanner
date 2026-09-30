@@ -80,7 +80,7 @@ test("operations D1 read preserves raw operation shape when available", async ()
   );
 
   assert.equal(response.status, 200);
-  const body = await response.json() as {
+  const body = (await response.json()) as {
     operations: { data: Array<Record<string, unknown>>; per_page: number };
     source: { persistence: string };
   };
