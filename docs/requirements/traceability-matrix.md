@@ -29,6 +29,7 @@
 | NFR-007 | Configurable upstream timeout | Backend integration configuration | `backend-integration.test.ts` | Implemented |
 | NFR-008 | Responsive application shell | Frontend architecture | Integration/build baseline | Implemented |
 | NFR-009 | Evidence-first unknown states | Finance/account/intelligence models | Code/documentation review | Implemented |
+| NFR-010 | Internal API contract kept synchronized with backend routes | `docs/api/openapi.yaml` | Contract review against `src/backend/server.ts` | Implemented |
 
 | Req. | Architecture / decision | Implementation | Verification evidence | Status |
 |---|---|---|---|---|
@@ -52,6 +53,7 @@
 | INT-002 | Backend mutation proxy | `src/backend/server.ts` | Apply/action integration tests | Implemented |
 | INT-003 | Controlled upstream errors | Backend request layer | 429 + timeout integration tests | Implemented |
 | INT-004 | QvaPay UUID identity | Operation/finance layers | Operation and finance tests | Implemented |
+| INT-005 | Explicit HTTP API contract | `docs/api/openapi.yaml` | Route-by-route review against `src/backend/server.ts` | Implemented |
 
 ## Baseline limitations
 
