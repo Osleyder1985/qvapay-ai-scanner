@@ -1,13 +1,17 @@
 /**
  * @file dashboard-security.ts
  * @path src/backend/dashboard-security.ts
- * @description Enforces the dashboard deployment trust boundary.
- * @module backend/security
+ * @description Implements dashboard security for QvaPay AI Scanner.
+ * @module backend
  * @status active
  */
-
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "::1", "localhost"]);
 
+/**
+ * Implements the isLoopbackHost operation for this module.
+
+ * @returns The operation result.
+ */
 export function isLoopbackHost(host: string): boolean {
   return LOOPBACK_HOSTS.has(host.trim().toLowerCase());
 }
@@ -15,6 +19,11 @@ export function isLoopbackHost(host: string): boolean {
 /**
  * Prevents the dashboard from being exposed to a network before application
  * authentication/authorization exists.
+ */
+/**
+ * Implements the assertDashboardHostIsSafe operation for this module.
+
+ * @returns The operation result.
  */
 export function assertDashboardHostIsSafe(host: string): void {
   if (!isLoopbackHost(host)) {
