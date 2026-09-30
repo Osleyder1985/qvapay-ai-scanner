@@ -15,6 +15,12 @@ export interface TrendPoint {
   samples: number;
 }
 
+/**
+
+ * Public interface TrendSummary used by the module.
+
+ */
+
 export interface TrendSummary {
   coin: string;
   type: string;
