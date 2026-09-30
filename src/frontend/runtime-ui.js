@@ -127,5 +127,5 @@ async function init(){
   nav();
   void refreshAll();
   setInterval(loadAuto,5000);
-  setInterval(()=>S.active&&loadOperation(S.active),10000);
+  setInterval(async()=>{if(!S.active)return;await loadOperations();if(S.operations.some(o=>String(o.uuid)===String(S.active)))await loadOperation(S.active,null,false)},10000);
 }
