@@ -58,7 +58,7 @@ function drawOffers(){const b=$('offers');if(!b)return;b.innerHTML=S.offers.leng
  * @param id Input used by the operation.
  * @returns The operation result.
  */
-async function applyOffer(id){if(!confirm('Aplicar a esta oferta ahora?'))return;const source=S.offers.find(o=>String(o.uuid??o.id??'')===String(id));try{await api('/api/p2p/'+encodeURIComponent(id)+'/apply',{method:'POST'});const operation=await waitForOperation(id);const fallback=operation||source?{...(operation||source),status:'processing',updated_at:new Date().toISOString()}:null;if(fallback&&!operation)S.operations=[fallback,...S.operations.filter(o=>String(o.uuid)!==String(id))];S.active=id;localStorage.setItem('qvapay.activeOperationId',id);await loadOperation(id,fallback);toast(operation?'Aplicación aceptada por QvaPay':'Aplicación aceptada por QvaPay; sincronizando la operación','success')}catch(e){toast(e.message,'error')}}
+async function applyOffer(id){if(!confirm('Aplicar a esta oferta ahora?'))return;const source=S.offers.find(o=>String(o.uuid??o.id??'')===String(id));try{await api('/api/p2p/'+encodeURIComponent(id)+'/apply',{method:'POST'});const operation=await waitForOperation(id);const fallback=operation||source?{...(operation||source),status:'processing',updated_at:new Date().toISOString()}:null;if(fallback&&!operation)S.operations=[fallback,...S.operations.filter(o=>String(o.uuid)!==String(id))];S.active=id;localStorage.setItem('qvapay.activeOperationId',id);const loaded=await loadOperation(id,fallback);if(loaded){location.hash='#/operations';nav()}toast(operation?'Aplicación aceptada por QvaPay':'Aplicación aceptada por QvaPay; sincronizando la operación','success')}catch(e){toast(e.message,'error')}}
 /**
  * Implements the loadOperation operation for this module.
 
