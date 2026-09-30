@@ -10,7 +10,7 @@ not_found_handling = "single-page-application"
 [[d1_databases]]
 binding = "DB"
 database_name = "qvapay-ai-scanner"
-database_id = "REPLACE_WITH_PRODUCTION_D1_DATABASE_ID"
+database_id = "839d0bc1-6f86-49ff-939a-91dc238783aa"
 migrations_dir = "migrations"
 
 [vars]
