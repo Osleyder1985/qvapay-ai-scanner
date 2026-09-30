@@ -8,6 +8,7 @@ import { summarizeTrends } from "./trend-engine.js";
 import { calculateBaselines } from "./market-baseline.js";
 import { fetchAccountSnapshot } from "./account.js";
 import { calculateFinanceSummary } from "./finance.js";
+import { FinanceLedgerStore } from "./finance-ledger.js";
 
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
@@ -255,6 +256,7 @@ async function fetchOwnP2P(status?: string): Promise<Response> {
 }
 
 const marketHistory = new MarketHistoryStore();
+const financeLedger = new FinanceLedgerStore();
 
 async function collectMarketHistory(): Promise<void> {
   try {
@@ -361,9 +363,11 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       const offers = payload && typeof payload === "object" && Array.isArray((payload as Record<string, unknown>).data)
         ? (payload as Record<string, unknown>).data as unknown[]
         : [];
+      await financeLedger.upsert(offers);
+      const ledger = financeLedger.list();
       sendJson(response, 200, {
-        finance: calculateFinanceSummary(offers),
-        source: { status: "completed", take: 100 }
+        finance: calculateFinanceSummary(ledger),
+        source: { status: "completed", fetched: offers.length, persisted: ledger.length }
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -454,7 +458,7 @@ const server = createServer((request, response) => {
   });
 });
 
-void Promise.all([marketHistory.initialize(), autoApplyEngine.initialize()]).then(() => {
+void Promise.all([marketHistory.initialize(), autoApplyEngine.initialize(), financeLedger.initialize()]).then(() => {
   void collectMarketHistory();
   setInterval(() => { void collectMarketHistory(); }, 60_000);
   server.listen(PORT, HOST, () => {
