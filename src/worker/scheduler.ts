@@ -19,9 +19,9 @@ export interface SchedulerDependencies {
  */
 export function createScheduledHandler(dependencies: SchedulerDependencies) {
   return async (
-    _controller: ScheduledController,
+    _controller: { scheduledTime: number },
     _env: unknown,
-    context: ExecutionContext,
+    context: { waitUntil(promise: Promise<unknown>): void },
   ): Promise<void> => {
     await runScheduledAutoApply(dependencies.executor, {
       waitUntil: (promise) => context.waitUntil(promise),
