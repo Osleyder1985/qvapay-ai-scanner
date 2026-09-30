@@ -11,10 +11,14 @@
     "build": "tsc",
     "start": "node --env-file=config/.env dist/backend/server.js",
     "dev": "npm run build && npm start",
-    "test": "npm run build && node --test dist/tests/*.test.js"
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "lint": "tsc --noEmit",
+    "format:check": "prettier --check \"src/**/*.ts\" \"scripts/**/*.mjs\" \"package.json\" \"tsconfig.json\"",
+    "quality": "npm run lint && npm run format:check && npm test"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "prettier": "^3.9.9"
   }
 }
