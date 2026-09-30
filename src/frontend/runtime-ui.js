@@ -88,7 +88,7 @@ async function loadBaselines(){try{const p=await api('/api/baselines?lookback=24
 
  * @returns The operation result.
  */
-async function refreshAll(){await Promise.all([loadMarket(),loadIntelligence(),loadHistory(),loadTrends(),loadBaselines(),loadAuto(),loadAccount(),loadFinance(),loadOperations()]);if(S.active)await loadOperation(S.active);nav();toast('Scanner sincronizado','success')}
+async function refreshAll(){await Promise.all([loadMarket(),loadHistory(),loadTrends(),loadBaselines(),loadAuto(),loadAccount()]);nav();toast('Scanner sincronizado','success')}
 window.refreshAll=refreshAll;window.refreshMarket=refreshMarket;window.changePage=changePage;window.applyOffer=applyOffer;window.loadOperation=loadOperation;window.loadOperations=loadOperations;window.refreshOperations=refreshOperations;window.selectOperation=selectOperation;window.markOperationPaid=markOperationPaid;window.markOperationReceived=markOperationReceived;window.cancelOperation=cancelOperation;window.rateOperation=rateOperation;window.loadChat=loadChat;window.resetFilters=resetFilters;
 const commands=Object.entries(meta).map(([href,v])=>({href,label:v[1],group:v[0]}));
 /**
@@ -123,7 +123,8 @@ async function init(){
   document.getElementById('commandButton')?.addEventListener('click',openCommands);
   setupCommands();
   addEventListener('hashchange',nav);
-  await refreshAll();
+  nav();
+  void refreshAll();
   setInterval(loadAuto,5000);
   setInterval(()=>S.active&&loadOperation(S.active),10000);
 }
