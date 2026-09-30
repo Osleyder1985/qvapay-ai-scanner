@@ -41,6 +41,7 @@
 | SEC-006 | Central 429 backoff | `src/backend/market-snapshot.ts` | 429 market snapshot test | Implemented |
 | SEC-007 | Sensitive route validation | `src/backend/server.ts` | Backend integration tests | Implemented |
 | SEC-008 | Reproducible dependency security gate | `.github/workflows/security.yml`, `package-lock.json` | Workflow definition | Implemented; GitHub run result not independently observed |
+| SEC-009 | Formal threat model and risk register | `docs/security/threat-model.md`, `docs/security/risk-register.md` | Security review against current trust boundaries and controls | Implemented |
 
 | Req. | Architecture / decision | Implementation | Verification evidence | Status |
 |---|---|---|---|---|
