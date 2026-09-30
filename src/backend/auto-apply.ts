@@ -1,3 +1,10 @@
+/**
+ * @file auto-apply.ts
+ * @path src/backend/auto-apply.ts
+ * @description Implements auto apply for QvaPay AI Scanner.
+ * @module backend
+ * @status active
+ */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
@@ -58,6 +65,11 @@ const APPLY_WINDOW_MS = 60_000;
 const SCAN_INTERVAL_MS = 30_000;
 const VIP_REJECTION_COOLDOWN_MS = 5 * 60_000;
 
+/**
+ * Implements the today operation for this module.
+
+ * @returns The operation result.
+ */
 function today(): string {
   const now = new Date();
   const year = now.getFullYear();
@@ -66,6 +78,11 @@ function today(): string {
   return year + "-" + month + "-" + day;
 }
 
+/**
+ * Implements the asNullablePositiveNumber operation for this module.
+
+ * @returns The operation result.
+ */
 function asNullablePositiveNumber(value: unknown, field: string): number | null {
   if (value === null || value === undefined || value === "") return null;
 
@@ -77,6 +94,11 @@ function asNullablePositiveNumber(value: unknown, field: string): number | null 
   return number;
 }
 
+/**
+ * Implements the asPositiveInteger operation for this module.
+
+ * @returns The operation result.
+ */
 function asPositiveInteger(value: unknown, field: string, minimum = 1): number {
   const number = Number(value);
   if (!Number.isInteger(number) || number < minimum) {
@@ -86,12 +108,22 @@ function asPositiveInteger(value: unknown, field: string, minimum = 1): number {
   return number;
 }
 
+/**
+ * Implements the isVipOnlyOffer operation for this module.
+
+ * @returns The operation result.
+ */
 export function isVipOnlyOffer(offer: Record<string, unknown>): boolean {
   const value = offer.only_vip;
   return value === true || value === 1 ||
     ["true", "1", "yes"].includes(String(value ?? "").trim().toLowerCase());
 }
 
+/**
+ * Implements the normalizeAutoApplyConfig operation for this module.
+
+ * @returns The operation result.
+ */
 export function normalizeAutoApplyConfig(input: unknown): AutoApplyConfig {
   const value = input && typeof input === "object"
     ? input as Record<string, unknown>
