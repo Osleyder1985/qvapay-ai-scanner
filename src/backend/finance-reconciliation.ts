@@ -1,11 +1,10 @@
 /**
  * @file finance-reconciliation.ts
  * @path src/backend/finance-reconciliation.ts
- * @description Paginated reconciliation helper for the authenticated QvaPay P2P history.
- * @module backend/finance
+ * @description Implements finance reconciliation for QvaPay AI Scanner.
+ * @module backend
  * @status active
  */
-
 export interface P2PPage {
   data: Record<string, unknown>[];
   total: number;
@@ -23,6 +22,11 @@ export type FetchCompletedPage = (page: number) => Promise<P2PPage>;
 
 const MAX_PAGES = 1000;
 
+/**
+ * Implements the fetchAllCompletedP2P operation for this module.
+
+ * @returns The operation result.
+ */
 export async function fetchAllCompletedP2P(fetchPage: FetchCompletedPage): Promise<ReconciliationResult> {
   const offers: Record<string, unknown>[] = [];
   let total = 0;
@@ -49,6 +53,11 @@ export async function fetchAllCompletedP2P(fetchPage: FetchCompletedPage): Promi
   };
 }
 
+/**
+ * Implements the reconcileCompletedIds operation for this module.
+
+ * @returns The operation result.
+ */
 export function reconcileCompletedIds(
   remoteOffers: Record<string, unknown>[],
   ledgerEntries: { uuid: string }[],
