@@ -1,3 +1,10 @@
+/**
+ * @file operations.ts
+ * @path src/backend/operations.ts
+ * @description Implements operations for QvaPay AI Scanner.
+ * @module backend
+ * @status active
+ */
 export type OperationRole = "owner" | "peer" | "unknown";
 export type OperationAction = "paid" | "received" | "cancel" | "rate" | "chat";
 
@@ -19,10 +26,22 @@ export interface P2POperation {
   Peer?: OperationParty | null;
 }
 
+/**
+ * Implements the sameId operation for this module.
+ * @param a Input used by the operation.
+ * @param b Input used by the operation.
+ * @returns The operation result.
+ */
 function sameId(a: unknown, b: unknown): boolean {
   return a != null && b != null && String(a) === String(b);
 }
 
+/**
+ * Implements the partyMatchesCurrentUser operation for this module.
+ * @param party Input used by the operation.
+ * @param currentUserId Input used by the operation.
+ * @returns The operation result.
+ */
 function partyMatchesCurrentUser(party: OperationParty | null | undefined, currentUserId: unknown): boolean {
   return Boolean(
     party &&
@@ -30,6 +49,11 @@ function partyMatchesCurrentUser(party: OperationParty | null | undefined, curre
   );
 }
 
+/**
+ * Implements the identifyOperationRole operation for this module.
+ * @param operation Input used by the operation.
+ * @returns The operation result.
+ */
 export function identifyOperationRole(
   operation: P2POperation,
   currentUserId?: string | number | null,
@@ -39,6 +63,12 @@ export function identifyOperationRole(
   return "unknown";
 }
 
+/**
+ * Implements the availableOperationActions operation for this module.
+ * @param operation Input used by the operation.
+ * @param role Input used by the operation.
+ * @returns The operation result.
+ */
 export function availableOperationActions(
   operation: P2POperation,
   role: OperationRole,
@@ -79,6 +109,11 @@ export function availableOperationActions(
   return [...new Set(actions)];
 }
 
+/**
+ * Implements the operationBucket operation for this module.
+ * @param status Input used by the operation.
+ * @returns The operation result.
+ */
 export function operationBucket(status: unknown): string {
   switch (String(status ?? "").toLowerCase()) {
     case "revision": return "revision";
