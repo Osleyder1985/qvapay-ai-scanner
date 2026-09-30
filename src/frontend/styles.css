@@ -9,3 +9,48 @@
 /* Market readability */
 .market-table td:nth-child(3),.market-table td:nth-child(4),.market-table td:nth-child(5),.market-table th:nth-child(3),.market-table th:nth-child(4),.market-table th:nth-child(5){text-align:right}.market-table td:nth-child(3),.market-table td:nth-child(4),.market-table td:nth-child(5){font-size:13px}.market-table th:nth-child(3),.market-table th:nth-child(4),.market-table th:nth-child(5){font-size:10px}
 .coin-analysis-list{display:grid;gap:12px}.coin-analysis{padding:16px;background:#080e19;border:1px solid var(--line);border-radius:12px}.coin-analysis-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.coin-analysis-head h3{font-family:'Space Grotesk';font-size:18px;margin:4px 0 0}.coin-metrics{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}.coin-metrics div{padding:11px;border:1px solid var(--line);border-radius:9px;background:#0b111d}.coin-metrics span,.coin-metrics b{display:block}.coin-metrics span{font-size:9px;color:#68768e}.coin-metrics b{font-family:'Space Grotesk';font-size:14px;margin-top:5px;color:#e7edf7}@media(max-width:720px){.coin-metrics{grid-template-columns:repeat(2,1fr)}.coin-metrics div:last-child{grid-column:1/-1}.market-table td:nth-child(3),.market-table td:nth-child(4),.market-table td:nth-child(5),.market-table th:nth-child(3),.market-table th:nth-child(4),.market-table th:nth-child(5){text-align:right}.market-table td:nth-child(3),.market-table td:nth-child(4),.market-table td:nth-child(5){font-size:12px}}
+
+/* Professional market filters and user identity */
+.market-filters{display:grid;gap:16px}
+.filter-primary,.filter-range{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.market-filters label{display:grid;gap:7px;color:#8a97ab;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.market-filters input,.market-filters select{width:100%;height:44px;background:#080e19;border:1px solid #29364d;border-radius:10px;color:#edf2fb;padding:0 12px;outline:0;font-size:12px}
+.market-filters input::placeholder{color:#4f5d73}
+.market-filters input:focus,.market-filters select:focus{border-color:#6559df;box-shadow:0 0 0 3px rgba(124,108,255,.08)}
+.filter-actions{display:flex;align-items:center;justify-content:space-between;padding-top:2px;border-top:1px solid #182235}
+.filter-actions>div{display:flex;align-items:center;gap:8px}
+.filter-count{font-size:10px;color:#6f7d94;font-weight:700}
+.filter-reset{min-height:34px;padding:0 10px;font-size:10px}
+.filter-actions .button.primary{min-height:40px}
+.market-table th{text-align:center}
+.market-table td:nth-child(3),.market-table td:nth-child(4),.market-table td:nth-child(5){text-align:right}
+.market-table th:nth-child(3),.market-table th:nth-child(4),.market-table th:nth-child(5){text-align:center}
+.user-cell{min-width:150px}
+.user-cell>b{display:flex;align-items:center;gap:6px;font-size:12px}
+.user-icon{font-size:14px;line-height:1}
+.user-cell>small{font-size:9px;color:#64728a}
+.user-badges{display:flex;align-items:center;gap:4px;margin-top:5px}
+.user-badge{display:inline-grid;place-items:center;width:22px;height:22px;border:1px solid #263247;border-radius:7px;background:#0b111d;font-size:12px;cursor:help}
+.user-badge.muted{color:#55637a}
+.rating-value{font-family:'Space Grotesk';font-size:12px;color:#f0f4fb}
+.coin-radar-list{display:grid;gap:14px}
+.coin-radar{padding:18px;background:#080e19;border:1px solid var(--line);border-radius:13px}
+.coin-radar-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.coin-radar-head h3{font-family:'Space Grotesk';font-size:19px;margin:4px 0 0;color:#f0f4fb}
+.coin-radar-stats{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:13px}
+.coin-radar-stats span{padding:5px 8px;border:1px solid #243047;border-radius:7px;color:#8490a4;font-size:9px;background:#0b111d}
+.opportunity-list{display:grid;gap:7px}
+.opportunity-row{display:grid;grid-template-columns:34px 1fr 90px;align-items:center;gap:10px;padding:10px;border:1px solid #1c2739;border-radius:9px;background:#0a101b}
+.opportunity-rank{font-family:'Space Grotesk';font-size:11px;color:#727f94}
+.opportunity-main b,.opportunity-main small{display:block}
+.opportunity-main b{font-size:11px;color:#e8edf7}
+.opportunity-main small{font-size:9px;color:#68768e;margin-top:3px}
+.opportunity-score{position:relative;height:7px;border-radius:99px;background:#111b2a;overflow:hidden}
+.opportunity-score span{display:block;height:100%;background:linear-gradient(90deg,#6559df,#28d7c0);border-radius:99px}
+.opportunity-score b{display:block;text-align:right;font-size:8px;color:#728098;margin-top:4px}
+.coin-analysis{padding:18px}
+.coin-analysis-head h3{font-size:19px;color:#f0f4fb}
+.coin-metrics span{font-size:10px;color:#77849a}
+.coin-metrics b{font-size:15px;color:#edf2fb}
+@media(max-width:900px){.filter-primary,.filter-range{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.filter-primary,.filter-range{grid-template-columns:1fr}.filter-actions{align-items:stretch;flex-direction:column;gap:10px}.filter-actions>div{justify-content:space-between}.filter-actions>.button{width:100%}.user-cell{min-width:130px}.coin-radar-head{align-items:flex-start}.opportunity-row{grid-template-columns:28px 1fr 70px}.coin-analysis{padding:16px}.coin-metrics{grid-template-columns:repeat(2,1fr)}}
