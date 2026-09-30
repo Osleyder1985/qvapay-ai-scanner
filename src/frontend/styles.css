@@ -54,3 +54,9 @@
 .coin-metrics b{font-size:15px;color:#edf2fb}
 @media(max-width:900px){.filter-primary,.filter-range{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:720px){.filter-primary,.filter-range{grid-template-columns:1fr}.filter-actions{align-items:stretch;flex-direction:column;gap:10px}.filter-actions>div{justify-content:space-between}.filter-actions>.button{width:100%}.user-cell{min-width:130px}.coin-radar-head{align-items:flex-start}.opportunity-row{grid-template-columns:28px 1fr 70px}.coin-analysis{padding:16px}.coin-metrics{grid-template-columns:repeat(2,1fr)}}
+
+.coin-history{grid-template-columns:repeat(3,minmax(0,1fr))}
+.coin-history>div{min-width:0}
+.coin-history small{display:block;color:#68768e;font-size:9px;margin-top:6px;line-height:1.4}
+.market-filters select option:disabled{color:#4f5d73}
+@media(max-width:720px){.coin-history{grid-template-columns:1fr}.coin-history>div{grid-column:auto}}
