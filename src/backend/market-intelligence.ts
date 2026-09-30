@@ -16,6 +16,12 @@ export interface MarketOffer {
   User?: { username?: string; rating_avg?: number|string; kyc?: boolean };
 }
 
+/**
+
+ * Public interface OpportunitySignal used by the module.
+
+ */
+
 export interface OpportunitySignal {
   uuid:string;
   type:string;
@@ -26,6 +32,12 @@ export interface OpportunitySignal {
   score:number;
   reasons:string[];
 }
+
+/**
+
+ * Public interface MarketCoinIntelligence used by the module.
+
+ */
 
 export interface MarketCoinIntelligence {
   coin:string;
@@ -41,6 +53,12 @@ export interface MarketCoinIntelligence {
   openCount:number;
   opportunities:OpportunitySignal[];
 }
+
+/**
+
+ * Public interface MarketIntelligence used by the module.
+
+ */
 
 export interface MarketIntelligence {
   sampleSize:number;
