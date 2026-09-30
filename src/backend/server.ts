@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
+
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
   : resolve(process.cwd(), "src/frontend");
@@ -59,7 +60,7 @@ function qvapayHeaders(): Record<string, string> {
     Accept: "application/json",
     "app-id": appId,
     "app-secret": appSecret,
-    "User-Agent": "qvapay-ai-scanner-p2p-dashboard/0.2"
+    "User-Agent": "qvapay-ai-scanner-p2p-dashboard/0.3"
   };
 }
 
@@ -99,17 +100,30 @@ async function fetchP2P(url: URL): Promise<Response> {
   });
 }
 
+async function applyP2POffer(uuid: string): Promise<Response> {
+  const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}/apply`, QVAPAY_API_BASE_URL);
+
+  return fetch(endpoint, {
+    method: "POST",
+    headers: qvapayHeaders(),
+    signal: AbortSignal.timeout(20_000)
+  });
+}
+
+async function readUpstreamPayload(upstream: Response): Promise<unknown> {
+  const text = await upstream.text();
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text ? { message: text } : {};
+  }
+}
+
 async function handleApiP2P(response: ServerResponse, url: URL): Promise<void> {
   try {
     const upstream = await fetchP2P(url);
-    const text = await upstream.text();
-
-    let payload: unknown;
-    try {
-      payload = JSON.parse(text);
-    } catch {
-      payload = { message: text };
-    }
+    const payload = await readUpstreamPayload(upstream);
 
     sendJson(response, upstream.status, upstream.ok
       ? payload
@@ -117,29 +131,71 @@ async function handleApiP2P(response: ServerResponse, url: URL): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
-    if (status === 500) {
-      sendJson(response, status, { error: message });
-    } else {
-      sendJson(response, status, { error: "No se pudo contactar con QvaPay", detail: message });
-    }
+    sendJson(response, status, status === 500
+      ? { error: message }
+      : { error: "No se pudo contactar con QvaPay", detail: message });
+  }
+}
+
+async function handleApiApplyP2P(response: ServerResponse, uuid: string): Promise<void> {
+  if (!uuid || uuid.length > 200) {
+    sendJson(response, 400, { error: "Identificador de oferta inválido." });
+    return;
+  }
+
+  try {
+    const upstream = await applyP2POffer(uuid);
+    const payload = await readUpstreamPayload(upstream);
+
+    sendJson(response, upstream.status, upstream.ok
+      ? { applied: true, offer_uuid: uuid, qvapay: payload }
+      : { error: "No se pudo aplicar a la oferta", detail: payload });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
+    sendJson(response, status, status === 500
+      ? { error: message }
+      : { error: "No se pudo contactar con QvaPay", detail: message });
   }
 }
 
 async function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
-  if (request.method !== "GET") {
-    sendJson(response, 405, { error: "Método no permitido" });
-    return;
-  }
-
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`);
 
-  if (url.pathname === "/api/health") {
+  if (request.method === "GET" && url.pathname === "/api/health") {
     sendJson(response, 200, { ok: true, service: "p2p-market-dashboard" });
     return;
   }
 
-  if (url.pathname === "/api/p2p") {
+  if (request.method === "GET" && url.pathname === "/api/p2p") {
     await handleApiP2P(response, url);
+    return;
+  }
+
+  if (request.method === "POST") {
+    const match = url.pathname.match(/^\/api\/p2p\/([^/]+)\/apply$/);
+    if (match) {
+      const encodedUuid = match[1];
+      if (!encodedUuid) {
+        sendJson(response, 400, { error: "Identificador de oferta inválido." });
+        return;
+      }
+
+      let uuid: string;
+      try {
+        uuid = decodeURIComponent(encodedUuid);
+      } catch {
+        sendJson(response, 400, { error: "Identificador de oferta inválido." });
+        return;
+      }
+
+      await handleApiApplyP2P(response, uuid);
+      return;
+    }
+  }
+
+  if (request.method !== "GET") {
+    sendJson(response, 405, { error: "Método no permitido" });
     return;
   }
 

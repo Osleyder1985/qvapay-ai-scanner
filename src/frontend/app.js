@@ -1,79 +1,14 @@
-const MARKED_STORAGE_KEY = "qvapay-ai-scanner.marked-p2p-offers.v1";
-const state = { page: 1, take: 100, markedOffers: loadMarkedOffers() };
+const state = {
+  page: 1,
+  take: 100,
+  applyingOfferId: null,
+  appliedOfferIds: new Set(),
+};
 
 const $ = (id) => document.getElementById(id);
 
-function loadMarkedOffers() {
-  try {
-    const raw = localStorage.getItem(MARKED_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return new Map(Array.isArray(parsed) ? parsed.map((offer) => [String(offer.id), offer]) : []);
-  } catch {
-    return new Map();
-  }
-}
-
-function persistMarkedOffers() {
-  localStorage.setItem(
-    MARKED_STORAGE_KEY,
-    JSON.stringify([...state.markedOffers.values()])
-  );
-}
-
 function offerId(offer) {
-  return String(offer.id ?? offer.uuid ?? "");
-}
-
-function toggleMarkedOffer(offer) {
-  const id = offerId(offer);
-  if (!id) {
-    $("status").textContent = "⚠️ La oferta no tiene un identificador disponible para marcarla.";
-    return;
-  }
-
-  if (state.markedOffers.has(id)) {
-    state.markedOffers.delete(id);
-    $("status").textContent = "Oferta desmarcada.";
-  } else {
-    state.markedOffers.set(id, offer);
-    $("status").textContent = "⭐ Oferta marcada para seguimiento.";
-  }
-
-  persistMarkedOffers();
-  renderMarkedOffers();
-  renderOffers(window.currentOffersPayload);
-}
-
-function renderMarkedOffers() {
-  const container = $("markedOffers");
-  container.innerHTML = "";
-
-  if (!state.markedOffers.size) {
-    container.innerHTML = '<p class="marked-empty">No tienes ofertas marcadas.</p>';
-    return;
-  }
-
-  for (const offer of state.markedOffers.values()) {
-    const user = offer.User || {};
-    const currentRate = rate(offer);
-    const item = document.createElement("div");
-    item.className = "marked-item";
-    item.innerHTML =
-      '<div><strong>' + escapeHtml(user.username || user.name || "—") + "</strong>" +
-      "<span>" + escapeHtml(offer.type) + " · " + escapeHtml(offer.coin) + "</span>" +
-      "<span>Tasa: " + (currentRate === null ? "—" : number(currentRate, 4)) + "</span></div>" +
-      '<button class="secondary unmark-button" type="button">Quitar</button>';
-
-    item.querySelector(".unmark-button").addEventListener("click", () => {
-      state.markedOffers.delete(offerId(offer));
-      persistMarkedOffers();
-      renderMarkedOffers();
-      renderOffers(window.currentOffersPayload);
-      $("status").textContent = "Oferta desmarcada.";
-    });
-
-    container.appendChild(item);
-  }
+  return String(offer.uuid ?? offer.id ?? "");
 }
 
 function escapeHtml(value) {
@@ -111,6 +46,102 @@ function verification(user) {
     : '<span class="unverified">—</span>';
 }
 
+function describeQvaPayError(payload) {
+  const detail = payload?.detail;
+
+  if (typeof detail === "string" && detail) {
+    return detail;
+  }
+
+  if (detail && typeof detail === "object") {
+    const candidates = [
+      detail.message,
+      detail.error,
+      detail.detail,
+      detail.reason,
+    ];
+
+    const message = candidates.find(
+      (value) => typeof value === "string" && value.trim()
+    );
+
+    if (message) return message;
+  }
+
+  return payload?.error || "QvaPay rechazó la aplicación.";
+}
+
+async function applyToOffer(offer) {
+  const uuid = offerId(offer);
+  if (!uuid) {
+    $("status").textContent = "⚠️ La oferta no tiene UUID disponible.";
+    return;
+  }
+
+  if (state.applyingOfferId) return;
+
+  const user = offer.User || {};
+  const type = String(offer.type || "").toLowerCase();
+  const amount = number(offer.amount);
+  const receive = number(offer.receive);
+  const coin = String(offer.coin || "—");
+  const username = String(user.username || user.name || "—");
+
+  let warning =
+    "QvaPay asignará esta oferta a tu cuenta si la operación es aceptada.\n\n" +
+    "Oferta: " + username + "\n" +
+    "Tipo: " + type.toUpperCase() + "\n" +
+    "Moneda: " + coin + "\n" +
+    "Monto: " + amount + "\n" +
+    "Recibe: " + receive;
+
+  if (type === "buy") {
+    warning +=
+      "\n\n⚠️ Según la API de QvaPay, al aplicar a una oferta BUY " +
+      "puede descontarse automáticamente de tu saldo el monto de garantía.";
+  }
+
+  warning += "\n\n¿Quieres aplicar a esta oferta ahora?";
+
+  if (!window.confirm(warning)) {
+    $("status").textContent = "Aplicación cancelada.";
+    return;
+  }
+
+  state.applyingOfferId = uuid;
+  renderOffers(window.currentOffersPayload);
+  $("status").textContent = "Aplicando a la oferta en QvaPay…";
+
+  try {
+    const response = await fetch(
+      "/api/p2p/" + encodeURIComponent(uuid) + "/apply",
+      {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      }
+    );
+
+    const payload = await response.json();
+
+    if (!response.ok) {
+      throw new Error(describeQvaPayError(payload));
+    }
+
+    state.appliedOfferIds.add(uuid);
+    $("status").textContent =
+      "✅ Aplicación aceptada por QvaPay. La oferta queda asignada a tu operación.";
+    await loadOffers(false);
+  } catch (error) {
+    $("status").textContent =
+      "⚠️ " + (error instanceof Error ? error.message : String(error));
+    renderOffers(window.currentOffersPayload);
+  } finally {
+    state.applyingOfferId = null;
+    renderOffers(window.currentOffersPayload);
+  }
+}
+
 function renderOffers(data) {
   window.currentOffersPayload = data;
   const tbody = $("offers");
@@ -126,12 +157,21 @@ function renderOffers(data) {
   for (const offer of offers) {
     const user = offer.User || {};
     const currentRate = rate(offer);
+    const id = offerId(offer);
+    const applied = state.appliedOfferIds.has(id);
+    const applying = state.applyingOfferId === id;
     const tr = document.createElement("tr");
 
     const range =
       offer.order_min == null && offer.order_max == null
         ? "—"
         : number(offer.order_min) + " – " + number(offer.order_max);
+
+    const actionLabel = applied
+      ? "✓ Aplicada"
+      : applying
+        ? "Aplicando…"
+        : "Aplicar a esta oferta";
 
     tr.innerHTML =
       '<td><span class="badge ' +
@@ -174,13 +214,24 @@ function renderOffers(data) {
         0
       ) +
       "</td>" +
-      '<td><button class="mark-button secondary" type="button" data-offer-id="' +
-      escapeHtml(offerId(offer)) +
-      '">' +
-      (state.markedOffers.has(offerId(offer)) ? "★ Marcada" : "☆ Marcar") +
+      "<td>" +
+      verification(user) +
+      "</td>" +
+      '<td><button class="apply-button secondary" type="button" data-offer-id="' +
+      escapeHtml(id) +
+      '"' +
+      (applied || applying || !id ? " disabled" : "") +
+      ">" +
+      actionLabel +
       "</button></td>";
 
-    tr.querySelector(".mark-button").addEventListener("click", () => toggleMarkedOffer(offer));
+    const applyButton = tr.querySelector(".apply-button");
+    if (applyButton && !applied && !applying) {
+      applyButton.addEventListener("click", () => {
+        void applyToOffer(offer);
+      });
+    }
+
     tbody.appendChild(tr);
   }
 }
@@ -218,8 +269,8 @@ function queryString() {
   return params;
 }
 
-async function loadOffers() {
-  $("status").textContent = "Consultando mercado…";
+async function loadOffers(updateStatus = true) {
+  if (updateStatus) $("status").textContent = "Consultando mercado…";
   $("refreshButton").disabled = true;
 
   try {
@@ -247,7 +298,7 @@ async function loadOffers() {
     $("previousButton").disabled = state.page <= 1;
     $("nextButton").disabled = state.page >= lastPage;
     $("updatedAt").textContent = new Date().toLocaleTimeString("es-ES");
-    $("status").textContent = "Mercado actualizado.";
+    if (updateStatus) $("status").textContent = "Mercado actualizado.";
   } catch (error) {
     $("status").textContent =
       "⚠️ " + (error instanceof Error ? error.message : String(error));
@@ -261,26 +312,27 @@ async function loadOffers() {
 );
 
 syncBestRateOption();
-renderMarkedOffers();
 
 $("filters").addEventListener("submit", (event) => {
   event.preventDefault();
   state.page = 1;
-  loadOffers();
+  void loadOffers();
 });
 
-$("refreshButton").addEventListener("click", loadOffers);
+$("refreshButton").addEventListener("click", () => {
+  void loadOffers();
+});
 
 $("previousButton").addEventListener("click", () => {
   if (state.page > 1) {
     state.page--;
-    loadOffers();
+    void loadOffers();
   }
 });
 
 $("nextButton").addEventListener("click", () => {
   state.page++;
-  loadOffers();
+  void loadOffers();
 });
 
-loadOffers();
+void loadOffers();

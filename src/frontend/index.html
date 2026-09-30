@@ -11,7 +11,7 @@
     <div>
       <p class="eyebrow">QvaPay AI Scanner</p>
       <h1>P2P Market Dashboard</h1>
-      <p class="subtitle">Observación del mercado · solo lectura</p>
+      <p class="subtitle">Observación del mercado · aplicación P2P manual confirmada</p>
     </div>
     <button id="refreshButton" class="primary">↻ Actualizar</button>
   </header>
@@ -24,7 +24,7 @@
     <section class="panel">
       <div class="panel-title">
         <h2>Filtros del mercado</h2>
-        <p>Consulta de solo lectura sobre <code>GET /p2p</code>.</p>
+        <p>Consulta sobre <code>GET /p2p</code>. La aplicación a una oferta es una operación independiente y requiere confirmación.</p>
       </div>
       <form id="filters" class="filters">
         <label>Tipo
@@ -45,13 +45,6 @@
         <button class="secondary" type="submit">Aplicar filtros</button>
       </form>
     </section>
-    <section class="panel marked-panel">
-      <div class="panel-title">
-        <h2>⭐ Mis ofertas marcadas</h2>
-        <p>Ofertas que seleccionaste para darles seguimiento. La marca se conserva en este navegador.</p>
-      </div>
-      <div id="markedOffers" class="marked-offers"></div>
-    </section>
     <section class="panel">
       <div id="status" class="status" role="status"></div>
       <div class="table-wrap">
@@ -59,7 +52,7 @@
           <thead><tr>
             <th>Tipo</th><th>Moneda</th><th>Tasa</th><th>QUSD</th><th>Recibe</th>
             <th>Disponible</th><th>Oferta</th><th>Usuario</th><th>Rating</th>
-            <th>Operaciones</th><th>Verificaciones</th><th>Marca</th>
+            <th>Operaciones</th><th>Verificaciones</th><th>Acción</th>
           </tr></thead>
           <tbody id="offers"></tbody>
         </table>
