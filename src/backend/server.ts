@@ -11,6 +11,7 @@ import { calculateFinanceSummary } from "./finance.js";
 import { FinanceLedgerStore } from "./finance-ledger.js";
 import { assertDashboardHostIsSafe } from "./dashboard-security.js";
 import { MarketSnapshotService } from "./market-snapshot.js";
+import { fetchAllCompletedP2P, reconcileCompletedIds } from "./finance-reconciliation.js";
 
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
@@ -377,6 +378,9 @@ async function handleApiOperationAction(
 
     const upstream = await fetchP2PAction(uuid, action, method, body);
     const payload = await readUpstreamPayload(upstream);
+    if (upstream.ok && action === "received") {
+      await financeLedger.recordSettlement(uuid, payload);
+    }
     sendJson(response, upstream.status, upstream.ok
       ? { ok: true, action, offer_uuid: uuid, qvapay: payload }
       : { error: "QvaPay API error", detail: payload });
@@ -415,6 +419,29 @@ async function fetchOwnP2P(status?: string): Promise<Response> {
   const query = new URLSearchParams({ my: "1", take: "100", orderBy: "updated_at", orderType: "desc" });
   if (status) query.set("status", status);
   return fetchP2P(new URL("/p2p?" + query.toString(), "http://127.0.0.1"));
+}
+
+async function fetchCompletedPage(page: number): Promise<{ data: Record<string, unknown>[]; total: number; perPage: number }> {
+  const query = new URLSearchParams({
+    my: "1",
+    status: "completed",
+    take: "100",
+    page: String(page),
+    orderBy: "updated_at",
+    orderType: "asc",
+  });
+  const upstream = await fetchP2P(new URL("/p2p?" + query.toString(), "http://127.0.0.1"));
+  const payload = await readUpstreamPayload(upstream);
+  if (!upstream.ok) throw new Error(JSON.stringify(payload));
+  const record = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
+  const data = Array.isArray(record.data)
+    ? record.data.filter((value): value is Record<string, unknown> => Boolean(value) && typeof value === "object")
+    : [];
+  return {
+    data,
+    total: Number(record.total ?? data.length),
+    perPage: Number(record.per_page ?? data.length ?? 100),
+  };
 }
 
 const marketHistory = new MarketHistoryStore();
@@ -526,20 +553,28 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
 
   if (request.method === "GET" && url.pathname === "/api/finance") {
     try {
-      const upstream = await fetchOwnP2P("completed");
-      const payload = await readUpstreamPayload(upstream);
-      if (!upstream.ok) {
-        sendJson(response, upstream.status, { error: "QvaPay API error", detail: payload });
-        return;
-      }
-      const offers = payload && typeof payload === "object" && Array.isArray((payload as Record<string, unknown>).data)
-        ? (payload as Record<string, unknown>).data as unknown[]
-        : [];
-      await financeLedger.upsert(offers);
+      const remote = await fetchAllCompletedP2P(fetchCompletedPage);
+      await financeLedger.upsert(remote.offers);
       const ledger = financeLedger.list();
+      const reconciliation = reconcileCompletedIds(remote.offers, ledger);
+      const knownFees = ledger.filter((entry) => entry.feeSource === "qvapay_received");
+      const feeQusd = knownFees.reduce((sum, entry) => sum + (entry.feeQusd ?? 0), 0);
       sendJson(response, 200, {
         finance: calculateFinanceSummary(ledger),
-        source: { status: "completed", fetched: offers.length, persisted: ledger.length }
+        fees: {
+          knownQusd: feeQusd,
+          knownOperations: knownFees.length,
+          unknownOperations: ledger.length - knownFees.length,
+        },
+        source: {
+          status: "completed",
+          fetched: remote.offers.length,
+          remoteTotal: remote.total,
+          pagesFetched: remote.pagesFetched,
+          truncated: remote.truncated,
+          persisted: ledger.length,
+        },
+        reconciliation,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
