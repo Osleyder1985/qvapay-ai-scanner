@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
+import { AutoApplyEngine } from "./auto-apply.js";
 
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
@@ -12,7 +13,7 @@ const PORT = Number(process.env.DASHBOARD_PORT ?? "8080");
 
 const allowedQueryParameters = new Set([
   "page", "take", "type", "coin", "orderBy", "orderType",
-  "min", "max", "ratio_min", "ratio_max", "only_vip"
+  "min", "max", "ratio_min", "ratio_max", "only_vip", "my", "status"
 ]);
 
 function sendJson(response: ServerResponse, status: number, payload: unknown): void {
@@ -60,7 +61,7 @@ function qvapayHeaders(): Record<string, string> {
     Accept: "application/json",
     "app-id": appId,
     "app-secret": appSecret,
-    "User-Agent": "qvapay-ai-scanner-p2p-dashboard/0.3"
+    "User-Agent": "qvapay-ai-scanner-p2p-dashboard/0.4"
   };
 }
 
@@ -130,6 +131,29 @@ async function readUpstreamPayload(upstream: Response): Promise<unknown> {
   }
 }
 
+async function readJsonBody(request: IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.length;
+    if (size > 1_000_000) {
+      throw new Error("Cuerpo de solicitud demasiado grande.");
+    }
+    chunks.push(buffer);
+  }
+
+  const text = Buffer.concat(chunks).toString("utf8");
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("JSON inválido.");
+  }
+}
+
 async function handleApiP2P(response: ServerResponse, url: URL): Promise<void> {
   try {
     const upstream = await fetchP2P(url);
@@ -191,11 +215,45 @@ async function handleApiApplyP2P(response: ServerResponse, uuid: string): Promis
   }
 }
 
+const autoApplyEngine = new AutoApplyEngine({
+  fetchMarket: (params) => fetchP2P(new URL("/p2p?" + params.toString(), "http://127.0.0.1")),
+  applyOffer: applyP2POffer,
+  fetchOwnProcessing: () => fetchP2P(new URL("/p2p?my=1&status=processing&take=100", "http://127.0.0.1")),
+  readPayload: readUpstreamPayload,
+});
+
+async function handleAutoApplyConfig(response: ServerResponse, method: string, request: IncomingMessage): Promise<void> {
+  try {
+    if (method === "GET") {
+      sendJson(response, 200, { config: autoApplyEngine.getConfig() });
+      return;
+    }
+
+    const body = await readJsonBody(request);
+    const config = await autoApplyEngine.updateConfig(body);
+    sendJson(response, 200, { config });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    sendJson(response, 400, { error: message });
+  }
+}
+
 async function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`);
 
   if (request.method === "GET" && url.pathname === "/api/health") {
     sendJson(response, 200, { ok: true, service: "p2p-market-dashboard" });
+    return;
+  }
+
+  if (url.pathname === "/api/auto-apply/config" &&
+      (request.method === "GET" || request.method === "PUT" || request.method === "PATCH")) {
+    await handleAutoApplyConfig(response, request.method, request);
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/auto-apply/status") {
+    sendJson(response, 200, { status: autoApplyEngine.getStatus() });
     return;
   }
 
@@ -276,6 +334,11 @@ const server = createServer((request, response) => {
   });
 });
 
-server.listen(PORT, HOST, () => {
-  console.log(`QvaPay P2P Dashboard: http://${HOST}:${PORT}`);
+void autoApplyEngine.initialize().then(() => {
+  server.listen(PORT, HOST, () => {
+    console.log(`QvaPay P2P Dashboard: http://${HOST}:${PORT}`);
+  });
+}).catch((error: unknown) => {
+  console.error("No se pudo inicializar Auto-Apply:", error);
+  process.exitCode = 1;
 });

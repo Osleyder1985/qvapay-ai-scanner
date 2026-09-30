@@ -1,0 +1,11 @@
+{
+  "enabled": false,
+  "type": "sell",
+  "coin": "",
+  "rateMin": null,
+  "rateMax": null,
+  "amountMin": null,
+  "amountMax": null,
+  "dailyMaxQusd": null,
+  "maxConcurrent": 1
+}

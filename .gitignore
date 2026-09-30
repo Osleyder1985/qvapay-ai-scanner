@@ -32,3 +32,5 @@ htmlcov/
 *.sqlite
 *.db
 /tmp/
+
+data/auto-apply.json

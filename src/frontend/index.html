@@ -11,7 +11,7 @@
     <div>
       <p class="eyebrow">QvaPay AI Scanner</p>
       <h1>P2P Market Dashboard</h1>
-      <p class="subtitle">Observación del mercado · aplicación P2P manual confirmada</p>
+      <p class="subtitle">Observación del mercado · aplicación P2P manual y Auto-Apply configurable</p>
     </div>
     <button id="refreshButton" class="primary">↻ Actualizar</button>
   </header>
@@ -24,7 +24,7 @@
     <section class="panel">
       <div class="panel-title">
         <h2>Filtros del mercado</h2>
-        <p>Consulta sobre <code>GET /p2p</code>. La aplicación a una oferta es una operación independiente y requiere confirmación.</p>
+        <p>Consulta sobre <code>GET /p2p</code>. La aplicación manual a una oferta es una operación independiente.</p>
       </div>
       <form id="filters" class="filters">
         <label>Tipo
@@ -45,10 +45,40 @@
         <button class="secondary" type="submit">Aplicar filtros</button>
       </form>
     </section>
+    <section class="panel auto-apply-panel">
+      <div class="panel-title">
+        <h2>🤖 Auto-Apply P2P</h2>
+        <p>Configura las reglas que el backend utilizará para aplicar automáticamente a ofertas P2P. Está desactivado por defecto.</p>
+      </div>
+      <form id="autoApplyForm" class="auto-apply-form">
+        <label class="toggle-field">Estado
+          <span class="toggle-row"><input id="autoApplyEnabled" type="checkbox"><strong>Activar Auto-Apply</strong></span>
+        </label>
+        <label>Tipo
+          <select id="autoApplyType"><option value="sell">Sell</option><option value="buy">Buy</option></select>
+        </label>
+        <label>Moneda <input id="autoApplyCoin" placeholder="Vacío = cualquier moneda"></label>
+        <label>Tasa mínima <input id="autoApplyRateMin" type="number" step="any" min="0" placeholder="Sin mínimo"></label>
+        <label>Tasa máxima <input id="autoApplyRateMax" type="number" step="any" min="0" placeholder="Sin máximo"></label>
+        <label>Monto mínimo (QUSD) <input id="autoApplyAmountMin" type="number" step="any" min="0" placeholder="Sin mínimo"></label>
+        <label>Monto máximo (QUSD) <input id="autoApplyAmountMax" type="number" step="any" min="0" placeholder="Sin máximo"></label>
+        <label>Máximo diario (QUSD) <input id="autoApplyDailyMax" type="number" step="any" min="0" placeholder="Sin máximo"></label>
+        <label>Máx. simultáneas <input id="autoApplyConcurrent" type="number" step="1" min="1" value="1"></label>
+        <button id="autoApplySaveButton" class="primary" type="submit">Guardar configuración</button>
+      </form>
+      <div class="auto-apply-runtime">
+        <div><span>Motor</span><strong id="autoApplyRuntimeState">—</strong></div>
+        <div><span>Aplicado hoy</span><strong id="autoApplyDailyValue">—</strong></div>
+        <div><span>Último escaneo</span><strong id="autoApplyLastScan">—</strong></div>
+        <div><span>Última acción</span><strong id="autoApplyLastAction">—</strong></div>
+      </div>
+      <p id="autoApplyMessage" class="auto-apply-message">—</p>
+      <p id="autoApplyConfigStatus" class="status">—</p>
+    </section>
     <section id="operationPanel" class="panel operation-panel" hidden>
       <div class="panel-title">
         <h2>🔄 Operación activa</h2>
-        <p>Estado consultado directamente desde QvaPay. Las acciones de pago, recepción y cancelación se habilitarán en una fase posterior.</p>
+        <p>Estado consultado desde QvaPay. Las acciones posteriores se habilitarán en una fase posterior.</p>
       </div>
       <div id="operationDetails" class="operation-details"></div>
       <div class="operation-actions">
