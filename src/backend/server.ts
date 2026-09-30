@@ -9,6 +9,7 @@ import { calculateBaselines } from "./market-baseline.js";
 import { fetchAccountSnapshot } from "./account.js";
 import { calculateFinanceSummary } from "./finance.js";
 import { FinanceLedgerStore } from "./finance-ledger.js";
+import { assertDashboardHostIsSafe } from "./dashboard-security.js";
 
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
@@ -17,6 +18,9 @@ const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
 const QVAPAY_API_BASE_URL = (process.env.QVAPAY_API_BASE_URL ?? "https://api.qvapay.com").replace(/\/$/, "");
 const HOST = process.env.DASHBOARD_HOST ?? "127.0.0.1";
 const PORT = Number(process.env.DASHBOARD_PORT ?? "8080");
+
+// The dashboard exposes QvaPay operations. Keep the current trust boundary local-only.
+assertDashboardHostIsSafe(HOST);
 
 const allowedQueryParameters = new Set([
   "page", "take", "type", "coin", "orderBy", "orderType",
