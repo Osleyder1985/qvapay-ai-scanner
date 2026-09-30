@@ -35,3 +35,9 @@ htmlcov/
 
 data/auto-apply.json
 data/finance-ledger.json
+
+# Build artifacts
+dist/
+
+# Local runtime market history
+data/market-history.json
