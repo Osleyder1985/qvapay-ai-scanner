@@ -35,7 +35,7 @@ export class FinanceLedgerStore {
       const parsed: unknown = JSON.parse(raw);
       if (Array.isArray(parsed)) {
         for (const item of parsed) {
-          if (this.isEntry(item)) this.entries.set(item.uuid, item);
+          if (this.isEntry(item)) this.entries.set(item.uuid, this.normalizeLoaded(item));
         }
       }
     } catch (error) {
@@ -87,6 +87,16 @@ export class FinanceLedgerStore {
 
   list(): FinanceLedgerEntry[] {
     return [...this.entries.values()].sort((a, b) => Date.parse(a.updatedAt) - Date.parse(b.updatedAt));
+  }
+
+  private normalizeLoaded(value: FinanceLedgerEntry): FinanceLedgerEntry {
+    return {
+      ...value,
+      grossAmountQusd: Number.isFinite(value.grossAmountQusd) ? value.grossAmountQusd : value.amount,
+      feeQusd: Number.isFinite(value.feeQusd) ? value.feeQusd : null,
+      netAmountQusd: Number.isFinite(value.netAmountQusd) ? value.netAmountQusd : null,
+      feeSource: value.feeSource === "qvapay_received" ? "qvapay_received" : "unknown",
+    };
   }
 
   private normalize(value: unknown): FinanceLedgerEntry | null {
