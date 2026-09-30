@@ -41,3 +41,5 @@ dist/
 
 # Local runtime market history
 data/market-history.json
+
+data/operations-ledger.json
