@@ -88,13 +88,12 @@ function dependencies(overrides: Record<string, unknown> = {}) {
         headers: new Headers(),
       },
     applyP2POffer: async (): Promise<QvaPayHttpResult> => {
-      const response =
-        (overrides.apply as QvaPayHttpResult | undefined) ?? {
-          status: 200,
-          ok: true,
-          payload: { message: "accepted" },
-          headers: new Headers(),
-        };
+      const response = (overrides.apply as QvaPayHttpResult | undefined) ?? {
+        status: 200,
+        ok: true,
+        payload: { message: "accepted" },
+        headers: new Headers(),
+      };
       if (response.ok) applied += 100;
       return response;
     },
