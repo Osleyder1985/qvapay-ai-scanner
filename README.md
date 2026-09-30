@@ -41,4 +41,4 @@ Los nombres de archivos, directorios, ramas, etiquetas, Issues y Pull Requests s
 
 ## Estado
 
-El proyecto se encuentra en fase de fundación e investigación.
+El proyecto se encuentra en fase de saneamiento y validación: la baseline de ingeniería ya está implementada y el checkpoint pendiente es la aceptación contra QvaPay real antes de ampliar automatización financiera.
