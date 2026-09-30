@@ -22,8 +22,10 @@ function createDb(rows: Record<string, unknown>[] = []): WorkerEnv["DB"] {
         },
         async first<T>() {
           if (sql.includes("SELECT 1")) return { ok: 1 } as T;
-          if (sql.includes("auto_apply_config")) return (rows[0] ?? null) as T | null;
-          if (sql.includes("auto_apply_state")) return (rows[1] ?? null) as T | null;
+          if (sql.includes("auto_apply_config"))
+            return (rows[0] ?? null) as T | null;
+          if (sql.includes("auto_apply_state"))
+            return (rows[1] ?? null) as T | null;
           return (rows[0] ?? null) as T | null;
         },
         async all<T>() {
