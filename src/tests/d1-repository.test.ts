@@ -57,36 +57,78 @@ class FakeD1 implements D1DatabaseLike {
 
     if (sql.includes("INSERT INTO p2p_operations")) {
       const [
-        uuid, type, status, amount, receive, currentUserId,
-        userUuid, userId, userUsername, userName,
-        peerUuid, peerId, peerUsername, peerName,
-        recordedAt, lastSeenAt, rawJson,
+        uuid,
+        type,
+        status,
+        amount,
+        receive,
+        currentUserId,
+        userUuid,
+        userId,
+        userUsername,
+        userName,
+        peerUuid,
+        peerId,
+        peerUsername,
+        peerName,
+        recordedAt,
+        lastSeenAt,
+        rawJson,
       ] = values;
       const previous = this.operations.get(String(uuid));
       this.operations.set(String(uuid), {
-        uuid, type, status, amount, receive, currentUserId,
-        userUuid, userId, userUsername, userName,
-        peerUuid, peerId, peerUsername, peerName,
-        recordedAt: previous?.recordedAt ?? recordedAt,
-        lastSeenAt, rawJson,
+        uuid,
+        type,
+        status,
+        amount,
+        receive,
+        current_user_id: currentUserId,
+        user_uuid: userUuid,
+        user_id: userId,
+        user_username: userUsername,
+        user_name: userName,
+        peer_uuid: peerUuid,
+        peer_id: peerId,
+        peer_username: peerUsername,
+        peer_name: peerName,
+        recorded_at: previous?.recorded_at ?? recordedAt,
+        last_seen_at: lastSeenAt,
+        raw_json: rawJson,
       });
       return;
     }
 
     if (sql.includes("INSERT INTO finance_ledger")) {
       const [
-        uuid, type, coin, amount, receive, createdAt, updatedAt, recordedAt,
-        gross, fee, net, feeSource,
+        uuid,
+        type,
+        coin,
+        amount,
+        receive,
+        createdAt,
+        updatedAt,
+        recordedAt,
+        gross,
+        fee,
+        net,
+        feeSource,
       ] = values;
       const previous = this.finance.get(String(uuid));
-      const confirmed = previous?.feeSource === "qvapay_received";
+      const confirmed = previous?.fee_source === "qvapay_received";
       this.finance.set(String(uuid), {
-        uuid, status: "completed", type, coin, amount, receive,
-        createdAt, updatedAt, recordedAt,
-        grossAmountQusd: confirmed ? previous?.grossAmountQusd : gross,
-        feeQusd: confirmed ? previous?.feeQusd : fee,
-        netAmountQusd: confirmed ? previous?.netAmountQusd : net,
-        feeSource: confirmed ? previous?.feeSource : feeSource,
+        uuid,
+        status: "completed",
+        type,
+        coin,
+        amount,
+        receive,
+        created_at: createdAt,
+        updated_at: updatedAt,
+        recorded_at: recordedAt,
+        gross_amount_qusd: confirmed ? previous?.gross_amount_qusd : gross,
+        fee_qusd: confirmed ? previous?.fee_qusd : fee,
+        net_amount_qusd: confirmed ? previous?.net_amount_qusd : net,
+        fee_source: confirmed ? previous?.fee_source : feeSource,
       });
       return;
     }
@@ -109,7 +151,7 @@ class FakeD1 implements D1DatabaseLike {
     return null;
   }
 
-  all<T>(): T[] {
+  all<T>(sql: string, values: unknown[]): T[] {
     return [...this.operations.values()] as T[];
   }
 }
@@ -124,7 +166,9 @@ const operation = (status: string): P2POperation => ({
   User: { uuid: "user-1", username: "owner" },
 });
 
-const finance = (feeSource: "unknown" | "qvapay_received"): FinanceLedgerEntry => ({
+const finance = (
+  feeSource: "unknown" | "qvapay_received",
+): FinanceLedgerEntry => ({
   uuid: "op-1",
   status: "completed",
   type: "sell",
@@ -144,15 +188,21 @@ test("D1 operations upsert is idempotent and preserves recordedAt", async () => 
   const db = new FakeD1();
   const repo = new D1Repository(db);
 
-  await repo.upsertOperations([operation("processing")], "2026-09-30T12:00:00.000Z");
+  await repo.upsertOperations(
+    [operation("processing")],
+    "2026-09-30T12:00:00.000Z",
+  );
   const first = await repo.getOperation("op-1");
-  await repo.upsertOperations([operation("completed")], "2026-09-30T13:00:00.000Z");
+  await repo.upsertOperations(
+    [operation("completed")],
+    "2026-09-30T13:00:00.000Z",
+  );
   const second = await repo.getOperation("op-1");
 
   assert.ok(first);
   assert.ok(second);
-  assert.equal(first.recordedAt, "2026-09-30T12:00:00.000Z");
-  assert.equal(second?.recordedAt, first.recordedAt);
+  assert.equal(first.recorded_at, "2026-09-30T12:00:00.000Z");
+  assert.equal(second?.recorded_at, first.recorded_at);
   assert.equal(second?.status, "completed");
   assert.equal(db.operations.size, 1);
 });
@@ -171,9 +221,9 @@ test("D1 finance upsert preserves a previously confirmed fee", async () => {
   await repo.upsertFinance([updated]);
 
   const row = await repo.getFinance("op-1");
-  assert.equal(row?.feeSource, "qvapay_received");
-  assert.equal(row?.feeQusd, 0.1);
-  assert.equal(row?.netAmountQusd, 9.9);
+  assert.equal(row?.fee_source, "qvapay_received");
+  assert.equal(row?.fee_qusd, 0.1);
+  assert.equal(row?.net_amount_qusd, 9.9);
 });
 
 test("D1 applied-offer idempotency does not duplicate an offer", async () => {
@@ -184,5 +234,8 @@ test("D1 applied-offer idempotency does not duplicate an offer", async () => {
   await repo.recordAppliedOffer("offer-1", "2026-09-30T12:01:00.000Z", 10);
 
   assert.equal(db.applied.size, 1);
-  assert.equal(db.applied.get("offer-1")?.appliedAt, "2026-09-30T12:00:00.000Z");
+  assert.equal(
+    db.applied.get("offer-1")?.appliedAt,
+    "2026-09-30T12:00:00.000Z",
+  );
 });
