@@ -124,37 +124,6 @@ function autoApplyStateFromRow(row: D1AutoApplyStateRow) {
   };
 }
 
-    if (
-      request.method === "GET" &&
-      url.pathname === "/api/cloudflare/d1/auto-apply"
-    ) {
-      if (!authorized(request, env)) {
-        return json({ error: "No autorizado" }, 401);
-      }
-
-      try {
-        const repository = new D1Repository(env.DB);
-        const [config, state] = await Promise.all([
-          repository.getAutoApplyConfig(),
-          repository.getAutoApplyState(),
-        ]);
-
-        return json({
-          config: config ? autoApplyConfigFromRow(config) : null,
-          state: state ? autoApplyStateFromRow(state) : null,
-          source: {
-            runtime: "cloudflare-worker",
-            persistence: "d1",
-          },
-        });
-      } catch {
-        return json(
-          { error: "No se pudo leer el estado de Auto-Apply desde D1" },
-          503,
-        );
-      }
-    }
-
 const handler: WorkerHandler = {
   async fetch(request, env): Promise<Response> {
     const url = new URL(request.url);
@@ -268,6 +237,37 @@ const handler: WorkerHandler = {
       } catch {
         return json(
           { error: "No se pudo leer el ledger financiero desde D1" },
+          503,
+        );
+      }
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/cloudflare/d1/auto-apply"
+    ) {
+      if (!authorized(request, env)) {
+        return json({ error: "No autorizado" }, 401);
+      }
+
+      try {
+        const repository = new D1Repository(env.DB);
+        const [config, state] = await Promise.all([
+          repository.getAutoApplyConfig(),
+          repository.getAutoApplyState(),
+        ]);
+
+        return json({
+          config: config ? autoApplyConfigFromRow(config) : null,
+          state: state ? autoApplyStateFromRow(state) : null,
+          source: {
+            runtime: "cloudflare-worker",
+            persistence: "d1",
+          },
+        });
+      } catch {
+        return json(
+          { error: "No se pudo leer el estado de Auto-Apply desde D1" },
           503,
         );
       }
