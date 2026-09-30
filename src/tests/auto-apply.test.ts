@@ -47,6 +47,9 @@ test("Auto-Apply never sends an application for a VIP-only offer", async () => {
   }));
 
   const applied: string[] = [];
+  const previousConfigPath = process.env.AUTO_APPLY_CONFIG_PATH;
+  process.env.AUTO_APPLY_CONFIG_PATH = configPath;
+
   const engine = new AutoApplyEngine({
     fetchMarket: async () => response({
       data: [
@@ -87,6 +90,11 @@ test("Auto-Apply never sends an application for a VIP-only offer", async () => {
     assert.deepEqual(engine.getStatus().appliedOfferIds, ["public-offer"]);
   } finally {
     engine.stop();
+    if (previousConfigPath === undefined) {
+      delete process.env.AUTO_APPLY_CONFIG_PATH;
+    } else {
+      process.env.AUTO_APPLY_CONFIG_PATH = previousConfigPath;
+    }
     await rm(directory, { recursive: true, force: true });
   }
 });
