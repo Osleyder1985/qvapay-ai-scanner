@@ -12,6 +12,8 @@
 
 import {
   D1Repository,
+  type D1AutoApplyConfigRow,
+  type D1AutoApplyStateRow,
   type D1DatabaseLike,
   type D1FinanceRow,
   type D1OperationRow,
@@ -93,6 +95,65 @@ function financeFromRow(row: D1FinanceRow): Record<string, unknown> {
     fee_source: row.fee_source,
   };
 }
+
+function autoApplyConfigFromRow(row: D1AutoApplyConfigRow) {
+  return {
+    id: row.id,
+    enabled: row.enabled === 1,
+    type: row.type,
+    coin: row.coin,
+    rate_min: row.rate_min,
+    rate_max: row.rate_max,
+    amount_min: row.amount_min,
+    amount_max: row.amount_max,
+    daily_max_qusd: row.daily_max_qusd,
+    max_concurrent: row.max_concurrent,
+    updated_at: row.updated_at,
+  };
+}
+
+function autoApplyStateFromRow(row: D1AutoApplyStateRow) {
+  return {
+    id: row.id,
+    daily_date: row.daily_date,
+    daily_applied_qusd: row.daily_applied_qusd,
+    last_scan_at: row.last_scan_at,
+    last_action_at: row.last_action_at,
+    last_message: row.last_message,
+    updated_at: row.updated_at,
+  };
+}
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/cloudflare/d1/auto-apply"
+    ) {
+      if (!authorized(request, env)) {
+        return json({ error: "No autorizado" }, 401);
+      }
+
+      try {
+        const repository = new D1Repository(env.DB);
+        const [config, state] = await Promise.all([
+          repository.getAutoApplyConfig(),
+          repository.getAutoApplyState(),
+        ]);
+
+        return json({
+          config: config ? autoApplyConfigFromRow(config) : null,
+          state: state ? autoApplyStateFromRow(state) : null,
+          source: {
+            runtime: "cloudflare-worker",
+            persistence: "d1",
+          },
+        });
+      } catch {
+        return json(
+          { error: "No se pudo leer el estado de Auto-Apply desde D1" },
+          503,
+        );
+      }
+    }
 
 const handler: WorkerHandler = {
   async fetch(request, env): Promise<Response> {
