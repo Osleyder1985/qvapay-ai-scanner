@@ -191,6 +191,25 @@ ON CONFLICT(offer_uuid) DO UPDATE SET
   reason = excluded.reason
 `;
 
+const INSERT_EXECUTION_LEASE_SQL = `
+INSERT OR IGNORE INTO auto_apply_execution_lease (
+  id, owner_id, acquired_at, expires_at, updated_at
+) VALUES (1, NULL, NULL, NULL, ?)
+`;
+
+const CLAIM_EXECUTION_LEASE_SQL = `
+UPDATE auto_apply_execution_lease
+SET owner_id = ?, acquired_at = ?, expires_at = ?, updated_at = ?
+WHERE id = 1
+  AND (owner_id IS NULL OR expires_at IS NULL OR expires_at <= ?)
+`;
+
+const RELEASE_EXECUTION_LEASE_SQL = `
+UPDATE auto_apply_execution_lease
+SET owner_id = NULL, acquired_at = NULL, expires_at = NULL, updated_at = ?
+WHERE id = 1 AND owner_id = ?
+`;
+
 const INSERT_SYNC_RUN_SQL = `
 INSERT INTO sync_runs (
   started_at, finished_at, pages_fetched, remote_count, ledger_count,
@@ -369,6 +388,44 @@ export class D1Repository {
       .prepare("SELECT * FROM auto_apply_state WHERE id = 1")
       .bind()
       .first<D1AutoApplyStateRow>();
+  }
+
+  /**
+   * Atomically claims the singleton Auto-Apply execution lease.
+   * Returns false when another non-expired execution owns the lease.
+   */
+  async claimAutoApplyExecutionLease(input: {
+    ownerId: string;
+    acquiredAt: string;
+    expiresAt: string;
+    now: string;
+  }): Promise<boolean> {
+    await this.db.prepare(INSERT_EXECUTION_LEASE_SQL).bind(input.now).run();
+    const result = await this.db
+      .prepare(CLAIM_EXECUTION_LEASE_SQL)
+      .bind(
+        input.ownerId,
+        input.acquiredAt,
+        input.expiresAt,
+        input.now,
+        input.now,
+      )
+      .run();
+    return result.meta?.changes === 1;
+  }
+
+  /**
+   * Releases the execution lease only when owned by the supplied run ID.
+   */
+  async releaseAutoApplyExecutionLease(
+    ownerId: string,
+    now = new Date().toISOString(),
+  ): Promise<boolean> {
+    const result = await this.db
+      .prepare(RELEASE_EXECUTION_LEASE_SQL)
+      .bind(now, ownerId)
+      .run();
+    return result.meta?.changes === 1;
   }
 
   async recordAutoApplyAttempt(input: {
