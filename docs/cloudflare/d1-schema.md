@@ -34,6 +34,9 @@ Configuración singleton id=1: enabled, type, coin, rate_min, rate_max, amount_m
 ### auto_apply_state
 Estado singleton id=1: daily_date, daily_applied_qusd, last_scan_at, last_action_at, last_message, updated_at. No se persiste running: en Workers será una propiedad de la ejecución actual.
 
+### auto_apply_execution_lease
+Lease singleton para exclusión mutua de ejecuciones Cloudflare. Conserva owner_id, acquired_at, expires_at y updated_at. Un lease expirado puede ser recuperado por una ejecución posterior.
+
 ### auto_apply_attempts
 Registro durable de intentos: offer_uuid, attempted_at, http_status, success, amount_qusd, response_json, reason. Sustituye recentApplyAttempts y permite imponer 2 intentos/60 s mediante consulta D1.
 
