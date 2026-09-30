@@ -6,6 +6,9 @@ import { calculateMarketIntelligence } from "./market-intelligence.js";
 import { MarketHistoryStore } from "./market-history.js";
 import { summarizeTrends } from "./trend-engine.js";
 import { calculateBaselines } from "./market-baseline.js";
+import { fetchAccountSnapshot } from "./account.js";
+import { calculateFinanceSummary } from "./finance.js";
+import { FinanceLedgerStore } from "./finance-ledger.js";
 
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
@@ -100,6 +103,15 @@ async function fetchP2P(url: URL): Promise<Response> {
 
   return fetch(endpoint, {
     method: "GET",
+    headers: qvapayHeaders(),
+    signal: AbortSignal.timeout(20_000)
+  });
+}
+
+async function fetchBalance(): Promise<Response> {
+  const endpoint = new URL("/v2/balance", QVAPAY_API_BASE_URL);
+  return fetch(endpoint, {
+    method: "POST",
     headers: qvapayHeaders(),
     signal: AbortSignal.timeout(20_000)
   });
@@ -237,7 +249,14 @@ async function handleApiApplyP2P(response: ServerResponse, uuid: string): Promis
   }
 }
 
+async function fetchOwnP2P(status?: string): Promise<Response> {
+  const query = new URLSearchParams({ my: "1", take: "100", orderBy: "updated_at", orderType: "desc" });
+  if (status) query.set("status", status);
+  return fetchP2P(new URL("/p2p?" + query.toString(), "http://127.0.0.1"));
+}
+
 const marketHistory = new MarketHistoryStore();
+const financeLedger = new FinanceLedgerStore();
 
 async function collectMarketHistory(): Promise<void> {
   try {
@@ -314,6 +333,46 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     const type=url.searchParams.get("type")??undefined;
     const limit=Number(url.searchParams.get("limit")??"200");
     sendJson(response,200,{history:marketHistory.query(coin,type,Number.isFinite(limit)?limit:200)});
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/account") {
+    try {
+      const snapshot = await fetchAccountSnapshot(
+        fetchBalance,
+        () => fetchOwnP2P("open"),
+        () => fetchOwnP2P(),
+        readUpstreamPayload,
+      );
+      sendJson(response, 200, { account: snapshot });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      sendJson(response, message.includes("QVAPAY_APP_ID") ? 500 : 502, { error: message });
+    }
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/finance") {
+    try {
+      const upstream = await fetchOwnP2P("completed");
+      const payload = await readUpstreamPayload(upstream);
+      if (!upstream.ok) {
+        sendJson(response, upstream.status, { error: "QvaPay API error", detail: payload });
+        return;
+      }
+      const offers = payload && typeof payload === "object" && Array.isArray((payload as Record<string, unknown>).data)
+        ? (payload as Record<string, unknown>).data as unknown[]
+        : [];
+      await financeLedger.upsert(offers);
+      const ledger = financeLedger.list();
+      sendJson(response, 200, {
+        finance: calculateFinanceSummary(ledger),
+        source: { status: "completed", fetched: offers.length, persisted: ledger.length }
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      sendJson(response, message.includes("QVAPAY_APP_ID") ? 500 : 502, { error: message });
+    }
     return;
   }
 
@@ -399,7 +458,7 @@ const server = createServer((request, response) => {
   });
 });
 
-void Promise.all([marketHistory.initialize(), autoApplyEngine.initialize()]).then(() => {
+void Promise.all([marketHistory.initialize(), autoApplyEngine.initialize(), financeLedger.initialize()]).then(() => {
   void collectMarketHistory();
   setInterval(() => { void collectMarketHistory(); }, 60_000);
   server.listen(PORT, HOST, () => {

@@ -34,3 +34,4 @@ htmlcov/
 /tmp/
 
 data/auto-apply.json
+data/finance-ledger.json
