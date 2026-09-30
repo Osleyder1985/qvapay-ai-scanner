@@ -379,6 +379,12 @@ async function handleApiOperationAction(
     const upstream = await fetchP2PAction(uuid, action, method, body);
     const payload = await readUpstreamPayload(upstream);
     if (upstream.ok && action === "received") {
+      const detailResponse = await fetchP2POffer(uuid);
+      const detailPayload = await readUpstreamPayload(detailResponse);
+      if (detailResponse.ok && detailPayload && typeof detailPayload === "object") {
+        const detail = (detailPayload as Record<string, unknown>).p2p;
+        if (detail && typeof detail === "object") await financeLedger.upsert([detail]);
+      }
       await financeLedger.recordSettlement(uuid, payload);
     }
     sendJson(response, upstream.status, upstream.ok
