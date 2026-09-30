@@ -69,6 +69,8 @@ export function calculateFinanceSummary(offers: unknown[]): FinanceSummary {
 
       while (remaining > 0 && lots.length) {
         const lot = lots[0];
+        if (!lot) break;
+
         const consumed = Math.min(remaining, lot.quantity);
         realizedProfit += consumed * ((receive / amount) - lot.unitCost);
         lot.quantity -= consumed;
