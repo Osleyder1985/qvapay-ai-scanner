@@ -12,3 +12,11 @@ th,td{padding:10px 8px;border-bottom:1px solid #eef0f2;text-align:left;white-spa
 .rate{font-weight:700}.badge{display:inline-block;padding:3px 7px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase}.badge.sell{background:#ecfdf5;color:#047857}.badge.buy{background:#eff6ff;color:#1d4ed8}
 .verified{color:#047857}.unverified{color:#9ca3af}.empty{text-align:center;padding:30px;color:#6b7280}.pagination{display:flex;justify-content:center;align-items:center;gap:12px;padding-top:16px}code{background:#f3f4f6;padding:2px 5px;border-radius:5px}
 @media(max-width:700px){.topbar{align-items:flex-start;flex-direction:column}.topbar button{width:100%}.metrics{grid-template-columns:1fr}.filters label{width:100%}.filters button{width:100%}main{padding:10px}}
+
+.marked-offers{display:grid;gap:8px}
+.marked-empty{margin:0;color:#6b7280;font-size:13px}
+.marked-item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb}
+.marked-item>div{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.marked-item span{font-size:12px;color:#6b7280}
+.mark-button{min-height:32px;padding:5px 9px}
+@media(max-width:700px){.marked-item{align-items:stretch;flex-direction:column}.marked-item button{width:100%}}
