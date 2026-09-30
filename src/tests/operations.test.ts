@@ -39,6 +39,11 @@ test("buy reverses the payment/receipt roles", () => {
   assert.ok(!availableOperationActions(paid, "owner").includes("received"));
 });
 
+test("open operations can be cancelled by their owner", () => {
+  assert.ok(availableOperationActions({ ...base, status: "open" }, "owner").includes("cancel"));
+  assert.ok(!availableOperationActions({ ...base, status: "open" }, "peer").includes("cancel"));
+});
+
 test("revision can be cancelled only by the fiat payer", () => {
   assert.ok(availableOperationActions({ ...base, status: "revision" }, "peer").includes("cancel"));
   assert.ok(!availableOperationActions({ ...base, status: "revision" }, "owner").includes("cancel"));
