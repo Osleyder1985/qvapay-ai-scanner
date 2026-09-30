@@ -6,7 +6,16 @@
  * @status active
  */
 export type OperationRole = "owner" | "peer" | "unknown";
+/**
+ * Public type OperationAction used by the module.
+ */
 export type OperationAction = "paid" | "received" | "cancel" | "rate" | "chat";
+
+/**
+
+ * Public interface OperationParty used by the module.
+
+ */
 
 export interface OperationParty {
   uuid?: string | number | null;
@@ -14,6 +23,12 @@ export interface OperationParty {
   username?: string | null;
   name?: string | null;
 }
+
+/**
+
+ * Public interface P2POperation used by the module.
+
+ */
 
 export interface P2POperation {
   uuid?: string;
