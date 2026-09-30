@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node --env-file=config/.env dist/backend/server.js",
-    "dev": "npm run build && npm start"
+    "dev": "npm run build && npm start",
+    "test": "npm run build && node --test dist/tests/*.test.js"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
