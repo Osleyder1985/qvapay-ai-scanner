@@ -131,13 +131,20 @@ async function selectOperation(id){S.active=id;localStorage.setItem('qvapay.acti
 
  * @returns The operation result.
  */
-async function loadOperations(){try{const p=await api('/api/operations');const q=p.operations||{};S.operations=Array.isArray(q)?q:(q.data||[]);if(S.active&&!S.operations.some(o=>String(o.uuid)===String(S.active))){S.active=null;S.operation=null;S.chat=[];localStorage.removeItem('qvapay.activeOperationId')}if(!S.active){const pending=S.operations.find(o=>['processing','paid','revision'].includes(String(o.status||'').toLowerCase()));if(pending){S.active=String(pending.uuid);localStorage.setItem('qvapay.activeOperationId',S.active)}}}catch(e){S.operations=[]}}
+async function loadOperations(){try{const p=await api('/api/operations');const q=p.operations||{};S.operations=Array.isArray(q)?q:(q.data||[]);if(S.active&&!S.operations.some(o=>String(o.uuid)===String(S.active))&&!S.operation){S.active=null;S.chat=[];localStorage.removeItem('qvapay.activeOperationId')}if(!S.active){const pending=S.operations.find(o=>['processing','paid','revision'].includes(String(o.status||'').toLowerCase()));if(pending){S.active=String(pending.uuid);localStorage.setItem('qvapay.activeOperationId',S.active)}}return true}catch(e){return false}}
 /**
  * Implements the loadOperation operation for this module.
  * @param id Input used by the operation.
  * @returns The operation result.
  */
-async function loadOperation(id=S.active){if(!id)return;try{const local=S.operations.find(o=>String(o.uuid)===String(id));if(!local)throw new Error('La operación no está disponible en el listado autenticado.');S.operation=local;S.active=id;S.operationRole=operationRole(S.operation);await loadChat();if((location.hash.slice(1)||'/')==='/operations'){drawOperations();drawOperationDetail()}}catch(e){toast(e.message,'error')}}
+/**
+ * Waits briefly for a newly applied P2P operation to appear in the authenticated listing.
+ * @param id Applied P2P operation UUID.
+ * @param attempts Maximum number of authenticated-list refreshes.
+ * @returns The synchronized operation, or null while QvaPay is still propagating it.
+ */
+async function waitForOperation(id,attempts=3){for(let attempt=0;attempt<attempts;attempt+=1){await loadOperations();const operation=S.operations.find(o=>String(o.uuid)===String(id));if(operation)return operation;if(attempt<attempts-1)await new Promise(resolve=>setTimeout(resolve,750*(attempt+1)))}return null}
+async function loadOperation(id=S.active,fallback=null){if(!id)return;try{const local=S.operations.find(o=>String(o.uuid)===String(id));const operation=local||fallback||(String(S.operation?.uuid||'')===String(id)?S.operation:null);if(!operation)throw new Error('La operación aún no aparece en el listado autenticado.');S.operation=operation;S.active=id;S.operationRole=operationRole(S.operation);await loadChat();if((location.hash.slice(1)||'/')==='/operations'){drawOperations();drawOperationDetail()}}catch(e){toast(e.message,'error')}}
 /**
  * Implements the loadChat operation for this module.
 

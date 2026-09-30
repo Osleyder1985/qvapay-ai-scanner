@@ -58,13 +58,13 @@ function drawOffers(){const b=$('offers');if(!b)return;b.innerHTML=S.offers.leng
  * @param id Input used by the operation.
  * @returns The operation result.
  */
-async function applyOffer(id){if(!confirm('Aplicar a esta oferta ahora?'))return;try{await api('/api/p2p/'+encodeURIComponent(id)+'/apply',{method:'POST'});await loadOperations();S.active=id;localStorage.setItem('qvapay.activeOperationId',id);await loadOperation(id);toast('Aplicación aceptada por QvaPay','success')}catch(e){toast(e.message,'error')}}
+async function applyOffer(id){if(!confirm('Aplicar a esta oferta ahora?'))return;const source=S.offers.find(o=>String(o.uuid??o.id??'')===String(id));try{await api('/api/p2p/'+encodeURIComponent(id)+'/apply',{method:'POST'});const operation=await waitForOperation(id);const fallback=operation||source?{...(operation||source),status:'processing',updated_at:new Date().toISOString()}:null;if(fallback&&!operation)S.operations=[fallback,...S.operations.filter(o=>String(o.uuid)!==String(id))];S.active=id;localStorage.setItem('qvapay.activeOperationId',id);await loadOperation(id,fallback);toast(operation?'Aplicación aceptada por QvaPay':'Aplicación aceptada por QvaPay; sincronizando la operación','success')}catch(e){toast(e.message,'error')}}
 /**
  * Implements the loadOperation operation for this module.
 
  * @returns The operation result.
  */
-async function loadOperation(){if(!S.active)return;try{const p=await api('/api/p2p/'+encodeURIComponent(S.active));S.operation=p?.qvapay?.p2p??p?.qvapay?.data??p?.qvapay??p?.data??p;if((location.hash.slice(1)||'/')==='/operations')nav()}catch(e){}}
+// Operation loading is centralized in operations-ui.js so market actions cannot bypass authenticated operation state.
 /**
  * Implements the opCard operation for this module.
 
