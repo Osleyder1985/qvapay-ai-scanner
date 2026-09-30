@@ -12,6 +12,12 @@ export interface FinanceLot {
   sourceUuid: string;
 }
 
+/**
+
+ * Public interface FinanceSummary used by the module.
+
+ */
+
 export interface FinanceSummary {
   completedCount: number;
   fiatIncome: number;
