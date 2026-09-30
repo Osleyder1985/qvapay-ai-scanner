@@ -47,6 +47,9 @@ export class FinanceLedgerStore {
       const entry = this.normalize(offer);
       if (!entry) continue;
       const previous = this.entries.get(entry.uuid);
+      if (previous) {
+        entry.recordedAt = previous.recordedAt;
+      }
       if (!previous || JSON.stringify(previous) !== JSON.stringify(entry)) {
         this.entries.set(entry.uuid, entry);
         changed++;
