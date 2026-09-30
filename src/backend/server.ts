@@ -1,3 +1,10 @@
+/**
+ * @file server.ts
+ * @path src/backend/server.ts
+ * @description Implements server for QvaPay AI Scanner.
+ * @module backend
+ * @status active
+ */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
@@ -30,6 +37,13 @@ const allowedQueryParameters = new Set([
   "min", "max", "ratio_min", "ratio_max", "only_vip", "my", "status"
 ]);
 
+/**
+ * Implements the sendJson operation for this module.
+ * @param response Input used by the operation.
+ * @param status Input used by the operation.
+ * @param payload Input used by the operation.
+ * @returns The operation result.
+ */
 function sendJson(response: ServerResponse, status: number, payload: unknown): void {
   const body = JSON.stringify(payload);
   response.writeHead(status, {
@@ -40,6 +54,11 @@ function sendJson(response: ServerResponse, status: number, payload: unknown): v
   response.end(body);
 }
 
+/**
+ * Implements the contentType operation for this module.
+ * @param path Input used by the operation.
+ * @returns The operation result.
+ */
 function contentType(path: string): string {
   switch (extname(path)) {
     case ".html": return "text/html; charset=utf-8";
@@ -49,6 +68,12 @@ function contentType(path: string): string {
   }
 }
 
+/**
+ * Implements the sendFile operation for this module.
+ * @param response Input used by the operation.
+ * @param path Input used by the operation.
+ * @returns The operation result.
+ */
 async function sendFile(response: ServerResponse, path: string): Promise<void> {
   try {
     const body = await readFile(path);
@@ -63,6 +88,11 @@ async function sendFile(response: ServerResponse, path: string): Promise<void> {
   }
 }
 
+/**
+ * Implements the qvapayHeaders operation for this module.
+
+ * @returns The operation result.
+ */
 function qvapayHeaders(): Record<string, string> {
   const appId = process.env.QVAPAY_APP_ID;
   const appSecret = process.env.QVAPAY_APP_SECRET;
@@ -79,6 +109,11 @@ function qvapayHeaders(): Record<string, string> {
   };
 }
 
+/**
+ * Implements the sanitizeQuery operation for this module.
+ * @param url Input used by the operation.
+ * @returns The operation result.
+ */
 function sanitizeQuery(url: URL): URLSearchParams {
   const params = new URLSearchParams();
 
@@ -103,6 +138,11 @@ function sanitizeQuery(url: URL): URLSearchParams {
   return params;
 }
 
+/**
+ * Implements the fetchP2P operation for this module.
+ * @param url Input used by the operation.
+ * @returns The operation result.
+ */
 async function fetchP2P(url: URL): Promise<Response> {
   const params = sanitizeQuery(url);
   const endpoint = new URL("/p2p", QVAPAY_API_BASE_URL);
@@ -115,6 +155,11 @@ async function fetchP2P(url: URL): Promise<Response> {
   }));
 }
 
+/**
+ * Implements the fetchBalance operation for this module.
+
+ * @returns The operation result.
+ */
 async function fetchBalance(): Promise<Response> {
   const endpoint = new URL("/v2/balance", QVAPAY_API_BASE_URL);
   return fetch(endpoint, {
@@ -124,6 +169,13 @@ async function fetchBalance(): Promise<Response> {
   });
 }
 
+/**
+ * Implements the fetchP2PAction operation for this module.
+ * @param uuid Input used by the operation.
+ * @param action Input used by the operation.
+ * @param method Input used by the operation.
+ * @returns The operation result.
+ */
 async function fetchP2PAction(uuid: string, action: string, method: "POST" | "GET", body?: unknown): Promise<Response> {
   const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}/${action}`, QVAPAY_API_BASE_URL);
   const headers = qvapayHeaders();
@@ -136,6 +188,11 @@ async function fetchP2PAction(uuid: string, action: string, method: "POST" | "GE
   });
 }
 
+/**
+ * Implements the fetchOperations operation for this module.
+
+ * @returns The operation result.
+ */
 async function fetchOperations(): Promise<Response> {
   const endpoint = new URL("/p2p", QVAPAY_API_BASE_URL);
   endpoint.search = new URLSearchParams({
@@ -150,6 +207,11 @@ async function fetchOperations(): Promise<Response> {
   }));
 }
 
+/**
+ * Implements the fetchP2POffer operation for this module.
+ * @param uuid Input used by the operation.
+ * @returns The operation result.
+ */
 async function fetchP2POffer(uuid: string): Promise<Response> {
   const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}`, QVAPAY_API_BASE_URL);
 
@@ -160,6 +222,11 @@ async function fetchP2POffer(uuid: string): Promise<Response> {
   });
 }
 
+/**
+ * Implements the applyP2POffer operation for this module.
+ * @param uuid Input used by the operation.
+ * @returns The operation result.
+ */
 async function applyP2POffer(uuid: string): Promise<Response> {
   const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}/apply`, QVAPAY_API_BASE_URL);
 
@@ -170,6 +237,11 @@ async function applyP2POffer(uuid: string): Promise<Response> {
   });
 }
 
+/**
+ * Implements the readUpstreamPayload operation for this module.
+ * @param upstream Input used by the operation.
+ * @returns The operation result.
+ */
 async function readUpstreamPayload(upstream: Response): Promise<unknown> {
   const text = await upstream.text();
 
@@ -180,6 +252,11 @@ async function readUpstreamPayload(upstream: Response): Promise<unknown> {
   }
 }
 
+/**
+ * Implements the readJsonBody operation for this module.
+ * @param request Input used by the operation.
+ * @returns The operation result.
+ */
 async function readJsonBody(request: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
   let size = 0;
@@ -203,6 +280,12 @@ async function readJsonBody(request: IncomingMessage): Promise<unknown> {
   }
 }
 
+/**
+ * Implements the handleApiP2P operation for this module.
+ * @param response Input used by the operation.
+ * @param url Input used by the operation.
+ * @returns The operation result.
+ */
 async function handleApiP2P(response: ServerResponse, url: URL): Promise<void> {
   try {
     const upstream = await fetchP2P(url);
@@ -222,6 +305,11 @@ async function handleApiP2P(response: ServerResponse, url: URL): Promise<void> {
 
 const MAX_INTELLIGENCE_PAGES = 10;
 
+/**
+ * Implements the fetchAllMarketPages operation for this module.
+ * @param url Input used by the operation.
+ * @returns The operation result.
+ */
 async function fetchAllMarketPages(url: URL): Promise<{
   offers: Record<string, unknown>[];
   total: number;
@@ -272,6 +360,12 @@ async function fetchAllMarketPages(url: URL): Promise<{
   };
 }
 
+/**
+ * Implements the handleApiIntelligence operation for this module.
+ * @param response Input used by the operation.
+ * @param url Input used by the operation.
+ * @returns The operation result.
+ */
 async function handleApiIntelligence(response: ServerResponse, url: URL): Promise<void> {
   try {
     const result = await fetchAllMarketPages(url);
@@ -289,6 +383,12 @@ async function handleApiIntelligence(response: ServerResponse, url: URL): Promis
   }
 }
 
+/**
+ * Implements the handleApiP2POffer operation for this module.
+ * @param response Input used by the operation.
+ * @param uuid Input used by the operation.
+ * @returns The operation result.
+ */
 async function handleApiP2POffer(response: ServerResponse, uuid: string): Promise<void> {
   if (!uuid || uuid.length > 200) {
     sendJson(response, 400, { error: "Identificador de oferta inválido." });
@@ -311,6 +411,11 @@ async function handleApiP2POffer(response: ServerResponse, uuid: string): Promis
   }
 }
 
+/**
+ * Implements the handleApiOperations operation for this module.
+ * @param response Input used by the operation.
+ * @returns The operation result.
+ */
 async function handleApiOperations(response: ServerResponse): Promise<void> {
   try {
     const upstream = await fetchOperations();
@@ -327,6 +432,15 @@ async function handleApiOperations(response: ServerResponse): Promise<void> {
   }
 }
 
+/**
+ * Implements the handleApiOperationAction operation for this module.
+ * @param response Input used by the operation.
+ * @param uuid Input used by the operation.
+ * @param action Input used by the operation.
+ * @param method Input used by the operation.
+ * @param request Input used by the operation.
+ * @returns The operation result.
+ */
 async function handleApiOperationAction(
   response: ServerResponse,
   uuid: string,
@@ -399,6 +513,12 @@ async function handleApiOperationAction(
   }
 }
 
+/**
+ * Implements the handleApiApplyP2P operation for this module.
+ * @param response Input used by the operation.
+ * @param uuid Input used by the operation.
+ * @returns The operation result.
+ */
 async function handleApiApplyP2P(response: ServerResponse, uuid: string): Promise<void> {
   if (!uuid || uuid.length > 200) {
     sendJson(response, 400, { error: "Identificador de oferta inválido." });
@@ -421,12 +541,22 @@ async function handleApiApplyP2P(response: ServerResponse, uuid: string): Promis
   }
 }
 
+/**
+ * Implements the fetchOwnP2P operation for this module.
+
+ * @returns The operation result.
+ */
 async function fetchOwnP2P(status?: string): Promise<Response> {
   const query = new URLSearchParams({ my: "1", take: "100", orderBy: "updated_at", orderType: "desc" });
   if (status) query.set("status", status);
   return fetchP2P(new URL("/p2p?" + query.toString(), "http://127.0.0.1"));
 }
 
+/**
+ * Implements the fetchCompletedPage operation for this module.
+ * @param page Input used by the operation.
+ * @returns The operation result.
+ */
 async function fetchCompletedPage(page: number): Promise<{ data: Record<string, unknown>[]; total: number; perPage: number }> {
   const query = new URLSearchParams({
     my: "1",
@@ -453,6 +583,11 @@ async function fetchCompletedPage(page: number): Promise<{ data: Record<string, 
 const marketHistory = new MarketHistoryStore();
 const financeLedger = new FinanceLedgerStore();
 
+/**
+ * Implements the collectMarketHistory operation for this module.
+
+ * @returns The operation result.
+ */
 async function collectMarketHistory(): Promise<void> {
   try {
     const upstream = await fetchP2P(new URL("/p2p?take=100&orderBy=updated_at&orderType=desc", "http://127.0.0.1"));
@@ -471,6 +606,13 @@ const autoApplyEngine = new AutoApplyEngine({
   readPayload: readUpstreamPayload,
 });
 
+/**
+ * Implements the handleAutoApplyConfig operation for this module.
+ * @param response Input used by the operation.
+ * @param method Input used by the operation.
+ * @param request Input used by the operation.
+ * @returns The operation result.
+ */
 async function handleAutoApplyConfig(response: ServerResponse, method: string, request: IncomingMessage): Promise<void> {
   try {
     if (method === "GET") {
@@ -487,6 +629,12 @@ async function handleAutoApplyConfig(response: ServerResponse, method: string, r
   }
 }
 
+/**
+ * Implements the handleRequest operation for this module.
+ * @param request Input used by the operation.
+ * @param response Input used by the operation.
+ * @returns The operation result.
+ */
 async function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`);
 
