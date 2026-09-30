@@ -1,3 +1,10 @@
+/**
+ * @file finance-ledger.ts
+ * @path src/backend/finance-ledger.ts
+ * @description Implements finance ledger for QvaPay AI Scanner.
+ * @module backend
+ * @status active
+ */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
@@ -19,6 +26,11 @@ export interface FinanceLedgerEntry {
 
 const defaultPath = resolve(process.cwd(), "data/finance-ledger.json");
 
+/**
+ * Implements the pathFromEnv operation for this module.
+
+ * @returns The operation result.
+ */
 function pathFromEnv(): string {
   return process.env.FINANCE_LEDGER_PATH ? resolve(process.env.FINANCE_LEDGER_PATH) : defaultPath;
 }
