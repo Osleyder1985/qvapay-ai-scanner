@@ -10,7 +10,11 @@
  * migración; no ejecuta mutaciones QvaPay.
  */
 
-import { D1Repository, type D1DatabaseLike, type D1OperationRow } from "../backend/cloudflare/d1-repository.js";
+import {
+  D1Repository,
+  type D1DatabaseLike,
+  type D1OperationRow,
+} from "../backend/cloudflare/d1-repository.js";
 
 export interface WorkerEnv {
   DB: D1DatabaseLike;
@@ -38,7 +42,9 @@ function authorized(request: Request, env: WorkerEnv): boolean {
   return provided === `Bearer ${expected}`;
 }
 
-function operationFromRow(row: D1OperationRow | null): Record<string, unknown> | null {
+function operationFromRow(
+  row: D1OperationRow | null,
+): Record<string, unknown> | null {
   if (!row) return null;
   try {
     const parsed = JSON.parse(row.raw_json);
@@ -117,7 +123,9 @@ const handler: WorkerHandler = {
         const rows = await repository.listOperations(limit);
         const operations = rows
           .map(operationFromRow)
-          .filter((operation): operation is Record<string, unknown> => operation !== null);
+          .filter(
+            (operation): operation is Record<string, unknown> => operation !== null,
+          );
 
         return json({
           operations: {
