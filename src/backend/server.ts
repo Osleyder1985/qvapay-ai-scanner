@@ -1106,6 +1106,11 @@ async function handleRequest(
     "/": "index.html",
     "/index.html": "index.html",
     "/styles.css": "styles.css",
+    "/app-core.js": "app-core.js",
+    "/pages.js": "pages.js",
+    "/market-ui.js": "market-ui.js",
+    "/operations-ui.js": "operations-ui.js",
+    "/runtime-ui.js": "runtime-ui.js",
     "/app.js": "app.js",
   };
 
