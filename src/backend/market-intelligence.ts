@@ -2,7 +2,7 @@ export interface MarketOffer { uuid?: string; id?: string; type?: string; coin?:
 export interface OpportunitySignal { uuid:string; type:string; coin:string; amount:number; receive:number; rate:number; score:number; reasons:string[]; }
 export interface MarketIntelligence { sampleSize:number; validRates:number; bestRate:number|null; medianRate:number|null; minRate:number|null; maxRate:number|null; spread:number|null; sellCount:number; buyCount:number; coins:string[]; opportunities:OpportunitySignal[]; }
 const n=(v:unknown)=>Number.isFinite(Number(v))?Number(v):NaN;
-function median(a:number[]):number|null { if(!a.length)return null; const x=[...a].sort((p,q)=>p-q),m=Math.floor(x.length/2); return x.length%2?x[m]:(x[m-1]+x[m])/2; }
+function median(a:number[]):number|null { if(!a.length)return null; const x=[...a].sort((p,q)=>p-q),m=Math.floor(x.length/2),lower=x[m-1],upper=x[m]; return x.length%2?upper??null:(lower!==undefined&&upper!==undefined?(lower+upper)/2:null); }
 export function calculateMarketIntelligence(offers:MarketOffer[]):MarketIntelligence {
  const valid=offers.map(o=>({o,amount:n(o.amount),receive:n(o.receive)})).filter(x=>x.amount>0&&x.receive>=0).map(x=>({...x,rate:x.receive/x.amount}));
  const rates=valid.map(x=>x.rate), med=median(rates);
