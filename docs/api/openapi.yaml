@@ -215,7 +215,7 @@ paths:
     get:
       tags: [Operations]
       summary: Consultar operaciones propias
-      description: Fuente operativa basada en QvaPay P2P con my=1. El endpoint actual consulta una página de hasta 100 registros.
+      description: Fuente operativa basada en QvaPay P2P con my=1. El backend reconstruye la historia disponible siguiendo la paginación hasta el límite de seguridad y persiste el snapshot completo solo después de una sincronización exitosa.
       responses:
         '200':
           description: Operaciones
