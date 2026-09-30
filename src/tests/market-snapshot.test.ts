@@ -1,11 +1,10 @@
 /**
  * @file market-snapshot.test.ts
  * @path src/tests/market-snapshot.test.ts
- * @description Tests for centralized QvaPay market request control.
- * @module tests/market
- * @status active
+ * @description Test coverage for market-snapshot.test.ts in QvaPay AI Scanner.
+ * @module tests
+ * @status test
  */
-
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MarketSnapshotService } from "../backend/market-snapshot.js";

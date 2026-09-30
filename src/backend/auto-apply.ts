@@ -1,7 +1,26 @@
+/**
+ * @file auto-apply.ts
+ * @path src/backend/auto-apply.ts
+ * @description Implements auto apply for QvaPay AI Scanner.
+ * @module backend
+ * @status active
+ */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
+/**
+
+ * Public type AutoApplyType used by the module.
+
+ */
+
 export type AutoApplyType = "sell" | "buy";
+
+/**
+
+ * Public interface AutoApplyConfig used by the module.
+
+ */
 
 export interface AutoApplyConfig {
   enabled: boolean;
@@ -14,6 +33,12 @@ export interface AutoApplyConfig {
   dailyMaxQusd: number | null;
   maxConcurrent: number;
 }
+
+/**
+
+ * Public interface AutoApplyStatus used by the module.
+
+ */
 
 export interface AutoApplyStatus {
   running: boolean;
@@ -58,6 +83,11 @@ const APPLY_WINDOW_MS = 60_000;
 const SCAN_INTERVAL_MS = 30_000;
 const VIP_REJECTION_COOLDOWN_MS = 5 * 60_000;
 
+/**
+ * Implements the today operation for this module.
+
+ * @returns The operation result.
+ */
 function today(): string {
   const now = new Date();
   const year = now.getFullYear();
@@ -66,6 +96,11 @@ function today(): string {
   return year + "-" + month + "-" + day;
 }
 
+/**
+ * Implements the asNullablePositiveNumber operation for this module.
+
+ * @returns The operation result.
+ */
 function asNullablePositiveNumber(value: unknown, field: string): number | null {
   if (value === null || value === undefined || value === "") return null;
 
@@ -77,6 +112,11 @@ function asNullablePositiveNumber(value: unknown, field: string): number | null 
   return number;
 }
 
+/**
+ * Implements the asPositiveInteger operation for this module.
+
+ * @returns The operation result.
+ */
 function asPositiveInteger(value: unknown, field: string, minimum = 1): number {
   const number = Number(value);
   if (!Number.isInteger(number) || number < minimum) {
@@ -86,12 +126,22 @@ function asPositiveInteger(value: unknown, field: string, minimum = 1): number {
   return number;
 }
 
+/**
+ * Implements the isVipOnlyOffer operation for this module.
+
+ * @returns The operation result.
+ */
 export function isVipOnlyOffer(offer: Record<string, unknown>): boolean {
   const value = offer.only_vip;
   return value === true || value === 1 ||
     ["true", "1", "yes"].includes(String(value ?? "").trim().toLowerCase());
 }
 
+/**
+ * Implements the normalizeAutoApplyConfig operation for this module.
+
+ * @returns The operation result.
+ */
 export function normalizeAutoApplyConfig(input: unknown): AutoApplyConfig {
   const value = input && typeof input === "object"
     ? input as Record<string, unknown>
@@ -135,6 +185,12 @@ export function normalizeAutoApplyConfig(input: unknown): AutoApplyConfig {
   };
 }
 
+/**
+
+ * Public class AutoApplyEngine used by the module.
+
+ */
+
 export class AutoApplyEngine {
   private readonly configPath: string;
   private config: AutoApplyConfig = DEFAULT_CONFIG;
@@ -157,7 +213,12 @@ export class AutoApplyEngine {
       : resolve(process.cwd(), "data/auto-apply.json");
   }
 
-  async initialize(): Promise<void> {
+  /**
+   * Executes the initialize method and preserves the module's documented invariants.
+
+   * @returns Promise<void> returned by the method.
+   */
+  async initialize(): Promise<void>  {
     await mkdir(dirname(this.configPath), { recursive: true });
 
     try {
@@ -199,11 +260,21 @@ export class AutoApplyEngine {
     }
   }
 
-  getConfig(): AutoApplyConfig {
+  /**
+   * Executes the getConfig method and preserves the module's documented invariants.
+
+   * @returns AutoApplyConfig returned by the method.
+   */
+  getConfig(): AutoApplyConfig  {
     return { ...this.config };
   }
 
-  getStatus(): AutoApplyStatus {
+  /**
+   * Executes the getStatus method and preserves the module's documented invariants.
+
+   * @returns AutoApplyStatus returned by the method.
+   */
+  getStatus(): AutoApplyStatus  {
     return {
       running: this.timer !== null,
       lastScanAt: this.lastScanAt,
@@ -216,7 +287,12 @@ export class AutoApplyEngine {
     };
   }
 
-  async updateConfig(input: unknown): Promise<AutoApplyConfig> {
+  /**
+   * Executes the updateConfig method and preserves the module's documented invariants.
+   * @param input Input used by the method.
+   * @returns Promise<AutoApplyConfig> returned by the method.
+   */
+  async updateConfig(input: unknown): Promise<AutoApplyConfig>  {
     const next = normalizeAutoApplyConfig(input);
     this.config = next;
     await this.persist();
@@ -232,7 +308,12 @@ export class AutoApplyEngine {
     return this.getConfig();
   }
 
-  start(): void {
+  /**
+   * Executes the start method and preserves the module's documented invariants.
+
+   * @returns void returned by the method.
+   */
+  start(): void  {
     if (this.timer !== null) return;
 
     this.statusMessage = "Auto-Apply activo; esperando el próximo escaneo.";
@@ -241,7 +322,12 @@ export class AutoApplyEngine {
     }, SCAN_INTERVAL_MS);
   }
 
-  stop(): void {
+  /**
+   * Executes the stop method and preserves the module's documented invariants.
+
+   * @returns void returned by the method.
+   */
+  stop(): void  {
     if (this.timer !== null) {
       clearInterval(this.timer);
       this.timer = null;
@@ -327,7 +413,12 @@ export class AutoApplyEngine {
     return true;
   }
 
-  async scan(): Promise<void> {
+  /**
+   * Executes the scan method and preserves the module's documented invariants.
+
+   * @returns Promise<void> returned by the method.
+   */
+  async scan(): Promise<void>  {
     if (!this.config.enabled || this.scanning) return;
 
     this.scanning = true;

@@ -1,3 +1,10 @@
+/**
+ * @file trend-engine.ts
+ * @path src/backend/trend-engine.ts
+ * @description Implements trend engine for QvaPay AI Scanner.
+ * @module backend
+ * @status active
+ */
 export interface TrendPoint {
   timestamp: string;
   coin: string;
@@ -7,6 +14,12 @@ export interface TrendPoint {
   maxRate: number | null;
   samples: number;
 }
+
+/**
+
+ * Public interface TrendSummary used by the module.
+
+ */
 
 export interface TrendSummary {
   coin: string;
@@ -25,6 +38,11 @@ export interface TrendSummary {
 
 const finite=(v:unknown):v is number=>typeof v==="number"&&Number.isFinite(v);
 
+/**
+ * Implements the calculateTrend operation for this module.
+ * @param points Input used by the operation.
+ * @returns The operation result.
+ */
 export function calculateTrend(points: TrendPoint[]): TrendSummary {
   if (!points.length) return {coin:"",type:"",points:0,firstTimestamp:null,lastTimestamp:null,firstMedian:null,lastMedian:null,changeAbsolute:null,changePercent:null,minMedian:null,maxMedian:null,direction:"insufficient"};
   const sorted=[...points].sort((a,b)=>a.timestamp.localeCompare(b.timestamp));
@@ -38,6 +56,11 @@ export function calculateTrend(points: TrendPoint[]): TrendSummary {
   return {coin:sorted[0]?.coin??"",type:sorted[0]?.type??"",points:valid.length,firstTimestamp:valid[0]?.timestamp??null,lastTimestamp:valid.at(-1)?.timestamp??null,firstMedian:first,lastMedian:last,changeAbsolute:change,changePercent:pct,minMedian:medians.length?Math.min(...medians):null,maxMedian:medians.length?Math.max(...medians):null,direction};
 }
 
+/**
+ * Implements the summarizeTrends operation for this module.
+ * @param points Input used by the operation.
+ * @returns The operation result.
+ */
 export function summarizeTrends(points: TrendPoint[]): TrendSummary[] {
   const groups=new Map<string,TrendPoint[]>();
   for(const point of points){const key=point.type+"|"+point.coin;const list=groups.get(key)??[];list.push(point);groups.set(key,list);}

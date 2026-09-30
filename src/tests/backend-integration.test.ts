@@ -1,3 +1,10 @@
+/**
+ * @file backend-integration.test.ts
+ * @path src/tests/backend-integration.test.ts
+ * @description backend-integration.test.ts source for QvaPay AI Scanner.
+ * @module tests
+ * @status test
+ */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer as createHttpServer, type Server } from "node:http";
@@ -11,6 +18,11 @@ interface MockState {
   upstreamRequests: number;
 }
 
+/**
+ * Implements the listen operation for this module.
+ * @param server Input used by the operation.
+ * @returns The operation result.
+ */
 function listen(server: Server): Promise<number> {
   return new Promise((resolvePromise, reject) => {
     server.once("error", reject);
@@ -25,10 +37,20 @@ function listen(server: Server): Promise<number> {
   });
 }
 
+/**
+ * Implements the close operation for this module.
+ * @param server Input used by the operation.
+ * @returns The operation result.
+ */
 async function close(server: Server): Promise<void> {
   await new Promise<void>((resolvePromise) => server.close(() => resolvePromise()));
 }
 
+/**
+ * Implements the startDashboard operation for this module.
+ * @param env Input used by the operation.
+ * @returns The operation result.
+ */
 async function startDashboard(env: NodeJS.ProcessEnv): Promise<ChildProcess> {
   const child = spawn(process.execPath, [resolve(process.cwd(), "dist/backend/server.js")], {
     cwd: process.cwd(),
@@ -58,6 +80,11 @@ async function startDashboard(env: NodeJS.ProcessEnv): Promise<ChildProcess> {
   throw new Error("Timeout esperando el dashboard: " + output);
 }
 
+/**
+ * Implements the stopDashboard operation for this module.
+ * @param child Input used by the operation.
+ * @returns The operation result.
+ */
 async function stopDashboard(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null) return;
   child.kill("SIGTERM");
@@ -70,10 +97,21 @@ async function stopDashboard(child: ChildProcess): Promise<void> {
   });
 }
 
+/**
+ * Implements the request operation for this module.
+ * @param port Input used by the operation.
+ * @param path Input used by the operation.
+ * @returns The operation result.
+ */
 async function request(port: number, path: string, init?: RequestInit): Promise<Response> {
   return fetch(`http://127.0.0.1:${port}${path}`, init);
 }
 
+/**
+ * Implements the createMockQvaPay operation for this module.
+ * @param state Input used by the operation.
+ * @returns The operation result.
+ */
 async function createMockQvaPay(state: MockState): Promise<{ server: Server; port: number }> {
   const server = createHttpServer(async (request, response) => {
     state.upstreamRequests += 1;

@@ -1,5 +1,18 @@
+/**
+ * @file market-history.ts
+ * @path src/backend/market-history.ts
+ * @description Implements market history for QvaPay AI Scanner.
+ * @module backend
+ * @status active
+ */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+
+/**
+
+ * Public interface MarketHistoryPoint used by the module.
+
+ */
 
 export interface MarketHistoryPoint {
   timestamp: string;
@@ -12,6 +25,12 @@ export interface MarketHistoryPoint {
   spread: number | null;
 }
 
+/**
+
+ * Public interface MarketHistoryStoreOptions used by the module.
+
+ */
+
 export interface MarketHistoryStoreOptions {
   path?: string;
   maxPoints?: number;
@@ -22,6 +41,12 @@ interface Offer { type?: unknown; coin?: unknown; amount?: unknown; receive?: un
 const n=(v:unknown)=>Number.isFinite(Number(v))?Number(v):NaN;
 const median=(a:number[]):number|null=>{if(!a.length)return null;const x=[...a].sort((p,q)=>p-q),m=Math.floor(x.length/2),lower=x[m-1],upper=x[m];return x.length%2?upper??null:(lower!==undefined&&upper!==undefined?(lower+upper)/2:null);};
 
+/**
+ * Implements the summarizeMarket operation for this module.
+ * @param offers Input used by the operation.
+ * @param timestamp Input used by the operation.
+ * @returns The operation result.
+ */
 export function summarizeMarket(offers: Offer[], timestamp=new Date().toISOString()): MarketHistoryPoint[] {
   const groups=new Map<string,{rates:number[],coin:string,type:string}>();
   for(const offer of offers){
@@ -40,6 +65,12 @@ export function summarizeMarket(offers: Offer[], timestamp=new Date().toISOStrin
   });
 }
 
+/**
+
+ * Public class MarketHistoryStore used by the module.
+
+ */
+
 export class MarketHistoryStore {
   private readonly path:string;
   private readonly maxPoints:number;
@@ -50,7 +81,12 @@ export class MarketHistoryStore {
     this.maxPoints=Math.max(100,Math.trunc(options.maxPoints??10000));
   }
 
-  async initialize():Promise<void>{
+  /**
+   * Executes the initialize method and preserves the module's documented invariants.
+
+   * @returns Promise<void> returned by the method.
+   */
+  async initialize(): Promise<void> {
     await mkdir(dirname(this.path),{recursive:true});
     try {
       const raw=await readFile(this.path,"utf8");
@@ -68,7 +104,12 @@ export class MarketHistoryStore {
     return points;
   }
 
-  query(coin?:string,type?:string,limit=200):MarketHistoryPoint[]{
+  /**
+   * Executes the query method and preserves the module's documented invariants.
+   * @param limit Input used by the method.
+   * @returns MarketHistoryPoint[] returned by the method.
+   */
+  query(coin?:string,type?:string,limit=200): MarketHistoryPoint[] {
     const c=coin?.trim().toUpperCase(),t=type?.trim().toLowerCase();
     return this.points.filter(p=>(!c||p.coin===c)&&(!t||p.type===t)).slice(-Math.min(Math.max(limit,1),1000));
   }

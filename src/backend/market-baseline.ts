@@ -1,3 +1,10 @@
+/**
+ * @file market-baseline.ts
+ * @path src/backend/market-baseline.ts
+ * @description Implements market baseline for QvaPay AI Scanner.
+ * @module backend
+ * @status active
+ */
 export interface BaselinePoint {
   coin: string;
   type: string;
@@ -5,6 +12,12 @@ export interface BaselinePoint {
   medianRate: number | null;
   samples: number;
 }
+
+/**
+
+ * Public interface MarketBaseline used by the module.
+
+ */
 
 export interface MarketBaseline {
   coin: string;
@@ -18,6 +31,12 @@ export interface MarketBaseline {
   status: "above" | "below" | "near" | "insufficient";
 }
 
+/**
+ * Implements the calculateBaseline operation for this module.
+ * @param points Input used by the operation.
+ * @param lookback Input used by the operation.
+ * @returns The operation result.
+ */
 export function calculateBaseline(points: BaselinePoint[], lookback=24): MarketBaseline {
   if (!points.length) return {coin:"",type:"",observations:0,baselineRate:null,currentRate:null,deviationPercent:null,minRate:null,maxRate:null,status:"insufficient"};
   const sorted=[...points].sort((a,b)=>a.timestamp.localeCompare(b.timestamp));
@@ -32,6 +51,12 @@ export function calculateBaseline(points: BaselinePoint[], lookback=24): MarketB
   return {coin:last.coin,type:last.type,observations:recent.length,baselineRate:baseline,currentRate:current,deviationPercent:deviation,minRate:Math.min(...values),maxRate:Math.max(...values),status};
 }
 
+/**
+ * Implements the calculateBaselines operation for this module.
+ * @param points Input used by the operation.
+ * @param lookback Input used by the operation.
+ * @returns The operation result.
+ */
 export function calculateBaselines(points: BaselinePoint[], lookback=24): MarketBaseline[] {
   const groups=new Map<string,BaselinePoint[]>();
   for(const p of points){const key=p.type+"|"+p.coin;const list=groups.get(key)??[];list.push(p);groups.set(key,list);}
