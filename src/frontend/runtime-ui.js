@@ -116,8 +116,14 @@ function closeCommands(){const p=$('commandPalette');if(p){p.classList.remove('o
  */
 function setupCommands(){document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCommands()}if(e.key==='Escape')closeCommands()});$('commandBackdrop')?.addEventListener('click',closeCommands);$('commandInput')?.addEventListener('input',e=>renderCommands(e.target.value));document.querySelector('.mobile-nav')?.addEventListener('click',closeCommands)}
 window.refreshAccount=refreshAccount;window.refreshFinance=refreshFinance;window.openCommands=openCommands;
-/**
- * Implements the init operation for this module.
-
- * @returns The operation result.
- */
+async function init(){
+  document.getElementById('menuButton')?.addEventListener('click',()=>document.getElementById('sidebar')?.classList.toggle('open'));
+  document.getElementById('mobileOverlay')?.addEventListener('click',()=>document.getElementById('sidebar')?.classList.remove('open'));
+  document.getElementById('refreshButton')?.addEventListener('click',refreshAll);
+  document.getElementById('commandButton')?.addEventListener('click',openCommands);
+  setupCommands();
+  addEventListener('hashchange',nav);
+  await refreshAll();
+  setInterval(loadAuto,5000);
+  setInterval(()=>S.active&&loadOperation(S.active),10000);
+}
