@@ -10,6 +10,7 @@ import { fetchAccountSnapshot } from "./account.js";
 import { calculateFinanceSummary } from "./finance.js";
 import { FinanceLedgerStore } from "./finance-ledger.js";
 import { assertDashboardHostIsSafe } from "./dashboard-security.js";
+import { MarketSnapshotService } from "./market-snapshot.js";
 
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
@@ -18,6 +19,7 @@ const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
 const QVAPAY_API_BASE_URL = (process.env.QVAPAY_API_BASE_URL ?? "https://api.qvapay.com").replace(/\/$/, "");
 const HOST = process.env.DASHBOARD_HOST ?? "127.0.0.1";
 const PORT = Number(process.env.DASHBOARD_PORT ?? "8080");
+const marketSnapshot = new MarketSnapshotService();
 
 // The dashboard exposes QvaPay operations. Keep the current trust boundary local-only.
 assertDashboardHostIsSafe(HOST);
@@ -105,11 +107,11 @@ async function fetchP2P(url: URL): Promise<Response> {
   const endpoint = new URL("/p2p", QVAPAY_API_BASE_URL);
   endpoint.search = params.toString();
 
-  return fetch(endpoint, {
+  return marketSnapshot.fetch(endpoint, async (target) => fetch(target, {
     method: "GET",
     headers: qvapayHeaders(),
     signal: AbortSignal.timeout(20_000)
-  });
+  }));
 }
 
 async function fetchBalance(): Promise<Response> {
