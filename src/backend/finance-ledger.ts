@@ -158,8 +158,19 @@ export class FinanceLedgerStore {
     const createdAt = String(o.created_at ?? o.createdAt ?? o.updated_at ?? o.updatedAt ?? new Date(0).toISOString());
     const updatedAt = String(o.updated_at ?? o.updatedAt ?? createdAt);
     return {
-      uuid, status: "completed", type, coin: String(o.coin ?? "QUSD"),
-      amount, receive, createdAt, updatedAt, recordedAt: new Date().toISOString()
+      uuid,
+      status: "completed",
+      type,
+      coin: String(o.coin ?? "QUSD"),
+      amount,
+      receive,
+      createdAt,
+      updatedAt,
+      recordedAt: new Date().toISOString(),
+      grossAmountQusd: amount,
+      feeQusd: null,
+      netAmountQusd: null,
+      feeSource: "unknown"
     };
   }
 
