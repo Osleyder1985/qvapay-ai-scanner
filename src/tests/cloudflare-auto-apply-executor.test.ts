@@ -8,9 +8,7 @@
 
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import {
-  createCloudflareAutoApplyExecutor,
-} from "../backend/cloudflare/cloudflare-auto-apply-executor.js";
+import { createCloudflareAutoApplyExecutor } from "../backend/cloudflare/cloudflare-auto-apply-executor.js";
 import type { D1AutoApplyConfigRow } from "../backend/cloudflare/d1-repository.js";
 import type { QvaPayHttpResult } from "../backend/cloudflare/qvapay-client.js";
 
@@ -91,12 +89,14 @@ function dependencies(overrides: Record<string, unknown> = {}) {
       },
     applyP2POffer: async (): Promise<QvaPayHttpResult> => {
       applied += 100;
-      return (overrides.apply as QvaPayHttpResult | undefined) ?? {
-        status: 200,
-        ok: true,
-        payload: { message: "accepted" },
-        headers: new Headers(),
-      };
+      return (
+        (overrides.apply as QvaPayHttpResult | undefined) ?? {
+          status: 200,
+          ok: true,
+          payload: { message: "accepted" },
+          headers: new Headers(),
+        }
+      );
     },
   };
 
@@ -109,19 +109,19 @@ function dependencies(overrides: Record<string, unknown> = {}) {
 
 test("disabled configuration never calls QvaPay mutation", async () => {
   const deps = dependencies();
-  deps.repository.getAutoApplyConfig = async (): Promise<D1AutoApplyConfigRow> =>
-    ({
-    id: 1,
-    enabled: 0,
-    type: "sell",
-    coin: "USDT",
-    rate_min: null,
-    rate_max: null,
-    amount_min: null,
-    amount_max: null,
-    daily_max_qusd: null,
-    max_concurrent: 1,
-    updated_at: "2026-09-30T00:00:00.000Z",
+  deps.repository.getAutoApplyConfig =
+    async (): Promise<D1AutoApplyConfigRow> => ({
+      id: 1,
+      enabled: 0,
+      type: "sell",
+      coin: "USDT",
+      rate_min: null,
+      rate_max: null,
+      amount_min: null,
+      amount_max: null,
+      daily_max_qusd: null,
+      max_concurrent: 1,
+      updated_at: "2026-09-30T00:00:00.000Z",
     });
   let mutationCalls = 0;
   deps.qvapay.applyP2POffer = async () => {

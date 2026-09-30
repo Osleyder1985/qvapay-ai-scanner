@@ -113,157 +113,69 @@ export function createCloudflareAutoApplyExecutor(
 ): AutoApplyExecutor {
   const now = dependencies.now ?? (() => new Date());
   const ownerId =
-    dependencies.ownerId ??
-    (() => `auto-apply-${crypto.randomUUID()}`);
+    dependencies.ownerId ?? (() => `auto-apply-${crypto.randomUUID()}`);
 
-  return createAutoApplyExecutor(async (): Promise<
-    Omit<AutoApplyExecutionResult, "startedAt" | "finishedAt">
-  > => {
-    const started = now();
-    const startedAt = started.toISOString();
-    const config = await dependencies.repository.getAutoApplyConfig();
+  return createAutoApplyExecutor(
+    async (): Promise<
+      Omit<AutoApplyExecutionResult, "startedAt" | "finishedAt">
+    > => {
+      const started = now();
+      const startedAt = started.toISOString();
+      const config = await dependencies.repository.getAutoApplyConfig();
 
-    if (!config) {
-      return {
-        status: "disabled",
-        message: "Auto-Apply configuration is absent.",
-      };
-    }
-    if (config.enabled !== 1) {
-      return { status: "disabled", message: "Auto-Apply is disabled." };
-    }
-
-    const state =
-      (await dependencies.repository.getAutoApplyState()) ??
-      ({
-        id: 1,
-        daily_date: today(started),
-        daily_applied_qusd: 0,
-        last_scan_at: null,
-        last_action_at: null,
-        last_message: "",
-        updated_at: startedAt,
-      } satisfies D1AutoApplyStateRow);
-
-    const runId = ownerId();
-    const expiresAt = new Date(started.getTime() + LEASE_MS).toISOString();
-    const claimed = await dependencies.repository.claimAutoApplyExecutionLease({
-      ownerId: runId,
-      acquiredAt: startedAt,
-      expiresAt,
-      now: startedAt,
-    });
-
-    if (!claimed) {
-      return {
-        status: "skipped",
-        message: "Another Auto-Apply execution owns the lease.",
-      };
-    }
-
-    let lastActionAt = state.last_action_at;
-    let dailyDate = state.daily_date;
-    let dailyAppliedQusd = state.daily_applied_qusd;
-
-    try {
-      if (dailyDate !== today(started)) {
-        dailyDate = today(started);
-        dailyAppliedQusd = 0;
-        lastActionAt = null;
+      if (!config) {
+        return {
+          status: "disabled",
+          message: "Auto-Apply configuration is absent.",
+        };
+      }
+      if (config.enabled !== 1) {
+        return { status: "disabled", message: "Auto-Apply is disabled." };
       }
 
-      const own = await dependencies.qvapay.getOwnP2P("processing");
-      if (!own.ok) {
-        const message = 
-          `Unable to read own processing operations: HTTP ${own.status}`;
-        await dependencies.repository.updateAutoApplyState({
-          dailyDate,
-          dailyAppliedQusd,
-          lastScanAt: startedAt,
-          lastActionAt,
-          lastMessage: message,
-          updatedAt: now().toISOString(),
+      const state =
+        (await dependencies.repository.getAutoApplyState()) ??
+        ({
+          id: 1,
+          daily_date: today(started),
+          daily_applied_qusd: 0,
+          last_scan_at: null,
+          last_action_at: null,
+          last_message: "",
+          updated_at: startedAt,
+        } satisfies D1AutoApplyStateRow);
+
+      const runId = ownerId();
+      const expiresAt = new Date(started.getTime() + LEASE_MS).toISOString();
+      const claimed =
+        await dependencies.repository.claimAutoApplyExecutionLease({
+          ownerId: runId,
+          acquiredAt: startedAt,
+          expiresAt,
+          now: startedAt,
         });
-        return { status: "failed", message };
+
+      if (!claimed) {
+        return {
+          status: "skipped",
+          message: "Another Auto-Apply execution owns the lease.",
+        };
       }
 
-      const processingCount = payloadData(own).length;
-      if (processingCount >= config.max_concurrent) {
-        const message =
-          `Paused by concurrent-operation limit (${processingCount}/${config.max_concurrent}).`;
-        await dependencies.repository.updateAutoApplyState({
-          dailyDate,
-          dailyAppliedQusd,
-          lastScanAt: startedAt,
-          lastActionAt,
-          lastMessage: message,
-          updatedAt: now().toISOString(),
-        });
-        return { status: "skipped", message };
-      }
+      let lastActionAt = state.last_action_at;
+      let dailyDate = state.daily_date;
+      let dailyAppliedQusd = state.daily_applied_qusd;
 
-      const query = new URLSearchParams({
-        page: "1",
-        take: "100",
-        type: config.type,
-        orderBy: "updated_at",
-        orderType: "desc",
-      });
-      if (config.coin) query.set("coin", config.coin);
+      try {
+        if (dailyDate !== today(started)) {
+          dailyDate = today(started);
+          dailyAppliedQusd = 0;
+          lastActionAt = null;
+        }
 
-      const market = await dependencies.qvapay.getP2P(query);
-      if (!market.ok) {
-        const message = `Unable to read market: HTTP ${market.status}`;
-        await dependencies.repository.updateAutoApplyState({
-          dailyDate,
-          dailyAppliedQusd,
-          lastScanAt: startedAt,
-          lastActionAt,
-          lastMessage: message,
-          updatedAt: now().toISOString(),
-        });
-        return { status: "failed", message };
-      }
-
-      const candidates = (payloadData(market) as MarketOffer[])
-        .filter(
-          (offer) => offerUuid(offer) && matches(offer, config, dailyAppliedQusd),
-        )
-        .sort(
-          (a, b) =>
-            Number(a.receive) / Number(a.amount) -
-            Number(b.receive) / Number(b.amount),
-        );
-
-      for (const offer of candidates) {
-        const uuid = offerUuid(offer);
-        if (await dependencies.repository.hasAppliedOffer(uuid)) continue;
-
-        const amount = Number(offer.amount);
-        const attemptedAt = now().toISOString();
-        const response = await dependencies.qvapay.applyP2POffer(uuid);
-        const detail = responseDetail(response);
-
-        await dependencies.repository.recordAutoApplyAttempt({
-          offerUuid: uuid,
-          attemptedAt,
-          httpStatus: response.status,
-          success: response.ok,
-          amountQusd: Number.isFinite(amount) ? amount : null,
-          responseJson: detail || null,
-          reason: response.ok ? "applied" : `HTTP ${response.status}`,
-        });
-
-        if (response.ok) {
-          await dependencies.repository.recordAppliedOffer(
-            uuid,
-            attemptedAt,
-            amount,
-          );
-          dailyAppliedQusd += amount;
-          lastActionAt = attemptedAt;
-          const message =
-            `Offer ${uuid} accepted automatically (${amount} QUSD).`;
+        const own = await dependencies.qvapay.getOwnP2P("processing");
+        if (!own.ok) {
+          const message = `Unable to read own processing operations: HTTP ${own.status}`;
           await dependencies.repository.updateAutoApplyState({
             dailyDate,
             dailyAppliedQusd,
@@ -272,26 +184,125 @@ export function createCloudflareAutoApplyExecutor(
             lastMessage: message,
             updatedAt: now().toISOString(),
           });
-          return { status: "completed", message };
+          return { status: "failed", message };
         }
 
-        if (
-          response.status === 400 &&
-          detail.toLowerCase().includes("vip")
-        ) {
-          const expiresAt = new Date(
-            now().getTime() + VIP_COOLDOWN_MS,
-          ).toISOString();
-          await dependencies.repository.recordVipRejection({
-            offerUuid: uuid,
-            rejectedAt: attemptedAt,
-            expiresAt,
-            reason: detail || "QvaPay requires VIP.",
+        const processingCount = payloadData(own).length;
+        if (processingCount >= config.max_concurrent) {
+          const message = `Paused by concurrent-operation limit (${processingCount}/${config.max_concurrent}).`;
+          await dependencies.repository.updateAutoApplyState({
+            dailyDate,
+            dailyAppliedQusd,
+            lastScanAt: startedAt,
+            lastActionAt,
+            lastMessage: message,
+            updatedAt: now().toISOString(),
           });
+          return { status: "skipped", message };
         }
 
-        const message =
-          `QvaPay rejected automatic application of ${uuid}: HTTP ${response.status} ${detail}`.trim();
+        const query = new URLSearchParams({
+          page: "1",
+          take: "100",
+          type: config.type,
+          orderBy: "updated_at",
+          orderType: "desc",
+        });
+        if (config.coin) query.set("coin", config.coin);
+
+        const market = await dependencies.qvapay.getP2P(query);
+        if (!market.ok) {
+          const message = `Unable to read market: HTTP ${market.status}`;
+          await dependencies.repository.updateAutoApplyState({
+            dailyDate,
+            dailyAppliedQusd,
+            lastScanAt: startedAt,
+            lastActionAt,
+            lastMessage: message,
+            updatedAt: now().toISOString(),
+          });
+          return { status: "failed", message };
+        }
+
+        const candidates = (payloadData(market) as MarketOffer[])
+          .filter(
+            (offer) =>
+              offerUuid(offer) && matches(offer, config, dailyAppliedQusd),
+          )
+          .sort(
+            (a, b) =>
+              Number(a.receive) / Number(a.amount) -
+              Number(b.receive) / Number(b.amount),
+          );
+
+        for (const offer of candidates) {
+          const uuid = offerUuid(offer);
+          if (await dependencies.repository.hasAppliedOffer(uuid)) continue;
+
+          const amount = Number(offer.amount);
+          const attemptedAt = now().toISOString();
+          const response = await dependencies.qvapay.applyP2POffer(uuid);
+          const detail = responseDetail(response);
+
+          await dependencies.repository.recordAutoApplyAttempt({
+            offerUuid: uuid,
+            attemptedAt,
+            httpStatus: response.status,
+            success: response.ok,
+            amountQusd: Number.isFinite(amount) ? amount : null,
+            responseJson: detail || null,
+            reason: response.ok ? "applied" : `HTTP ${response.status}`,
+          });
+
+          if (response.ok) {
+            await dependencies.repository.recordAppliedOffer(
+              uuid,
+              attemptedAt,
+              amount,
+            );
+            dailyAppliedQusd += amount;
+            lastActionAt = attemptedAt;
+            const message = `Offer ${uuid} accepted automatically (${amount} QUSD).`;
+            await dependencies.repository.updateAutoApplyState({
+              dailyDate,
+              dailyAppliedQusd,
+              lastScanAt: startedAt,
+              lastActionAt,
+              lastMessage: message,
+              updatedAt: now().toISOString(),
+            });
+            return { status: "completed", message };
+          }
+
+          if (response.status === 400 && detail.toLowerCase().includes("vip")) {
+            const expiresAt = new Date(
+              now().getTime() + VIP_COOLDOWN_MS,
+            ).toISOString();
+            await dependencies.repository.recordVipRejection({
+              offerUuid: uuid,
+              rejectedAt: attemptedAt,
+              expiresAt,
+              reason: detail || "QvaPay requires VIP.",
+            });
+          }
+
+          const message =
+            `QvaPay rejected automatic application of ${uuid}: HTTP ${response.status} ${detail}`.trim();
+          await dependencies.repository.updateAutoApplyState({
+            dailyDate,
+            dailyAppliedQusd,
+            lastScanAt: startedAt,
+            lastActionAt,
+            lastMessage: message,
+            updatedAt: now().toISOString(),
+          });
+
+          if (response.status === 429) {
+            return { status: "skipped", message };
+          }
+        }
+
+        const message = "Scan completed: no eligible unapplied offer found.";
         await dependencies.repository.updateAutoApplyState({
           dailyDate,
           dailyAppliedQusd,
@@ -300,27 +311,13 @@ export function createCloudflareAutoApplyExecutor(
           lastMessage: message,
           updatedAt: now().toISOString(),
         });
-
-        if (response.status === 429) {
-          return { status: "skipped", message };
-        }
+        return { status: "completed", message };
+      } finally {
+        await dependencies.repository.releaseAutoApplyExecutionLease(
+          runId,
+          now().toISOString(),
+        );
       }
-
-      const message = "Scan completed: no eligible unapplied offer found.";
-      await dependencies.repository.updateAutoApplyState({
-        dailyDate,
-        dailyAppliedQusd,
-        lastScanAt: startedAt,
-        lastActionAt,
-        lastMessage: message,
-        updatedAt: now().toISOString(),
-      });
-      return { status: "completed", message };
-    } finally {
-      await dependencies.repository.releaseAutoApplyExecutionLease(
-        runId,
-        now().toISOString(),
-      );
-    }
-  });
+    },
+  );
 }

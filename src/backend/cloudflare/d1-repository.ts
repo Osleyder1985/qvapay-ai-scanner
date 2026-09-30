@@ -411,7 +411,8 @@ export class D1Repository {
     updatedAt: string;
   }): Promise<void> {
     await this.db
-      .prepare(`INSERT INTO auto_apply_state (
+      .prepare(
+        `INSERT INTO auto_apply_state (
         id, daily_date, daily_applied_qusd, last_scan_at, last_action_at, last_message, updated_at
       ) VALUES (1, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
@@ -420,7 +421,8 @@ export class D1Repository {
         last_scan_at = excluded.last_scan_at,
         last_action_at = excluded.last_action_at,
         last_message = excluded.last_message,
-        updated_at = excluded.updated_at`)
+        updated_at = excluded.updated_at`,
+      )
       .bind(
         input.dailyDate,
         input.dailyAppliedQusd,
