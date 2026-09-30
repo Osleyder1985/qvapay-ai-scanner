@@ -272,9 +272,7 @@ export class D1Repository {
    * Upserts completed finance entries while preserving a previously confirmed fee.
    * The referenced operation must already exist because the D1 schema uses a foreign key.
    */
-  async upsertFinance(
-    entries: FinanceLedgerEntry[],
-  ): Promise<number> {
+  async upsertFinance(entries: FinanceLedgerEntry[]): Promise<number> {
     let written = 0;
     for (const entry of entries) {
       await this.db
