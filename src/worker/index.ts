@@ -92,9 +92,9 @@ const handler: WorkerHandler = {
       url.pathname === "/api/cloudflare/d1/health"
     ) {
       try {
-        const row = await env.DB
-          .prepare("SELECT 1 AS ok")
-          .first<{ ok: number }>();
+        const row = await env.DB.prepare("SELECT 1 AS ok").first<{
+          ok: number;
+        }>();
 
         return json(
           {
