@@ -8,6 +8,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
+/**
+
+ * Public interface MarketHistoryPoint used by the module.
+
+ */
+
 export interface MarketHistoryPoint {
   timestamp: string;
   coin: string;
@@ -18,6 +24,12 @@ export interface MarketHistoryPoint {
   maxRate: number | null;
   spread: number | null;
 }
+
+/**
+
+ * Public interface MarketHistoryStoreOptions used by the module.
+
+ */
 
 export interface MarketHistoryStoreOptions {
   path?: string;
@@ -53,6 +65,12 @@ export function summarizeMarket(offers: Offer[], timestamp=new Date().toISOStrin
   });
 }
 
+/**
+
+ * Public class MarketHistoryStore used by the module.
+
+ */
+
 export class MarketHistoryStore {
   private readonly path:string;
   private readonly maxPoints:number;
@@ -63,7 +81,12 @@ export class MarketHistoryStore {
     this.maxPoints=Math.max(100,Math.trunc(options.maxPoints??10000));
   }
 
-  async initialize():Promise<void>{
+  /**
+   * Executes the initialize method and preserves the module's documented invariants.
+
+   * @returns Promise<void> returned by the method.
+   */
+  async initialize(): Promise<void> {
     await mkdir(dirname(this.path),{recursive:true});
     try {
       const raw=await readFile(this.path,"utf8");
@@ -81,7 +104,12 @@ export class MarketHistoryStore {
     return points;
   }
 
-  query(coin?:string,type?:string,limit=200):MarketHistoryPoint[]{
+  /**
+   * Executes the query method and preserves the module's documented invariants.
+   * @param limit Input used by the method.
+   * @returns MarketHistoryPoint[] returned by the method.
+   */
+  query(coin?:string,type?:string,limit=200): MarketHistoryPoint[] {
     const c=coin?.trim().toUpperCase(),t=type?.trim().toLowerCase();
     return this.points.filter(p=>(!c||p.coin===c)&&(!t||p.type===t)).slice(-Math.min(Math.max(limit,1),1000));
   }
