@@ -21,7 +21,19 @@ const meta={'/':['OVERVIEW','Inicio'],'/market':['MARKET','Mercado'],'/auto-appl
  * @param o Input used by the operation.
  * @returns The operation result.
  */
-async function api(u,o={}){const r=await fetch(u,{cache:'no-store',...o}),p=await r.json();if(!r.ok)throw Error(p?.detail?.message||p?.detail||p?.error||'Error');return p}
+function errorText(value){
+  if(value==null)return 'Error desconocido';
+  if(typeof value==='string')return value;
+  if(value instanceof Error)return value.message||'Error desconocido';
+  if(typeof value==='object'){
+    const message=value.message||value.detail||value.error||value.title||value.reason;
+    if(typeof message==='string'&&message.trim())return message;
+    if(message&&message!==value)return errorText(message);
+    try{return JSON.stringify(value)}catch{return String(value)}
+  }
+  return String(value);
+}
+async function api(u,o={}){const r=await fetch(u,{cache:'no-store',...o});let p;try{p=await r.json()}catch{p={error:'Respuesta no válida del servidor',status:r.status}}if(!r.ok)throw new Error(errorText(p?.detail?.message||p?.detail||p?.error||p));return p}
 /**
  * Implements the toast operation for this module.
  * @param m Input used by the operation.
