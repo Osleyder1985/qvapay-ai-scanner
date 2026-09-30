@@ -125,9 +125,7 @@ class FakeD1 implements D1DatabaseLike {
         created_at: createdAt,
         updated_at: updatedAt,
         recorded_at: recordedAt,
-        gross_amount_qusd: confirmed
-          ? previous?.gross_amount_qusd
-          : gross,
+        gross_amount_qusd: confirmed ? previous?.gross_amount_qusd : gross,
         fee_qusd: confirmed ? previous?.fee_qusd : fee,
         net_amount_qusd: confirmed ? previous?.net_amount_qusd : net,
         fee_source: confirmed ? previous?.fee_source : feeSource,
