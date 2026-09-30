@@ -49,6 +49,30 @@ export interface D1OperationRow {
   raw_json: string;
 }
 
+export interface D1AutoApplyConfigRow {
+  id: 1;
+  enabled: number;
+  type: "buy" | "sell";
+  coin: string;
+  rate_min: number | null;
+  rate_max: number | null;
+  amount_min: number | null;
+  amount_max: number | null;
+  daily_max_qusd: number | null;
+  max_concurrent: number;
+  updated_at: string;
+}
+
+export interface D1AutoApplyStateRow {
+  id: 1;
+  daily_date: string;
+  daily_applied_qusd: number;
+  last_scan_at: string | null;
+  last_action_at: string | null;
+  last_message: string;
+  updated_at: string;
+}
+
 export interface D1FinanceRow {
   uuid: string;
   status: "completed";
@@ -331,6 +355,20 @@ export class D1Repository {
         createdAt,
       )
       .run();
+  }
+
+  async getAutoApplyConfig(): Promise<D1AutoApplyConfigRow | null> {
+    return this.db
+      .prepare("SELECT * FROM auto_apply_config WHERE id = 1")
+      .bind()
+      .first<D1AutoApplyConfigRow>();
+  }
+
+  async getAutoApplyState(): Promise<D1AutoApplyStateRow | null> {
+    return this.db
+      .prepare("SELECT * FROM auto_apply_state WHERE id = 1")
+      .bind()
+      .first<D1AutoApplyStateRow>();
   }
 
   async recordAutoApplyAttempt(input: {

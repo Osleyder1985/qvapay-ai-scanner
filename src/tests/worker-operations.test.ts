@@ -22,6 +22,10 @@ function createDb(rows: Record<string, unknown>[] = []): WorkerEnv["DB"] {
         },
         async first<T>() {
           if (sql.includes("SELECT 1")) return { ok: 1 } as T;
+          if (sql.includes("auto_apply_config"))
+            return (rows[0] ?? null) as T | null;
+          if (sql.includes("auto_apply_state"))
+            return (rows[1] ?? null) as T | null;
           return (rows[0] ?? null) as T | null;
         },
         async all<T>() {
@@ -177,5 +181,75 @@ test("finance D1 read returns 404 when the entry does not exist", async () => {
   assert.equal(response.status, 404);
   assert.deepEqual(await response.json(), {
     error: "Entrada financiera no encontrada",
+  });
+});
+
+test("Auto-Apply D1 read rejects unauthenticated requests", async () => {
+  const response = await worker.fetch(
+    new Request("https://scanner.example/api/cloudflare/d1/auto-apply"),
+    { DB: createDb(), DASHBOARD_API_TOKEN: "test-token" },
+  );
+
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), { error: "No autorizado" });
+});
+
+test("Auto-Apply D1 read returns durable config and state", async () => {
+  const config = {
+    id: 1,
+    enabled: 1,
+    type: "sell",
+    coin: "QUSD",
+    rate_min: 1000,
+    rate_max: 1100,
+    amount_min: 5,
+    amount_max: 100,
+    daily_max_qusd: 500,
+    max_concurrent: 2,
+    updated_at: "2026-09-30T00:00:00.000Z",
+  };
+  const state = {
+    id: 1,
+    daily_date: "2026-09-30",
+    daily_applied_qusd: 25,
+    last_scan_at: "2026-09-30T00:01:00.000Z",
+    last_action_at: "2026-09-30T00:01:30.000Z",
+    last_message: "scan completed",
+    updated_at: "2026-09-30T00:01:30.000Z",
+  };
+  const response = await worker.fetch(
+    new Request("https://scanner.example/api/cloudflare/d1/auto-apply", {
+      headers: { authorization: "Bearer test-token" },
+    }),
+    { DB: createDb([config, state]), DASHBOARD_API_TOKEN: "test-token" },
+  );
+
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as {
+    config: Record<string, unknown>;
+    state: Record<string, unknown>;
+    source: { persistence: string };
+  };
+
+  assert.equal(body.config.enabled, true);
+  assert.equal(body.config.rate_min, 1000);
+  assert.equal(body.state.daily_applied_qusd, 25);
+  assert.equal(body.state.last_message, "scan completed");
+  assert.equal(body.source.persistence, "d1");
+});
+
+test("Auto-Apply D1 read returns null state when no durable rows exist", async () => {
+  const response = await worker.fetch(
+    new Request("https://scanner.example/api/cloudflare/d1/auto-apply", {
+      headers: { authorization: "Bearer test-token" },
+    }),
+    { DB: createDb(), DASHBOARD_API_TOKEN: "test-token" },
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    config: null,
+    state: null,
+    source: { runtime: "cloudflare-worker", persistence: "d1" },
   });
 });
