@@ -8,7 +8,6 @@
 
 import {
   createCloudflareAutoApplyExecutor,
-  type CloudflareAutoApplyDependencies,
 } from "../backend/cloudflare/cloudflare-auto-apply-executor.js";
 import { D1Repository, type D1DatabaseLike } from "../backend/cloudflare/d1-repository.js";
 import { createQvaPayClient, type QvaPayClientConfig } from "../backend/cloudflare/qvapay-client.js";
@@ -70,7 +69,7 @@ export function createAutoApplyScheduledHandler(
     const executor = createExecutor({
       repository,
       qvapay,
-    } as CloudflareAutoApplyDependencies);
+    });
 
     await createScheduledHandler({ executor })(controller, env, context);
   };
