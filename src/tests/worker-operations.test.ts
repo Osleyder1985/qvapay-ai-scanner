@@ -106,9 +106,7 @@ test("D1 health remains available without dashboard authorization", async () => 
 
 test("finance D1 read rejects unauthenticated requests", async () => {
   const response = await worker.fetch(
-    new Request(
-      "https://scanner.example/api/cloudflare/d1/finance?uuid=op-1",
-    ),
+    new Request("https://scanner.example/api/cloudflare/d1/finance?uuid=op-1"),
     { DB: createDb(), DASHBOARD_API_TOKEN: "test-token" },
   );
 
@@ -148,10 +146,9 @@ test("finance D1 read returns the fee-aware durable projection", async () => {
   };
 
   const response = await worker.fetch(
-    new Request(
-      "https://scanner.example/api/cloudflare/d1/finance?uuid=op-1",
-      { headers: { authorization: "Bearer test-token" } },
-    ),
+    new Request("https://scanner.example/api/cloudflare/d1/finance?uuid=op-1", {
+      headers: { authorization: "Bearer test-token" },
+    }),
     { DB: createDb([row]), DASHBOARD_API_TOKEN: "test-token" },
   );
 
