@@ -7,3 +7,4 @@ El formato detallado de cada decisión se incorporará mediante registros indivi
 ## Decisions
 
 - [ADR-001: Selección de tecnologías de backend](ADR-001-backend-technology-selection.md) — TypeScript/Node.js como backend principal, Python para analytics/AI cuando sea necesario y Go diferido hasta existir evidencia técnica.
+- [ADR-002: Auto-Apply configurable con límites de ejecución](ADR-002-configurable-auto-apply.md) — Reglas persistentes, motor desactivado por defecto y límite local de aplicaciones.
