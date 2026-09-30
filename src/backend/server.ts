@@ -5,7 +5,11 @@
  * @module backend
  * @status active
  */
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 import { AutoApplyEngine } from "./auto-apply.js";
@@ -18,14 +22,19 @@ import { calculateFinanceSummary } from "./finance.js";
 import { FinanceLedgerStore } from "./finance-ledger.js";
 import { assertDashboardHostIsSafe } from "./dashboard-security.js";
 import { MarketSnapshotService } from "./market-snapshot.js";
-import { fetchAllCompletedP2P, reconcileCompletedIds } from "./finance-reconciliation.js";
+import {
+  fetchAllCompletedP2P,
+  reconcileCompletedIds,
+} from "./finance-reconciliation.js";
 import { OperationsLedgerStore } from "./operations-ledger.js";
 
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
   : resolve(process.cwd(), "src/frontend");
 
-const QVAPAY_API_BASE_URL = (process.env.QVAPAY_API_BASE_URL ?? "https://api.qvapay.com").replace(/\/$/, "");
+const QVAPAY_API_BASE_URL = (
+  process.env.QVAPAY_API_BASE_URL ?? "https://api.qvapay.com"
+).replace(/\/$/, "");
 const HOST = process.env.DASHBOARD_HOST ?? "127.0.0.1";
 const PORT = Number(process.env.DASHBOARD_PORT ?? "8080");
 const marketSnapshot = new MarketSnapshotService();
@@ -36,8 +45,19 @@ const MAX_OPERATION_PAGES = 100;
 assertDashboardHostIsSafe(HOST);
 
 const allowedQueryParameters = new Set([
-  "page", "take", "type", "coin", "orderBy", "orderType",
-  "min", "max", "ratio_min", "ratio_max", "only_vip", "my", "status"
+  "page",
+  "take",
+  "type",
+  "coin",
+  "orderBy",
+  "orderType",
+  "min",
+  "max",
+  "ratio_min",
+  "ratio_max",
+  "only_vip",
+  "my",
+  "status",
 ]);
 
 /**
@@ -47,12 +67,16 @@ const allowedQueryParameters = new Set([
  * @param payload Input used by the operation.
  * @returns The operation result.
  */
-function sendJson(response: ServerResponse, status: number, payload: unknown): void {
+function sendJson(
+  response: ServerResponse,
+  status: number,
+  payload: unknown,
+): void {
   const body = JSON.stringify(payload);
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
-    "Content-Length": Buffer.byteLength(body)
+    "Content-Length": Buffer.byteLength(body),
   });
   response.end(body);
 }
@@ -64,10 +88,14 @@ function sendJson(response: ServerResponse, status: number, payload: unknown): v
  */
 function contentType(path: string): string {
   switch (extname(path)) {
-    case ".html": return "text/html; charset=utf-8";
-    case ".css": return "text/css; charset=utf-8";
-    case ".js": return "text/javascript; charset=utf-8";
-    default: return "application/octet-stream";
+    case ".html":
+      return "text/html; charset=utf-8";
+    case ".css":
+      return "text/css; charset=utf-8";
+    case ".js":
+      return "text/javascript; charset=utf-8";
+    default:
+      return "application/octet-stream";
   }
 }
 
@@ -83,7 +111,7 @@ async function sendFile(response: ServerResponse, path: string): Promise<void> {
     response.writeHead(200, {
       "Content-Type": contentType(path),
       "Cache-Control": "no-store",
-      "Content-Length": body.byteLength
+      "Content-Length": body.byteLength,
     });
     response.end(body);
   } catch {
@@ -101,14 +129,16 @@ function qvapayHeaders(): Record<string, string> {
   const appSecret = process.env.QVAPAY_APP_SECRET;
 
   if (!appId || !appSecret) {
-    throw new Error("Faltan QVAPAY_APP_ID y QVAPAY_APP_SECRET en las variables de entorno.");
+    throw new Error(
+      "Faltan QVAPAY_APP_ID y QVAPAY_APP_SECRET en las variables de entorno.",
+    );
   }
 
   return {
     Accept: "application/json",
     "app-id": appId,
     "app-secret": appSecret,
-    "User-Agent": "qvapay-ai-scanner-p2p-dashboard/0.4"
+    "User-Agent": "qvapay-ai-scanner-p2p-dashboard/0.4",
   };
 }
 
@@ -133,8 +163,10 @@ function sanitizeQuery(url: URL): URLSearchParams {
     params.set("take", String(Math.min(Math.max(Math.trunc(take), 1), 100)));
   }
 
-  if (params.get("orderBy") === "best_rate" &&
-      (!params.get("type") || !params.get("coin"))) {
+  if (
+    params.get("orderBy") === "best_rate" &&
+    (!params.get("type") || !params.get("coin"))
+  ) {
     params.set("orderBy", "updated_at");
   }
 
@@ -151,11 +183,13 @@ async function fetchP2P(url: URL): Promise<Response> {
   const endpoint = new URL("/p2p", QVAPAY_API_BASE_URL);
   endpoint.search = params.toString();
 
-  return marketSnapshot.fetch(endpoint, async (target) => fetch(target, {
-    method: "GET",
-    headers: qvapayHeaders(),
-    signal: AbortSignal.timeout(20_000)
-  }));
+  return marketSnapshot.fetch(endpoint, async (target) =>
+    fetch(target, {
+      method: "GET",
+      headers: qvapayHeaders(),
+      signal: AbortSignal.timeout(20_000),
+    }),
+  );
 }
 
 /**
@@ -168,7 +202,7 @@ async function fetchBalance(): Promise<Response> {
   return fetch(endpoint, {
     method: "POST",
     headers: qvapayHeaders(),
-    signal: AbortSignal.timeout(20_000)
+    signal: AbortSignal.timeout(20_000),
   });
 }
 
@@ -179,15 +213,23 @@ async function fetchBalance(): Promise<Response> {
  * @param method Input used by the operation.
  * @returns The operation result.
  */
-async function fetchP2PAction(uuid: string, action: string, method: "POST" | "GET", body?: unknown): Promise<Response> {
-  const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}/${action}`, QVAPAY_API_BASE_URL);
+async function fetchP2PAction(
+  uuid: string,
+  action: string,
+  method: "POST" | "GET",
+  body?: unknown,
+): Promise<Response> {
+  const endpoint = new URL(
+    `/p2p/${encodeURIComponent(uuid)}/${action}`,
+    QVAPAY_API_BASE_URL,
+  );
   const headers = qvapayHeaders();
   if (body !== undefined) headers["Content-Type"] = "application/json";
   return fetch(endpoint, {
     method,
     headers,
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-    signal: AbortSignal.timeout(20_000)
+    signal: AbortSignal.timeout(20_000),
   });
 }
 
@@ -214,29 +256,37 @@ async function fetchAllOperations(): Promise<{
       my: "1",
       take: "100",
       page: String(page),
-      sortByStatus: "true"
+      sortByStatus: "true",
     }).toString();
 
-    const upstream = await marketSnapshot.fetch(endpoint, async (target) => fetch(target, {
-      method: "GET",
-      headers: qvapayHeaders(),
-      signal: AbortSignal.timeout(20_000)
-    }));
+    const upstream = await marketSnapshot.fetch(endpoint, async (target) =>
+      fetch(target, {
+        method: "GET",
+        headers: qvapayHeaders(),
+        signal: AbortSignal.timeout(20_000),
+      }),
+    );
     const payload = await readUpstreamPayload(upstream);
     if (!upstream.ok) throw new Error(JSON.stringify(payload));
 
-    const record = payload && typeof payload === "object"
-      ? payload as Record<string, unknown>
-      : {};
+    const record =
+      payload && typeof payload === "object"
+        ? (payload as Record<string, unknown>)
+        : {};
     const pageOperations = Array.isArray(record.data)
-      ? record.data.filter((value): value is Record<string, unknown> =>
-          Boolean(value) && typeof value === "object")
+      ? record.data.filter(
+          (value): value is Record<string, unknown> =>
+            Boolean(value) && typeof value === "object",
+        )
       : [];
 
     operations.push(...pageOperations);
     pagesFetched = page;
     total = Number(record.total ?? operations.length);
-    perPage = Math.max(1, Number(record.per_page ?? pageOperations.length ?? 100));
+    perPage = Math.max(
+      1,
+      Number(record.per_page ?? pageOperations.length ?? 100),
+    );
     lastPage = Math.max(1, Math.ceil(total / perPage));
 
     if (page >= lastPage || pageOperations.length === 0) break;
@@ -256,12 +306,15 @@ async function fetchAllOperations(): Promise<{
  * @returns The operation result.
  */
 async function fetchP2POffer(uuid: string): Promise<Response> {
-  const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}`, QVAPAY_API_BASE_URL);
+  const endpoint = new URL(
+    `/p2p/${encodeURIComponent(uuid)}`,
+    QVAPAY_API_BASE_URL,
+  );
 
   return fetch(endpoint, {
     method: "GET",
     headers: qvapayHeaders(),
-    signal: AbortSignal.timeout(20_000)
+    signal: AbortSignal.timeout(20_000),
   });
 }
 
@@ -271,12 +324,15 @@ async function fetchP2POffer(uuid: string): Promise<Response> {
  * @returns The operation result.
  */
 async function applyP2POffer(uuid: string): Promise<Response> {
-  const endpoint = new URL(`/p2p/${encodeURIComponent(uuid)}/apply`, QVAPAY_API_BASE_URL);
+  const endpoint = new URL(
+    `/p2p/${encodeURIComponent(uuid)}/apply`,
+    QVAPAY_API_BASE_URL,
+  );
 
   return fetch(endpoint, {
     method: "POST",
     headers: qvapayHeaders(),
-    signal: AbortSignal.timeout(20_000)
+    signal: AbortSignal.timeout(20_000),
   });
 }
 
@@ -334,15 +390,21 @@ async function handleApiP2P(response: ServerResponse, url: URL): Promise<void> {
     const upstream = await fetchP2P(url);
     const payload = await readUpstreamPayload(upstream);
 
-    sendJson(response, upstream.status, upstream.ok
-      ? payload
-      : { error: "QvaPay API error", detail: payload });
+    sendJson(
+      response,
+      upstream.status,
+      upstream.ok ? payload : { error: "QvaPay API error", detail: payload },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
-    sendJson(response, status, status === 500
-      ? { error: message }
-      : { error: "No se pudo contactar con QvaPay", detail: message });
+    sendJson(
+      response,
+      status,
+      status === 500
+        ? { error: message }
+        : { error: "No se pudo contactar con QvaPay", detail: message },
+    );
   }
 }
 
@@ -372,18 +434,24 @@ async function fetchAllMarketPages(url: URL): Promise<{
   for (let page = 1; page <= MAX_INTELLIGENCE_PAGES; page += 1) {
     const params = new URLSearchParams(base);
     params.set("page", String(page));
-    const upstream = await fetchP2P(new URL("/p2p?" + params.toString(), "http://127.0.0.1"));
+    const upstream = await fetchP2P(
+      new URL("/p2p?" + params.toString(), "http://127.0.0.1"),
+    );
     const payload = await readUpstreamPayload(upstream);
 
     if (!upstream.ok) {
       throw new Error(JSON.stringify(payload));
     }
 
-    const record = payload && typeof payload === "object"
-      ? payload as Record<string, unknown>
-      : {};
+    const record =
+      payload && typeof payload === "object"
+        ? (payload as Record<string, unknown>)
+        : {};
     const pageOffers = Array.isArray(record.data)
-      ? record.data.filter((value): value is Record<string, unknown> => Boolean(value) && typeof value === "object")
+      ? record.data.filter(
+          (value): value is Record<string, unknown> =>
+            Boolean(value) && typeof value === "object",
+        )
       : [];
 
     offers.push(...pageOffers);
@@ -399,7 +467,7 @@ async function fetchAllMarketPages(url: URL): Promise<{
     offers,
     total,
     pagesFetched,
-    truncated: lastPage > MAX_INTELLIGENCE_PAGES
+    truncated: lastPage > MAX_INTELLIGENCE_PAGES,
   };
 }
 
@@ -409,20 +477,27 @@ async function fetchAllMarketPages(url: URL): Promise<{
  * @param url Input used by the operation.
  * @returns The operation result.
  */
-async function handleApiIntelligence(response: ServerResponse, url: URL): Promise<void> {
+async function handleApiIntelligence(
+  response: ServerResponse,
+  url: URL,
+): Promise<void> {
   try {
     const result = await fetchAllMarketPages(url);
     sendJson(response, 200, {
-      intelligence: calculateMarketIntelligence(result.offers as Parameters<typeof calculateMarketIntelligence>[0]),
+      intelligence: calculateMarketIntelligence(
+        result.offers as Parameters<typeof calculateMarketIntelligence>[0],
+      ),
       coverage: {
         total: result.total,
         pagesFetched: result.pagesFetched,
-        truncated: result.truncated
-      }
+        truncated: result.truncated,
+      },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    sendJson(response, message.includes("QVAPAY_APP_ID") ? 500 : 502, { error: message });
+    sendJson(response, message.includes("QVAPAY_APP_ID") ? 500 : 502, {
+      error: message,
+    });
   }
 }
 
@@ -432,7 +507,10 @@ async function handleApiIntelligence(response: ServerResponse, url: URL): Promis
  * @param uuid Input used by the operation.
  * @returns The operation result.
  */
-async function handleApiP2POffer(response: ServerResponse, uuid: string): Promise<void> {
+async function handleApiP2POffer(
+  response: ServerResponse,
+  uuid: string,
+): Promise<void> {
   if (!uuid || uuid.length > 200) {
     sendJson(response, 400, { error: "Identificador de oferta inválido." });
     return;
@@ -442,15 +520,23 @@ async function handleApiP2POffer(response: ServerResponse, uuid: string): Promis
     const upstream = await fetchP2POffer(uuid);
     const payload = await readUpstreamPayload(upstream);
 
-    sendJson(response, upstream.status, upstream.ok
-      ? { offer_uuid: uuid, qvapay: payload }
-      : { error: "No se pudo consultar la oferta", detail: payload });
+    sendJson(
+      response,
+      upstream.status,
+      upstream.ok
+        ? { offer_uuid: uuid, qvapay: payload }
+        : { error: "No se pudo consultar la oferta", detail: payload },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
-    sendJson(response, status, status === 500
-      ? { error: message }
-      : { error: "No se pudo contactar con QvaPay", detail: message });
+    sendJson(
+      response,
+      status,
+      status === 500
+        ? { error: message }
+        : { error: "No se pudo contactar con QvaPay", detail: message },
+    );
   }
 }
 
@@ -490,9 +576,16 @@ async function handleApiOperations(response: ServerResponse): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
-    sendJson(response, status, status === 500
-      ? { error: message }
-      : { error: "No se pudo sincronizar el histórico de operaciones", detail: message });
+    sendJson(
+      response,
+      status,
+      status === 500
+        ? { error: message }
+        : {
+            error: "No se pudo sincronizar el histórico de operaciones",
+            detail: message,
+          },
+    );
   }
 }
 
@@ -520,9 +613,14 @@ async function handleApiOperationAction(
   try {
     const body = method === "POST" ? await readJsonBody(request) : undefined;
     if (action === "paid") {
-      const txId = body && typeof body === "object" ? String((body as Record<string, unknown>).tx_id ?? "").trim() : "";
+      const txId =
+        body && typeof body === "object"
+          ? String((body as Record<string, unknown>).tx_id ?? "").trim()
+          : "";
       if (!txId) {
-        sendJson(response, 400, { error: "tx_id es obligatorio para marcar la operación como pagada." });
+        sendJson(response, 400, {
+          error: "tx_id es obligatorio para marcar la operación como pagada.",
+        });
         return;
       }
       if (txId.length > 500) {
@@ -531,25 +629,40 @@ async function handleApiOperationAction(
       }
     }
     if (action === "chat" && method === "POST") {
-      const message = body && typeof body === "object" ? String((body as Record<string, unknown>).message ?? "").trim() : "";
+      const message =
+        body && typeof body === "object"
+          ? String((body as Record<string, unknown>).message ?? "").trim()
+          : "";
       if (!message) {
         sendJson(response, 400, { error: "El mensaje es obligatorio." });
         return;
       }
       if (message.length > 599) {
-        sendJson(response, 400, { error: "El mensaje no puede superar 599 caracteres." });
+        sendJson(response, 400, {
+          error: "El mensaje no puede superar 599 caracteres.",
+        });
         return;
       }
     }
     if (action === "rate" && method === "POST") {
-      const value = body && typeof body === "object" ? Number((body as Record<string, unknown>).rating) : NaN;
+      const value =
+        body && typeof body === "object"
+          ? Number((body as Record<string, unknown>).rating)
+          : NaN;
       if (!Number.isFinite(value) || value < 1 || value > 5) {
-        sendJson(response, 400, { error: "La calificación debe estar entre 1 y 5." });
+        sendJson(response, 400, {
+          error: "La calificación debe estar entre 1 y 5.",
+        });
         return;
       }
-      const comment = body && typeof body === "object" ? String((body as Record<string, unknown>).comment ?? "") : "";
+      const comment =
+        body && typeof body === "object"
+          ? String((body as Record<string, unknown>).comment ?? "")
+          : "";
       if (comment.length > 120) {
-        sendJson(response, 400, { error: "El comentario no puede superar 120 caracteres." });
+        sendJson(response, 400, {
+          error: "El comentario no puede superar 120 caracteres.",
+        });
         return;
       }
     }
@@ -559,21 +672,34 @@ async function handleApiOperationAction(
     if (upstream.ok && action === "received") {
       const detailResponse = await fetchP2POffer(uuid);
       const detailPayload = await readUpstreamPayload(detailResponse);
-      if (detailResponse.ok && detailPayload && typeof detailPayload === "object") {
+      if (
+        detailResponse.ok &&
+        detailPayload &&
+        typeof detailPayload === "object"
+      ) {
         const detail = (detailPayload as Record<string, unknown>).p2p;
-        if (detail && typeof detail === "object") await financeLedger.upsert([detail]);
+        if (detail && typeof detail === "object")
+          await financeLedger.upsert([detail]);
       }
       await financeLedger.recordSettlement(uuid, payload);
     }
-    sendJson(response, upstream.status, upstream.ok
-      ? { ok: true, action, offer_uuid: uuid, qvapay: payload }
-      : { error: "QvaPay API error", detail: payload });
+    sendJson(
+      response,
+      upstream.status,
+      upstream.ok
+        ? { ok: true, action, offer_uuid: uuid, qvapay: payload }
+        : { error: "QvaPay API error", detail: payload },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
-    sendJson(response, status, status === 500
-      ? { error: message }
-      : { error: "No se pudo contactar con QvaPay", detail: message });
+    sendJson(
+      response,
+      status,
+      status === 500
+        ? { error: message }
+        : { error: "No se pudo contactar con QvaPay", detail: message },
+    );
   }
 }
 
@@ -583,7 +709,10 @@ async function handleApiOperationAction(
  * @param uuid Input used by the operation.
  * @returns The operation result.
  */
-async function handleApiApplyP2P(response: ServerResponse, uuid: string): Promise<void> {
+async function handleApiApplyP2P(
+  response: ServerResponse,
+  uuid: string,
+): Promise<void> {
   if (!uuid || uuid.length > 200) {
     sendJson(response, 400, { error: "Identificador de oferta inválido." });
     return;
@@ -593,15 +722,23 @@ async function handleApiApplyP2P(response: ServerResponse, uuid: string): Promis
     const upstream = await applyP2POffer(uuid);
     const payload = await readUpstreamPayload(upstream);
 
-    sendJson(response, upstream.status, upstream.ok
-      ? { applied: true, offer_uuid: uuid, qvapay: payload }
-      : { error: "No se pudo aplicar a la oferta", detail: payload });
+    sendJson(
+      response,
+      upstream.status,
+      upstream.ok
+        ? { applied: true, offer_uuid: uuid, qvapay: payload }
+        : { error: "No se pudo aplicar a la oferta", detail: payload },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
-    sendJson(response, status, status === 500
-      ? { error: message }
-      : { error: "No se pudo contactar con QvaPay", detail: message });
+    sendJson(
+      response,
+      status,
+      status === 500
+        ? { error: message }
+        : { error: "No se pudo contactar con QvaPay", detail: message },
+    );
   }
 }
 
@@ -611,7 +748,12 @@ async function handleApiApplyP2P(response: ServerResponse, uuid: string): Promis
  * @returns The operation result.
  */
 async function fetchOwnP2P(status?: string): Promise<Response> {
-  const query = new URLSearchParams({ my: "1", take: "100", orderBy: "updated_at", orderType: "desc" });
+  const query = new URLSearchParams({
+    my: "1",
+    take: "100",
+    orderBy: "updated_at",
+    orderType: "desc",
+  });
   if (status) query.set("status", status);
   return fetchP2P(new URL("/p2p?" + query.toString(), "http://127.0.0.1"));
 }
@@ -621,7 +763,13 @@ async function fetchOwnP2P(status?: string): Promise<Response> {
  * @param page Input used by the operation.
  * @returns The operation result.
  */
-async function fetchCompletedPage(page: number): Promise<{ data: Record<string, unknown>[]; total: number; perPage: number }> {
+async function fetchCompletedPage(
+  page: number,
+): Promise<{
+  data: Record<string, unknown>[];
+  total: number;
+  perPage: number;
+}> {
   const query = new URLSearchParams({
     my: "1",
     status: "completed",
@@ -630,12 +778,20 @@ async function fetchCompletedPage(page: number): Promise<{ data: Record<string, 
     orderBy: "updated_at",
     orderType: "asc",
   });
-  const upstream = await fetchP2P(new URL("/p2p?" + query.toString(), "http://127.0.0.1"));
+  const upstream = await fetchP2P(
+    new URL("/p2p?" + query.toString(), "http://127.0.0.1"),
+  );
   const payload = await readUpstreamPayload(upstream);
   if (!upstream.ok) throw new Error(JSON.stringify(payload));
-  const record = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
+  const record =
+    payload && typeof payload === "object"
+      ? (payload as Record<string, unknown>)
+      : {};
   const data = Array.isArray(record.data)
-    ? record.data.filter((value): value is Record<string, unknown> => Boolean(value) && typeof value === "object")
+    ? record.data.filter(
+        (value): value is Record<string, unknown> =>
+          Boolean(value) && typeof value === "object",
+      )
     : [];
   return {
     data,
@@ -654,19 +810,37 @@ const financeLedger = new FinanceLedgerStore();
  */
 async function collectMarketHistory(): Promise<void> {
   try {
-    const upstream = await fetchP2P(new URL("/p2p?take=100&orderBy=updated_at&orderType=desc", "http://127.0.0.1"));
+    const upstream = await fetchP2P(
+      new URL(
+        "/p2p?take=100&orderBy=updated_at&orderType=desc",
+        "http://127.0.0.1",
+      ),
+    );
     if (!upstream.ok) return;
     const payload = await readUpstreamPayload(upstream);
-    const offers = payload && typeof payload === "object" && Array.isArray((payload as Record<string, unknown>).data)
-      ? (payload as Record<string, unknown>).data as Record<string, unknown>[] : [];
+    const offers =
+      payload &&
+      typeof payload === "object" &&
+      Array.isArray((payload as Record<string, unknown>).data)
+        ? ((payload as Record<string, unknown>).data as Record<
+            string,
+            unknown
+          >[])
+        : [];
     await marketHistory.append(offers);
-  } catch (error) { console.error("Market history collector:", error); }
+  } catch (error) {
+    console.error("Market history collector:", error);
+  }
 }
 
 const autoApplyEngine = new AutoApplyEngine({
-  fetchMarket: (params) => fetchP2P(new URL("/p2p?" + params.toString(), "http://127.0.0.1")),
+  fetchMarket: (params) =>
+    fetchP2P(new URL("/p2p?" + params.toString(), "http://127.0.0.1")),
   applyOffer: applyP2POffer,
-  fetchOwnProcessing: () => fetchP2P(new URL("/p2p?my=1&status=processing&take=100", "http://127.0.0.1")),
+  fetchOwnProcessing: () =>
+    fetchP2P(
+      new URL("/p2p?my=1&status=processing&take=100", "http://127.0.0.1"),
+    ),
   readPayload: readUpstreamPayload,
 });
 
@@ -677,7 +851,11 @@ const autoApplyEngine = new AutoApplyEngine({
  * @param request Input used by the operation.
  * @returns The operation result.
  */
-async function handleAutoApplyConfig(response: ServerResponse, method: string, request: IncomingMessage): Promise<void> {
+async function handleAutoApplyConfig(
+  response: ServerResponse,
+  method: string,
+  request: IncomingMessage,
+): Promise<void> {
   try {
     if (method === "GET") {
       sendJson(response, 200, { config: autoApplyEngine.getConfig() });
@@ -699,8 +877,14 @@ async function handleAutoApplyConfig(response: ServerResponse, method: string, r
  * @param response Input used by the operation.
  * @returns The operation result.
  */
-async function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
-  const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`);
+async function handleRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> {
+  const url = new URL(
+    request.url ?? "/",
+    `http://${request.headers.host ?? "127.0.0.1"}`,
+  );
 
   if (request.method === "GET" && url.pathname === "/api/health") {
     sendJson(response, 200, { ok: true, service: "p2p-market-dashboard" });
@@ -712,8 +896,12 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     return;
   }
 
-  if (url.pathname === "/api/auto-apply/config" &&
-      (request.method === "GET" || request.method === "PUT" || request.method === "PATCH")) {
+  if (
+    url.pathname === "/api/auto-apply/config" &&
+    (request.method === "GET" ||
+      request.method === "PUT" ||
+      request.method === "PATCH")
+  ) {
     await handleAutoApplyConfig(response, request.method, request);
     return;
   }
@@ -724,27 +912,38 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
   }
 
   if (request.method === "GET" && url.pathname === "/api/baselines") {
-    const coin=url.searchParams.get("coin")??undefined;
-    const type=url.searchParams.get("type")??undefined;
-    const lookback=Number(url.searchParams.get("lookback")??"24");
-    const points=marketHistory.query(coin,type,1000);
-    sendJson(response,200,{baselines:calculateBaselines(points,Number.isFinite(lookback)?lookback:24)});
+    const coin = url.searchParams.get("coin") ?? undefined;
+    const type = url.searchParams.get("type") ?? undefined;
+    const lookback = Number(url.searchParams.get("lookback") ?? "24");
+    const points = marketHistory.query(coin, type, 1000);
+    sendJson(response, 200, {
+      baselines: calculateBaselines(
+        points,
+        Number.isFinite(lookback) ? lookback : 24,
+      ),
+    });
     return;
   }
 
   if (request.method === "GET" && url.pathname === "/api/trends") {
-    const coin=url.searchParams.get("coin")??undefined;
-    const type=url.searchParams.get("type")??undefined;
-    const points=marketHistory.query(coin,type,1000);
-    sendJson(response,200,{trends:summarizeTrends(points)});
+    const coin = url.searchParams.get("coin") ?? undefined;
+    const type = url.searchParams.get("type") ?? undefined;
+    const points = marketHistory.query(coin, type, 1000);
+    sendJson(response, 200, { trends: summarizeTrends(points) });
     return;
   }
 
   if (request.method === "GET" && url.pathname === "/api/history") {
-    const coin=url.searchParams.get("coin")??undefined;
-    const type=url.searchParams.get("type")??undefined;
-    const limit=Number(url.searchParams.get("limit")??"200");
-    sendJson(response,200,{history:marketHistory.query(coin,type,Number.isFinite(limit)?limit:200)});
+    const coin = url.searchParams.get("coin") ?? undefined;
+    const type = url.searchParams.get("type") ?? undefined;
+    const limit = Number(url.searchParams.get("limit") ?? "200");
+    sendJson(response, 200, {
+      history: marketHistory.query(
+        coin,
+        type,
+        Number.isFinite(limit) ? limit : 200,
+      ),
+    });
     return;
   }
 
@@ -759,7 +958,9 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       sendJson(response, 200, { account: snapshot });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      sendJson(response, message.includes("QVAPAY_APP_ID") ? 500 : 502, { error: message });
+      sendJson(response, message.includes("QVAPAY_APP_ID") ? 500 : 502, {
+        error: message,
+      });
     }
     return;
   }
@@ -775,8 +976,13 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       await financeLedger.upsert(remote.offers);
       const ledger = financeLedger.list();
       const reconciliation = reconcileCompletedIds(remote.offers, ledger);
-      const knownFees = ledger.filter((entry) => entry.feeSource === "qvapay_received");
-      const feeQusd = knownFees.reduce((sum, entry) => sum + (entry.feeQusd ?? 0), 0);
+      const knownFees = ledger.filter(
+        (entry) => entry.feeSource === "qvapay_received",
+      );
+      const feeQusd = knownFees.reduce(
+        (sum, entry) => sum + (entry.feeQusd ?? 0),
+        0,
+      );
       sendJson(response, 200, {
         finance: calculateFinanceSummary(ledger),
         fees: {
@@ -796,7 +1002,9 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      sendJson(response, message.includes("QVAPAY_APP_ID") ? 500 : 502, { error: message });
+      sendJson(response, message.includes("QVAPAY_APP_ID") ? 500 : 502, {
+        error: message,
+      });
     }
     return;
   }
@@ -840,7 +1048,9 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       try {
         uuid = decodeURIComponent(chatMatch[1]);
       } catch {
-        sendJson(response, 400, { error: "Identificador de operación inválido." });
+        sendJson(response, 400, {
+          error: "Identificador de operación inválido.",
+        });
         return;
       }
       await handleApiOperationAction(response, uuid, "chat", "GET", request);
@@ -849,16 +1059,21 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
   }
 
   if (request.method === "POST") {
-    const operationMatch = url.pathname.match(/^\/api\/operations\/([^/]+)\/(paid|received|cancel|chat|rate)$/);
+    const operationMatch = url.pathname.match(
+      /^\/api\/operations\/([^/]+)\/(paid|received|cancel|chat|rate)$/,
+    );
     if (operationMatch?.[1] && operationMatch[2]) {
       let uuid: string;
       try {
         uuid = decodeURIComponent(operationMatch[1]);
       } catch {
-        sendJson(response, 400, { error: "Identificador de operación inválido." });
+        sendJson(response, 400, {
+          error: "Identificador de operación inválido.",
+        });
         return;
       }
-      const action = operationMatch[2] as "paid" | "received" | "cancel" | "chat" | "rate";
+      const action = operationMatch[2] as
+        "paid" | "received" | "cancel" | "chat" | "rate";
       await handleApiOperationAction(response, uuid, action, "POST", request);
       return;
     }
@@ -893,7 +1108,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     "/": "index.html",
     "/index.html": "index.html",
     "/styles.css": "styles.css",
-    "/app.js": "app.js"
+    "/app.js": "app.js",
   };
 
   const file = staticFiles[url.pathname];
@@ -912,13 +1127,22 @@ const server = createServer((request, response) => {
   });
 });
 
-void Promise.all([marketHistory.initialize(), autoApplyEngine.initialize(), financeLedger.initialize(), operationsLedger.initialize()]).then(() => {
-  void collectMarketHistory();
-  setInterval(() => { void collectMarketHistory(); }, 60_000);
-  server.listen(PORT, HOST, () => {
-    console.log(`QvaPay P2P Dashboard: http://${HOST}:${PORT}`);
+void Promise.all([
+  marketHistory.initialize(),
+  autoApplyEngine.initialize(),
+  financeLedger.initialize(),
+  operationsLedger.initialize(),
+])
+  .then(() => {
+    void collectMarketHistory();
+    setInterval(() => {
+      void collectMarketHistory();
+    }, 60_000);
+    server.listen(PORT, HOST, () => {
+      console.log(`QvaPay P2P Dashboard: http://${HOST}:${PORT}`);
+    });
+  })
+  .catch((error: unknown) => {
+    console.error("No se pudo inicializar Auto-Apply:", error);
+    process.exitCode = 1;
   });
-}).catch((error: unknown) => {
-  console.error("No se pudo inicializar Auto-Apply:", error);
-  process.exitCode = 1;
-});

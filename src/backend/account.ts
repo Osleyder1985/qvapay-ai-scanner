@@ -32,14 +32,16 @@ async function firstProfile(
     if (!item || typeof item !== "object") continue;
     const record = item as Record<string, unknown>;
     const candidate = preferOwner ? record.User : record.Peer;
-    if (candidate && typeof candidate === "object") return candidate as Record<string, unknown>;
+    if (candidate && typeof candidate === "object")
+      return candidate as Record<string, unknown>;
   }
 
   for (const item of data) {
     if (!item || typeof item !== "object") continue;
     const record = item as Record<string, unknown>;
     const candidate = record.User ?? record.Peer;
-    if (candidate && typeof candidate === "object") return candidate as Record<string, unknown>;
+    if (candidate && typeof candidate === "object")
+      return candidate as Record<string, unknown>;
   }
 
   return null;
@@ -64,7 +66,11 @@ export async function fetchAccountSnapshot(
 
   const balancePayload = await readPayload(balanceResponse);
   let balanceUsd: number | null = null;
-  if (balanceResponse.ok && balancePayload && typeof balancePayload === "object") {
+  if (
+    balanceResponse.ok &&
+    balancePayload &&
+    typeof balancePayload === "object"
+  ) {
     const value = (balancePayload as Record<string, unknown>).balance;
     balanceUsd = Number.isFinite(Number(value)) ? Number(value) : null;
   }
@@ -75,7 +81,11 @@ export async function fetchAccountSnapshot(
   return {
     balanceUsd,
     user: owner ?? fallback,
-    identitySource: owner ? "own_open_offer" : fallback ? "own_p2p_offer" : "unavailable",
+    identitySource: owner
+      ? "own_open_offer"
+      : fallback
+        ? "own_p2p_offer"
+        : "unavailable",
     fetchedAt: new Date().toISOString(),
   };
 }

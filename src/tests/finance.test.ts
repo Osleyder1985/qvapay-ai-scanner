@@ -11,8 +11,22 @@ import { calculateFinanceSummary } from "../backend/finance.js";
 
 test("FIFO calculates realized profit from completed buy then sell", () => {
   const result = calculateFinanceSummary([
-    { uuid: "b1", status: "completed", type: "buy", amount: 10, receive: 100, updated_at: "2026-01-01T00:00:00Z" },
-    { uuid: "s1", status: "completed", type: "sell", amount: 4, receive: 48, updated_at: "2026-01-02T00:00:00Z" },
+    {
+      uuid: "b1",
+      status: "completed",
+      type: "buy",
+      amount: 10,
+      receive: 100,
+      updated_at: "2026-01-01T00:00:00Z",
+    },
+    {
+      uuid: "s1",
+      status: "completed",
+      type: "sell",
+      amount: 4,
+      receive: 48,
+      updated_at: "2026-01-02T00:00:00Z",
+    },
   ]);
 
   assert.equal(result.fiatExpense, 100);
@@ -24,7 +38,14 @@ test("FIFO calculates realized profit from completed buy then sell", () => {
 
 test("FIFO does not invent profit when sold QUSD has unknown opening cost", () => {
   const result = calculateFinanceSummary([
-    { uuid: "s1", status: "completed", type: "sell", amount: 4, receive: 48, updated_at: "2026-01-02T00:00:00Z" },
+    {
+      uuid: "s1",
+      status: "completed",
+      type: "sell",
+      amount: 4,
+      receive: 48,
+      updated_at: "2026-01-02T00:00:00Z",
+    },
   ]);
 
   assert.equal(result.realizedProfit, null);
@@ -42,7 +63,10 @@ test("ignores non-completed operations", () => {
   assert.equal(result.fiatExpense, 0);
 });
 
-import { fetchAllCompletedP2P, reconcileCompletedIds } from "../backend/finance-reconciliation.js";
+import {
+  fetchAllCompletedP2P,
+  reconcileCompletedIds,
+} from "../backend/finance-reconciliation.js";
 
 test("paginated reconciliation fetches every remote page", async () => {
   const calls: number[] = [];

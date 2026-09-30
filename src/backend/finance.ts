@@ -70,14 +70,22 @@ export function calculateFinanceSummary(offers: unknown[]): FinanceSummary {
     const type = String(offer.type ?? "").toLowerCase();
     const amount = num(offer.amount);
     const receive = num(offer.receive);
-    if (amount === null || receive === null || amount < 0 || receive < 0) continue;
+    if (amount === null || receive === null || amount < 0 || receive < 0)
+      continue;
 
-    const at = String(offer.updated_at ?? offer.created_at ?? new Date(0).toISOString());
+    const at = String(
+      offer.updated_at ?? offer.created_at ?? new Date(0).toISOString(),
+    );
     const uuid = String(offer.uuid ?? "unknown");
 
     if (type === "buy") {
       fiatExpense += receive;
-      lots.push({ acquiredAt: at, quantity: amount, unitCost: amount > 0 ? receive / amount : 0, sourceUuid: uuid });
+      lots.push({
+        acquiredAt: at,
+        quantity: amount,
+        unitCost: amount > 0 ? receive / amount : 0,
+        sourceUuid: uuid,
+      });
       continue;
     }
 
@@ -90,7 +98,7 @@ export function calculateFinanceSummary(offers: unknown[]): FinanceSummary {
         if (!lot) break;
 
         const consumed = Math.min(remaining, lot.quantity);
-        realizedProfit += consumed * ((receive / amount) - lot.unitCost);
+        realizedProfit += consumed * (receive / amount - lot.unitCost);
         lot.quantity -= consumed;
         remaining -= consumed;
         if (lot.quantity <= 1e-12) lots.shift();

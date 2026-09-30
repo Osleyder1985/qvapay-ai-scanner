@@ -57,10 +57,13 @@ function sameId(a: unknown, b: unknown): boolean {
  * @param currentUserId Input used by the operation.
  * @returns The operation result.
  */
-function partyMatchesCurrentUser(party: OperationParty | null | undefined, currentUserId: unknown): boolean {
+function partyMatchesCurrentUser(
+  party: OperationParty | null | undefined,
+  currentUserId: unknown,
+): boolean {
   return Boolean(
     party &&
-    (sameId(party.uuid, currentUserId) || sameId(party.id, currentUserId))
+    (sameId(party.uuid, currentUserId) || sameId(party.id, currentUserId)),
   );
 }
 
@@ -115,7 +118,8 @@ export function availableOperationActions(
   if (status === "open" && role === "owner") actions.push("cancel");
   if (
     status === "revision" &&
-    ((type === "buy" && role === "owner") || (type === "sell" && role === "peer"))
+    ((type === "buy" && role === "owner") ||
+      (type === "sell" && role === "peer"))
   ) {
     actions.push("cancel");
   }
@@ -131,12 +135,19 @@ export function availableOperationActions(
  */
 export function operationBucket(status: unknown): string {
   switch (String(status ?? "").toLowerCase()) {
-    case "revision": return "revision";
-    case "processing": return "processing";
-    case "paid": return "paid";
-    case "open": return "open";
-    case "completed": return "completed";
-    case "cancelled": return "cancelled";
-    default: return "other";
+    case "revision":
+      return "revision";
+    case "processing":
+      return "processing";
+    case "paid":
+      return "paid";
+    case "open":
+      return "open";
+    case "completed":
+      return "completed";
+    case "cancelled":
+      return "cancelled";
+    default:
+      return "other";
   }
 }

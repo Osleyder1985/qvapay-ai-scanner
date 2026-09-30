@@ -23,7 +23,9 @@ export interface OperationReconciliation {
 }
 
 function ledgerPath(): string {
-  return resolve(process.env.OPERATIONS_LEDGER_PATH ?? "data/operations-ledger.json");
+  return resolve(
+    process.env.OPERATIONS_LEDGER_PATH ?? "data/operations-ledger.json",
+  );
 }
 
 function normalize(value: unknown): OperationLedgerEntry | null {
@@ -34,7 +36,10 @@ function normalize(value: unknown): OperationLedgerEntry | null {
 
   const now = new Date().toISOString();
   return {
-    ...(record as Omit<OperationLedgerEntry, "uuid" | "recordedAt" | "lastSeenAt">),
+    ...(record as Omit<
+      OperationLedgerEntry,
+      "uuid" | "recordedAt" | "lastSeenAt"
+    >),
     uuid,
     recordedAt: typeof record.recordedAt === "string" ? record.recordedAt : now,
     lastSeenAt: typeof record.lastSeenAt === "string" ? record.lastSeenAt : now,
@@ -69,9 +74,10 @@ export class OperationsLedgerStore {
         if (entry) this.entries.set(entry.uuid, entry);
       }
     } catch (error) {
-      const code = error && typeof error === "object" && "code" in error
-        ? String((error as { code?: unknown }).code)
-        : "";
+      const code =
+        error && typeof error === "object" && "code" in error
+          ? String((error as { code?: unknown }).code)
+          : "";
       if (code !== "ENOENT") throw error;
     }
     this.initialized = true;
@@ -114,7 +120,11 @@ export class OperationsLedgerStore {
    * @returns Differences between remote and local identifiers.
    */
   reconcile(remoteOperations: P2POperation[]): OperationReconciliation {
-    const remoteIds = new Set(remoteOperations.map((operation) => String(operation.uuid ?? "").trim()).filter(Boolean));
+    const remoteIds = new Set(
+      remoteOperations
+        .map((operation) => String(operation.uuid ?? "").trim())
+        .filter(Boolean),
+    );
     const localIds = new Set(this.entries.keys());
     return {
       remoteCount: remoteIds.size,

@@ -19,12 +19,32 @@ test("finance ledger persists completed operations idempotently", async () => {
   try {
     const first = new FinanceLedgerStore();
     await first.initialize();
-    assert.equal(await first.upsert([
-      { uuid: "b1", status: "completed", type: "buy", coin: "BANK_CUP", amount: 10, receive: 100 }
-    ]), 1);
-    assert.equal(await first.upsert([
-      { uuid: "b1", status: "completed", type: "buy", coin: "BANK_CUP", amount: 10, receive: 100 }
-    ]), 0);
+    assert.equal(
+      await first.upsert([
+        {
+          uuid: "b1",
+          status: "completed",
+          type: "buy",
+          coin: "BANK_CUP",
+          amount: 10,
+          receive: 100,
+        },
+      ]),
+      1,
+    );
+    assert.equal(
+      await first.upsert([
+        {
+          uuid: "b1",
+          status: "completed",
+          type: "buy",
+          coin: "BANK_CUP",
+          amount: 10,
+          receive: 100,
+        },
+      ]),
+      0,
+    );
     const second = new FinanceLedgerStore();
     await second.initialize();
     assert.equal(second.list().length, 1);

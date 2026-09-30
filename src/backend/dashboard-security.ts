@@ -29,7 +29,7 @@ export function assertDashboardHostIsSafe(host: string): void {
   if (!isLoopbackHost(host)) {
     throw new Error(
       "DASHBOARD_HOST debe ser local-only (127.0.0.1, ::1 o localhost). " +
-      "La exposición LAN/Internet requiere autenticación/autorización explícita."
+        "La exposición LAN/Internet requiere autenticación/autorización explícita.",
     );
   }
 }

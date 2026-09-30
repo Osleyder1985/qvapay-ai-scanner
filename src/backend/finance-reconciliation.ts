@@ -39,7 +39,9 @@ const MAX_PAGES = 1000;
 
  * @returns The operation result.
  */
-export async function fetchAllCompletedP2P(fetchPage: FetchCompletedPage): Promise<ReconciliationResult> {
+export async function fetchAllCompletedP2P(
+  fetchPage: FetchCompletedPage,
+): Promise<ReconciliationResult> {
   const offers: Record<string, unknown>[] = [];
   let total = 0;
   let perPage = 100;
@@ -50,8 +52,13 @@ export async function fetchAllCompletedP2P(fetchPage: FetchCompletedPage): Promi
     const result = await fetchPage(page);
     offers.push(...result.data);
     pagesFetched = page;
-    total = Number.isFinite(result.total) ? Math.max(0, Math.trunc(result.total)) : offers.length;
-    perPage = Math.max(1, Math.trunc(result.perPage || result.data.length || 100));
+    total = Number.isFinite(result.total)
+      ? Math.max(0, Math.trunc(result.total))
+      : offers.length;
+    perPage = Math.max(
+      1,
+      Math.trunc(result.perPage || result.data.length || 100),
+    );
     lastPage = Math.max(1, Math.ceil(total / perPage));
 
     if (page >= lastPage || result.data.length === 0) break;
@@ -73,9 +80,18 @@ export async function fetchAllCompletedP2P(fetchPage: FetchCompletedPage): Promi
 export function reconcileCompletedIds(
   remoteOffers: Record<string, unknown>[],
   ledgerEntries: { uuid: string }[],
-): { remoteCount: number; ledgerCount: number; missingInLedger: string[]; staleLocal: string[] } {
-  const remote = new Set(remoteOffers.map((offer) => String(offer.uuid ?? "")).filter(Boolean));
-  const local = new Set(ledgerEntries.map((entry) => entry.uuid).filter(Boolean));
+): {
+  remoteCount: number;
+  ledgerCount: number;
+  missingInLedger: string[];
+  staleLocal: string[];
+} {
+  const remote = new Set(
+    remoteOffers.map((offer) => String(offer.uuid ?? "")).filter(Boolean),
+  );
+  const local = new Set(
+    ledgerEntries.map((entry) => entry.uuid).filter(Boolean),
+  );
   return {
     remoteCount: remote.size,
     ledgerCount: local.size,
