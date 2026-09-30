@@ -121,4 +121,3 @@ window.refreshAccount=refreshAccount;window.refreshFinance=refreshFinance;window
 
  * @returns The operation result.
  */
-async function init(){document.getElementById('menuButton').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('mobileOverlay').onclick=()=>document.getElementById('sidebar').classList.remove('open');document.getElementById('refreshButton').onclick=refreshAll;document.getElementById('commandButton')?.addEventListener('click',openCommands);setupCommands();addEventListener('hashchange',nav);await Promise.all([loadMarket(),loadIntelligence(),loadHistory(),loadAuto(),loadAccount(),loadFinance(),loadOperations()]);if(S.active)await loadOperation(S.active);nav();setInterval(loadAuto,5000);setInterval(()=>S.active&&loadOperation(S.active),10000)}init();
