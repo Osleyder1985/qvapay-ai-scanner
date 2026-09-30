@@ -52,6 +52,7 @@ function operationActions(o,role=operationRole(o)){
   if(status==='processing'&&((type==='buy'&&role==='owner')||(type==='sell'&&role==='peer')))a.unshift('paid');
   if(status==='paid'&&((type==='sell'&&role==='owner')||(type==='buy'&&role==='peer')))a.unshift('received');
   if(['processing','paid'].includes(status))a.push('cancel');
+  if(status==='open'&&role==='owner')a.push('cancel');
   if(status==='revision'&&((type==='buy'&&role==='owner')||(type==='sell'&&role==='peer')))a.push('cancel');
   if(status==='completed')a.unshift('rate');
   return [...new Set(a)];
