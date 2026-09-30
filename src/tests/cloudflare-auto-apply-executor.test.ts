@@ -84,7 +84,7 @@ function dependencies(overrides: Record<string, unknown> = {}) {
       },
     applyP2POffer: async (): Promise<QvaPayHttpResult> => {
       applied += 100;
-      return overrides.apply ?? {
+      return (overrides.apply as QvaPayHttpResult | undefined) ?? {
         status: 200,
         ok: true,
         payload: { message: "accepted" },
