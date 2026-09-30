@@ -13,6 +13,7 @@
 import {
   D1Repository,
   type D1DatabaseLike,
+  type D1FinanceRow,
   type D1OperationRow,
 } from "../backend/cloudflare/d1-repository.js";
 
@@ -72,6 +73,24 @@ function operationFromRow(
       username: row.peer_username,
       name: row.peer_name,
     },
+  };
+}
+
+function financeFromRow(row: D1FinanceRow): Record<string, unknown> {
+  return {
+    uuid: row.uuid,
+    status: row.status,
+    type: row.type,
+    coin: row.coin,
+    amount: row.amount,
+    receive: row.receive,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    recorded_at: row.recorded_at,
+    gross_amount_qusd: row.gross_amount_qusd,
+    fee_qusd: row.fee_qusd,
+    net_amount_qusd: row.net_amount_qusd,
+    fee_source: row.fee_source,
   };
 }
 
@@ -153,6 +172,41 @@ const handler: WorkerHandler = {
       } catch {
         return json(
           { error: "No se pudieron leer las operaciones desde D1" },
+          503,
+        );
+      }
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/cloudflare/d1/finance"
+    ) {
+      if (!authorized(request, env)) {
+        return json({ error: "No autorizado" }, 401);
+      }
+
+      const uuid = url.searchParams.get("uuid")?.trim();
+      if (!uuid) {
+        return json({ error: "El parámetro uuid es obligatorio" }, 400);
+      }
+
+      try {
+        const repository = new D1Repository(env.DB);
+        const row = await repository.getFinance(uuid);
+        if (!row) {
+          return json({ error: "Entrada financiera no encontrada" }, 404);
+        }
+
+        return json({
+          finance: financeFromRow(row),
+          source: {
+            runtime: "cloudflare-worker",
+            persistence: "d1",
+          },
+        });
+      } catch {
+        return json(
+          { error: "No se pudo leer el ledger financiero desde D1" },
           503,
         );
       }
