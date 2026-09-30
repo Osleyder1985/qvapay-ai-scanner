@@ -140,6 +140,22 @@ async function createMockQvaPay(state: MockState): Promise<{ server: Server; por
       return;
     }
 
+    if (url.pathname === "/p2p" && request.method === "GET" && url.searchParams.get("my") === "1" && !url.searchParams.get("status")) {
+      const page = Number(url.searchParams.get("page") ?? "1");
+      const pages = {
+        1: [
+          { uuid: "operation-1", status: "completed", type: "buy", coin: "BANK_CUP", amount: 10, receive: 100, User: { uuid: "self" } }
+        ],
+        2: [
+          { uuid: "operation-2", status: "processing", type: "sell", coin: "BANK_CUP", amount: 5, receive: 60, Peer: { uuid: "self" } }
+        ]
+      } as Record<number, Array<Record<string, unknown>>>;
+      const data = pages[page] ?? [];
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ data, total: 2, per_page: 1 }));
+      return;
+    }
+
     if (url.pathname === "/p2p" && request.method === "GET") {
       response.writeHead(200, { "Content-Type": "application/json" });
       response.end(JSON.stringify({
@@ -221,6 +237,7 @@ test("backend integration/E2E covers market read, controlled apply and tracking"
     FINANCE_LEDGER_PATH: join(dataDir, "finance-ledger.json"),
     MARKET_HISTORY_PATH: join(dataDir, "market-history.json"),
     AUTO_APPLY_CONFIG_PATH: join(dataDir, "auto-apply.json"),
+    OPERATIONS_LEDGER_PATH: join(dataDir, "operations-ledger.json"),
   };
 
   const child = await startDashboard(env);
@@ -344,4 +361,58 @@ test("backend integration enforces upstream timeout without real QvaPay credenti
   assert.ok(elapsed < 22_000, `timeout demasiado largo: ${elapsed}ms`);
   const payload = await response.json() as { error: string };
   assert.equal(payload.error, "No se pudo contactar con QvaPay");
+});
+
+test("backend integration reconstructs paginated operations and persists the complete snapshot", async (t) => {
+  const state: MockState = { applied: [], upstreamRequests: 0 };
+  const mock = await createMockQvaPay(state);
+  const dataDir = await mkdtemp(join(tmpdir(), "qvapay-ai-scanner-operations-"));
+  const probe = createHttpServer();
+  const dashboardPort = await listen(probe);
+  await close(probe);
+
+  const env = {
+    DASHBOARD_HOST: "127.0.0.1",
+    DASHBOARD_PORT: String(dashboardPort),
+    QVAPAY_API_BASE_URL: `http://127.0.0.1:${mock.port}`,
+    QVAPAY_APP_ID: "integration-test-app",
+    QVAPAY_APP_SECRET: "integration-test-secret",
+    FINANCE_LEDGER_PATH: join(dataDir, "finance-ledger.json"),
+    MARKET_HISTORY_PATH: join(dataDir, "market-history.json"),
+    AUTO_APPLY_CONFIG_PATH: join(dataDir, "auto-apply.json"),
+    OPERATIONS_LEDGER_PATH: join(dataDir, "operations-ledger.json"),
+  };
+
+  let child = await startDashboard(env);
+  t.after(async () => {
+    await stopDashboard(child);
+    await close(mock.server);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  const first = await request(dashboardPort, "/api/operations");
+  assert.equal(first.status, 200);
+  const firstPayload = await first.json() as {
+    operations: { data: Array<{ uuid: string }>; total: number; pages_fetched: number; truncated: boolean };
+    persistence: { persisted: number; reconciled: boolean };
+    reconciliation: { missingInLedger: string[] };
+  };
+
+  assert.equal(firstPayload.operations.total, 2);
+  assert.equal(firstPayload.operations.data.length, 2);
+  assert.equal(firstPayload.operations.pages_fetched, 2);
+  assert.equal(firstPayload.operations.truncated, false);
+  assert.equal(firstPayload.persistence.persisted, 2);
+  assert.equal(firstPayload.persistence.reconciled, true);
+  assert.deepEqual(firstPayload.reconciliation.missingInLedger, []);
+
+  await stopDashboard(child);
+  child = await startDashboard(env);
+
+  const recovered = await request(dashboardPort, "/api/operations");
+  assert.equal(recovered.status, 200);
+  const recoveredPayload = await recovered.json() as {
+    persistence: { persisted: number };
+  };
+  assert.equal(recoveredPayload.persistence.persisted, 2);
 });
