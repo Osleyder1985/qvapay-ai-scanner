@@ -1,5 +1,5 @@
-const state = { page: 1, take: 100, markedOffers: loadMarkedOffers() };
 const MARKED_STORAGE_KEY = "qvapay-ai-scanner.marked-p2p-offers.v1";
+const state = { page: 1, take: 100, markedOffers: loadMarkedOffers() };
 
 const $ = (id) => document.getElementById(id);
 
