@@ -54,11 +54,16 @@ export class OperationsLedgerStore {
     try {
       const text = await readFile(ledgerPath(), "utf8");
       const parsed: unknown = JSON.parse(text);
-      const values = Array.isArray(parsed)
-        ? parsed
-        : parsed && typeof parsed === "object" && Array.isArray((parsed as Record<string, unknown>).operations)
-          ? (parsed as Record<string, unknown>).operations
-          : [];
+      let values: unknown[] = [];
+      if (Array.isArray(parsed)) {
+        values = parsed;
+      } else if (
+        parsed &&
+        typeof parsed === "object" &&
+        Array.isArray((parsed as Record<string, unknown>).operations)
+      ) {
+        values = (parsed as Record<string, unknown>).operations as unknown[];
+      }
       for (const value of values) {
         const entry = normalize(value);
         if (entry) this.entries.set(entry.uuid, entry);
