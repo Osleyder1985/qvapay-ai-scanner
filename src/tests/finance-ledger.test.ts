@@ -1,3 +1,10 @@
+/**
+ * @file finance-ledger.test.ts
+ * @path src/tests/finance-ledger.test.ts
+ * @description finance-ledger.test.ts source for QvaPay AI Scanner.
+ * @module tests
+ * @status test
+ */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
