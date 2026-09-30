@@ -84,8 +84,8 @@ async function applyToOffer(offer) {
   const type = String(offer.type || "").toLowerCase();
   const amount = number(offer.amount);
   const receive = number(offer.receive);
-  const coin = escapeHtml(offer.coin || "—");
-  const username = escapeHtml(user.username || user.name || "—");
+  const coin = String(offer.coin || "—");
+  const username = String(user.username || user.name || "—");
 
   let warning =
     "QvaPay asignará esta oferta a tu cuenta si la operación es aceptada.\n\n" +
@@ -131,7 +131,7 @@ async function applyToOffer(offer) {
     state.appliedOfferIds.add(uuid);
     $("status").textContent =
       "✅ Aplicación aceptada por QvaPay. La oferta queda asignada a tu operación.";
-    await loadOffers();
+    await loadOffers(false);
   } catch (error) {
     $("status").textContent =
       "⚠️ " + (error instanceof Error ? error.message : String(error));
@@ -269,8 +269,8 @@ function queryString() {
   return params;
 }
 
-async function loadOffers() {
-  $("status").textContent = "Consultando mercado…";
+async function loadOffers(updateStatus = true) {
+  if (updateStatus) $("status").textContent = "Consultando mercado…";
   $("refreshButton").disabled = true;
 
   try {
@@ -298,7 +298,7 @@ async function loadOffers() {
     $("previousButton").disabled = state.page <= 1;
     $("nextButton").disabled = state.page >= lastPage;
     $("updatedAt").textContent = new Date().toLocaleTimeString("es-ES");
-    $("status").textContent = "Mercado actualizado.";
+    if (updateStatus) $("status").textContent = "Mercado actualizado.";
   } catch (error) {
     $("status").textContent =
       "⚠️ " + (error instanceof Error ? error.message : String(error));
