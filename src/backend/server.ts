@@ -187,18 +187,67 @@ async function handleApiP2P(response: ServerResponse, url: URL): Promise<void> {
   }
 }
 
+const MAX_INTELLIGENCE_PAGES = 10;
+
+async function fetchAllMarketPages(url: URL): Promise<{
+  offers: Record<string, unknown>[];
+  total: number;
+  pagesFetched: number;
+  truncated: boolean;
+}> {
+  const base = sanitizeQuery(url);
+  base.set("page", "1");
+  base.set("take", "100");
+
+  const offers: Record<string, unknown>[] = [];
+  let total = 0;
+  let perPage = 100;
+  let lastPage = 1;
+
+  for (let page = 1; page <= MAX_INTELLIGENCE_PAGES; page += 1) {
+    const params = new URLSearchParams(base);
+    params.set("page", String(page));
+    const upstream = await fetchP2P(new URL("/p2p?" + params.toString(), "http://127.0.0.1"));
+    const payload = await readUpstreamPayload(upstream);
+
+    if (!upstream.ok) {
+      throw new Error(JSON.stringify(payload));
+    }
+
+    const record = payload && typeof payload === "object"
+      ? payload as Record<string, unknown>
+      : {};
+    const pageOffers = Array.isArray(record.data)
+      ? record.data.filter((value): value is Record<string, unknown> => Boolean(value) && typeof value === "object")
+      : [];
+
+    offers.push(...pageOffers);
+    total = Number(record.total ?? offers.length);
+    perPage = Math.max(1, Number(record.per_page ?? pageOffers.length ?? 100));
+    lastPage = Math.max(1, Math.ceil(total / perPage));
+
+    if (page >= lastPage || pageOffers.length === 0) break;
+  }
+
+  return {
+    offers,
+    total,
+    pagesFetched: Math.min(lastPage, MAX_INTELLIGENCE_PAGES),
+    truncated: lastPage > MAX_INTELLIGENCE_PAGES
+  };
+}
+
 async function handleApiIntelligence(response: ServerResponse, url: URL): Promise<void> {
   try {
-    const upstream = await fetchP2P(url);
-    const payload = await readUpstreamPayload(upstream);
-    if (!upstream.ok) {
-      sendJson(response, upstream.status, { error: "QvaPay API error", detail: payload });
-      return;
-    }
-    const offers = payload && typeof payload === "object" && Array.isArray((payload as Record<string, unknown>).data)
-      ? (payload as Record<string, unknown>).data as Record<string, unknown>[]
-      : [];
-    sendJson(response, 200, { intelligence: calculateMarketIntelligence(offers) });
+    const result = await fetchAllMarketPages(url);
+    sendJson(response, 200, {
+      intelligence: calculateMarketIntelligence(result.offers),
+      coverage: {
+        total: result.total,
+        pagesFetched: result.pagesFetched,
+        truncated: result.truncated
+      }
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     sendJson(response, message.includes("QVAPAY_APP_ID") ? 500 : 502, { error: message });
