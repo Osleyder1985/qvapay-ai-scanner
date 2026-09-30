@@ -8,7 +8,19 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
+/**
+
+ * Public type AutoApplyType used by the module.
+
+ */
+
 export type AutoApplyType = "sell" | "buy";
+
+/**
+
+ * Public interface AutoApplyConfig used by the module.
+
+ */
 
 export interface AutoApplyConfig {
   enabled: boolean;
@@ -21,6 +33,12 @@ export interface AutoApplyConfig {
   dailyMaxQusd: number | null;
   maxConcurrent: number;
 }
+
+/**
+
+ * Public interface AutoApplyStatus used by the module.
+
+ */
 
 export interface AutoApplyStatus {
   running: boolean;
@@ -167,6 +185,12 @@ export function normalizeAutoApplyConfig(input: unknown): AutoApplyConfig {
   };
 }
 
+/**
+
+ * Public class AutoApplyEngine used by the module.
+
+ */
+
 export class AutoApplyEngine {
   private readonly configPath: string;
   private config: AutoApplyConfig = DEFAULT_CONFIG;
@@ -189,7 +213,12 @@ export class AutoApplyEngine {
       : resolve(process.cwd(), "data/auto-apply.json");
   }
 
-  async initialize(): Promise<void> {
+  /**
+   * Executes the initialize method and preserves the module's documented invariants.
+
+   * @returns Promise<void> returned by the method.
+   */
+  async initialize(): Promise<void>  {
     await mkdir(dirname(this.configPath), { recursive: true });
 
     try {
@@ -231,11 +260,21 @@ export class AutoApplyEngine {
     }
   }
 
-  getConfig(): AutoApplyConfig {
+  /**
+   * Executes the getConfig method and preserves the module's documented invariants.
+
+   * @returns AutoApplyConfig returned by the method.
+   */
+  getConfig(): AutoApplyConfig  {
     return { ...this.config };
   }
 
-  getStatus(): AutoApplyStatus {
+  /**
+   * Executes the getStatus method and preserves the module's documented invariants.
+
+   * @returns AutoApplyStatus returned by the method.
+   */
+  getStatus(): AutoApplyStatus  {
     return {
       running: this.timer !== null,
       lastScanAt: this.lastScanAt,
@@ -248,7 +287,12 @@ export class AutoApplyEngine {
     };
   }
 
-  async updateConfig(input: unknown): Promise<AutoApplyConfig> {
+  /**
+   * Executes the updateConfig method and preserves the module's documented invariants.
+   * @param input Input used by the method.
+   * @returns Promise<AutoApplyConfig> returned by the method.
+   */
+  async updateConfig(input: unknown): Promise<AutoApplyConfig>  {
     const next = normalizeAutoApplyConfig(input);
     this.config = next;
     await this.persist();
@@ -264,7 +308,12 @@ export class AutoApplyEngine {
     return this.getConfig();
   }
 
-  start(): void {
+  /**
+   * Executes the start method and preserves the module's documented invariants.
+
+   * @returns void returned by the method.
+   */
+  start(): void  {
     if (this.timer !== null) return;
 
     this.statusMessage = "Auto-Apply activo; esperando el próximo escaneo.";
@@ -273,7 +322,12 @@ export class AutoApplyEngine {
     }, SCAN_INTERVAL_MS);
   }
 
-  stop(): void {
+  /**
+   * Executes the stop method and preserves the module's documented invariants.
+
+   * @returns void returned by the method.
+   */
+  stop(): void  {
     if (this.timer !== null) {
       clearInterval(this.timer);
       this.timer = null;
@@ -359,7 +413,12 @@ export class AutoApplyEngine {
     return true;
   }
 
-  async scan(): Promise<void> {
+  /**
+   * Executes the scan method and preserves the module's documented invariants.
+
+   * @returns Promise<void> returned by the method.
+   */
+  async scan(): Promise<void>  {
     if (!this.config.enabled || this.scanning) return;
 
     this.scanning = true;
