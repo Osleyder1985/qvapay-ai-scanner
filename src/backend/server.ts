@@ -19,6 +19,7 @@ import { FinanceLedgerStore } from "./finance-ledger.js";
 import { assertDashboardHostIsSafe } from "./dashboard-security.js";
 import { MarketSnapshotService } from "./market-snapshot.js";
 import { fetchAllCompletedP2P, reconcileCompletedIds } from "./finance-reconciliation.js";
+import { OperationsLedgerStore } from "./operations-ledger.js";
 
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
@@ -28,6 +29,8 @@ const QVAPAY_API_BASE_URL = (process.env.QVAPAY_API_BASE_URL ?? "https://api.qva
 const HOST = process.env.DASHBOARD_HOST ?? "127.0.0.1";
 const PORT = Number(process.env.DASHBOARD_PORT ?? "8080");
 const marketSnapshot = new MarketSnapshotService();
+const operationsLedger = new OperationsLedgerStore();
+const MAX_OPERATION_PAGES = 100;
 
 // The dashboard exposes QvaPay operations. Keep the current trust boundary local-only.
 assertDashboardHostIsSafe(HOST);
@@ -198,6 +201,7 @@ async function fetchOperations(): Promise<Response> {
   endpoint.search = new URLSearchParams({
     my: "1",
     take: "100",
+    page: "1",
     sortByStatus: "true"
   }).toString();
   return marketSnapshot.fetch(endpoint, async (target) => fetch(target, {
@@ -205,6 +209,65 @@ async function fetchOperations(): Promise<Response> {
     headers: qvapayHeaders(),
     signal: AbortSignal.timeout(20_000)
   }));
+}
+
+/**
+ * Reconstructs the complete available own-operation history from QvaPay.
+ * The local ledger is only updated after all pages are fetched successfully.
+ * @returns Remote operations, pagination metadata and reconciliation data.
+ */
+async function fetchAllOperations(): Promise<{
+  operations: Record<string, unknown>[];
+  total: number;
+  pagesFetched: number;
+  truncated: boolean;
+}> {
+  const operations: Record<string, unknown>[] = [];
+  let total = 0;
+  let perPage = 100;
+  let lastPage = 1;
+  let pagesFetched = 0;
+
+  for (let page = 1; page <= MAX_OPERATION_PAGES; page += 1) {
+    const endpoint = new URL("/p2p", QVAPAY_API_BASE_URL);
+    endpoint.search = new URLSearchParams({
+      my: "1",
+      take: "100",
+      page: String(page),
+      sortByStatus: "true"
+    }).toString();
+
+    const upstream = await marketSnapshot.fetch(endpoint, async (target) => fetch(target, {
+      method: "GET",
+      headers: qvapayHeaders(),
+      signal: AbortSignal.timeout(20_000)
+    }));
+    const payload = await readUpstreamPayload(upstream);
+    if (!upstream.ok) throw new Error(JSON.stringify(payload));
+
+    const record = payload && typeof payload === "object"
+      ? payload as Record<string, unknown>
+      : {};
+    const pageOperations = Array.isArray(record.data)
+      ? record.data.filter((value): value is Record<string, unknown> =>
+          Boolean(value) && typeof value === "object")
+      : [];
+
+    operations.push(...pageOperations);
+    pagesFetched = page;
+    total = Number(record.total ?? operations.length);
+    perPage = Math.max(1, Number(record.per_page ?? pageOperations.length ?? 100));
+    lastPage = Math.max(1, Math.ceil(total / perPage));
+
+    if (page >= lastPage || pageOperations.length === 0) break;
+  }
+
+  return {
+    operations,
+    total,
+    pagesFetched,
+    truncated: lastPage > MAX_OPERATION_PAGES,
+  };
 }
 
 /**
@@ -418,17 +481,38 @@ async function handleApiP2POffer(response: ServerResponse, uuid: string): Promis
  */
 async function handleApiOperations(response: ServerResponse): Promise<void> {
   try {
-    const upstream = await fetchOperations();
-    const payload = await readUpstreamPayload(upstream);
-    sendJson(response, upstream.status, upstream.ok
-      ? { operations: payload }
-      : { error: "No se pudieron consultar las operaciones", detail: payload });
+    const remote = await fetchAllOperations();
+    await operationsLedger.upsert(remote.operations);
+    const ledger = operationsLedger.list();
+    const reconciliation = operationsLedger.reconcile(remote.operations);
+
+    sendJson(response, 200, {
+      operations: {
+        data: remote.operations,
+        total: remote.total,
+        per_page: 100,
+        page: 1,
+        pages_fetched: remote.pagesFetched,
+        truncated: remote.truncated,
+      },
+      source: {
+        remoteTotal: remote.total,
+        fetched: remote.operations.length,
+        pagesFetched: remote.pagesFetched,
+        truncated: remote.truncated,
+      },
+      persistence: {
+        persisted: ledger.length,
+        reconciled: !reconciliation.missingInLedger.length,
+      },
+      reconciliation,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const status = message.includes("QVAPAY_APP_ID") ? 500 : 502;
     sendJson(response, status, status === 500
       ? { error: message }
-      : { error: "No se pudo contactar con QvaPay", detail: message });
+      : { error: "No se pudo sincronizar el histórico de operaciones", detail: message });
   }
 }
 
@@ -848,7 +932,7 @@ const server = createServer((request, response) => {
   });
 });
 
-void Promise.all([marketHistory.initialize(), autoApplyEngine.initialize(), financeLedger.initialize()]).then(() => {
+void Promise.all([marketHistory.initialize(), autoApplyEngine.initialize(), financeLedger.initialize(), operationsLedger.initialize()]).then(() => {
   void collectMarketHistory();
   setInterval(() => { void collectMarketHistory(); }, 60_000);
   server.listen(PORT, HOST, () => {
