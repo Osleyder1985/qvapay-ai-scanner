@@ -137,7 +137,7 @@ async function loadOperations(){try{const p=await api('/api/operations');const q
  * @param id Input used by the operation.
  * @returns The operation result.
  */
-async function loadOperation(id=S.active){if(!id)return;try{const p=await api('/api/p2p/'+encodeURIComponent(id));S.operation=p?.qvapay?.p2p??p?.qvapay?.data??p?.qvapay??p?.data??p;S.active=id;S.operationRole=operationRole(S.operation);await loadChat();if((location.hash.slice(1)||'/')==='/operations'){drawOperations();drawOperationDetail()}}catch(e){toast(e.message,'error')}}
+async function loadOperation(id=S.active){if(!id)return;try{const local=S.operations.find(o=>String(o.uuid)===String(id));if(!local)throw new Error('La operación no está disponible en el listado autenticado.');S.operation=local;S.active=id;S.operationRole=operationRole(S.operation);await loadChat();if((location.hash.slice(1)||'/')==='/operations'){drawOperations();drawOperationDetail()}}catch(e){toast(e.message,'error')}}
 /**
  * Implements the loadChat operation for this module.
 

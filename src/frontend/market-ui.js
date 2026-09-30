@@ -58,7 +58,7 @@ function drawOffers(){const b=$('offers');if(!b)return;b.innerHTML=S.offers.leng
  * @param id Input used by the operation.
  * @returns The operation result.
  */
-async function applyOffer(id){if(!confirm('Aplicar a esta oferta ahora?'))return;try{await api('/api/p2p/'+encodeURIComponent(id)+'/apply',{method:'POST'});S.active=id;localStorage.setItem('qvapay.activeOperationId',id);await loadOperation();toast('Aplicación aceptada por QvaPay','success')}catch(e){toast(e.message,'error')}}
+async function applyOffer(id){if(!confirm('Aplicar a esta oferta ahora?'))return;try{await api('/api/p2p/'+encodeURIComponent(id)+'/apply',{method:'POST'});await loadOperations();S.active=id;localStorage.setItem('qvapay.activeOperationId',id);await loadOperation(id);toast('Aplicación aceptada por QvaPay','success')}catch(e){toast(e.message,'error')}}
 /**
  * Implements the loadOperation operation for this module.
 
