@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 import { AutoApplyEngine } from "./auto-apply.js";
 import { calculateMarketIntelligence } from "./market-intelligence.js";
+import { MarketHistoryStore } from "./market-history.js";
 
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
@@ -234,6 +235,19 @@ async function handleApiApplyP2P(response: ServerResponse, uuid: string): Promis
   }
 }
 
+const marketHistory = new MarketHistoryStore();
+
+async function collectMarketHistory(): Promise<void> {
+  try {
+    const upstream = await fetchP2P(new URL("/p2p?take=100&orderBy=updated_at&orderType=desc", "http://127.0.0.1"));
+    if (!upstream.ok) return;
+    const payload = await readUpstreamPayload(upstream);
+    const offers = payload && typeof payload === "object" && Array.isArray((payload as Record<string, unknown>).data)
+      ? (payload as Record<string, unknown>).data as Record<string, unknown>[] : [];
+    await marketHistory.append(offers);
+  } catch (error) { console.error("Market history collector:", error); }
+}
+
 const autoApplyEngine = new AutoApplyEngine({
   fetchMarket: (params) => fetchP2P(new URL("/p2p?" + params.toString(), "http://127.0.0.1")),
   applyOffer: applyP2POffer,
@@ -273,6 +287,14 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
 
   if (request.method === "GET" && url.pathname === "/api/auto-apply/status") {
     sendJson(response, 200, { status: autoApplyEngine.getStatus() });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/history") {
+    const coin=url.searchParams.get("coin")??undefined;
+    const type=url.searchParams.get("type")??undefined;
+    const limit=Number(url.searchParams.get("limit")??"200");
+    sendJson(response,200,{history:marketHistory.query(coin,type,Number.isFinite(limit)?limit:200)});
     return;
   }
 
@@ -358,7 +380,9 @@ const server = createServer((request, response) => {
   });
 });
 
-void autoApplyEngine.initialize().then(() => {
+void Promise.all([marketHistory.initialize(), autoApplyEngine.initialize()]).then(() => {
+  void collectMarketHistory();
+  setInterval(() => { void collectMarketHistory(); }, 60_000);
   server.listen(PORT, HOST, () => {
     console.log(`QvaPay P2P Dashboard: http://${HOST}:${PORT}`);
   });
