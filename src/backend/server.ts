@@ -763,9 +763,7 @@ async function fetchOwnP2P(status?: string): Promise<Response> {
  * @param page Input used by the operation.
  * @returns The operation result.
  */
-async function fetchCompletedPage(
-  page: number,
-): Promise<{
+async function fetchCompletedPage(page: number): Promise<{
   data: Record<string, unknown>[];
   total: number;
   perPage: number;
