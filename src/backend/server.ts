@@ -4,6 +4,7 @@ import { extname, resolve } from "node:path";
 import { AutoApplyEngine } from "./auto-apply.js";
 import { calculateMarketIntelligence } from "./market-intelligence.js";
 import { MarketHistoryStore } from "./market-history.js";
+import { summarizeTrends } from "./trend-engine.js";
 
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
@@ -287,6 +288,14 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
 
   if (request.method === "GET" && url.pathname === "/api/auto-apply/status") {
     sendJson(response, 200, { status: autoApplyEngine.getStatus() });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/trends") {
+    const coin=url.searchParams.get("coin")??undefined;
+    const type=url.searchParams.get("type")??undefined;
+    const points=marketHistory.query(coin,type,1000);
+    sendJson(response,200,{trends:summarizeTrends(points)});
     return;
   }
 
