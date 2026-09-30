@@ -31,6 +31,7 @@ interface PersistedState {
   dailyAppliedQusd: number;
   recentApplyAttempts: string[];
   appliedOfferIds: string[];
+  vipRejectedOffers: Record<string, string>;
 }
 
 interface EngineDependencies {
@@ -55,6 +56,7 @@ const DEFAULT_CONFIG: AutoApplyConfig = {
 const APPLY_LIMIT = 2;
 const APPLY_WINDOW_MS = 60_000;
 const SCAN_INTERVAL_MS = 30_000;
+const VIP_REJECTION_COOLDOWN_MS = 5 * 60_000;
 
 function today(): string {
   const now = new Date();
@@ -82,6 +84,12 @@ function asPositiveInteger(value: unknown, field: string, minimum = 1): number {
   }
 
   return number;
+}
+
+export function isVipOnlyOffer(offer: Record<string, unknown>): boolean {
+  const value = offer.only_vip;
+  return value === true || value === 1 ||
+    ["true", "1", "yes"].includes(String(value ?? "").trim().toLowerCase());
 }
 
 export function normalizeAutoApplyConfig(input: unknown): AutoApplyConfig {
@@ -135,6 +143,7 @@ export class AutoApplyEngine {
     dailyAppliedQusd: 0,
     recentApplyAttempts: [],
     appliedOfferIds: [],
+    vipRejectedOffers: {},
   };
   private timer: ReturnType<typeof setInterval> | null = null;
   private scanning = false;
@@ -168,6 +177,15 @@ export class AutoApplyEngine {
         appliedOfferIds: Array.isArray(parsed.state?.appliedOfferIds)
           ? parsed.state.appliedOfferIds.map(String)
           : [],
+        vipRejectedOffers: parsed.state?.vipRejectedOffers &&
+            typeof parsed.state.vipRejectedOffers === "object"
+          ? Object.fromEntries(
+              Object.entries(parsed.state.vipRejectedOffers).map(([uuid, timestamp]) => [
+                String(uuid),
+                String(timestamp),
+              ]),
+            )
+          : {},
       };
     } catch {
       await this.persist();
@@ -247,6 +265,25 @@ export class AutoApplyEngine {
     );
   }
 
+  private pruneVipRejectedOffers(now = Date.now()): void {
+    const threshold = now - VIP_REJECTION_COOLDOWN_MS;
+    for (const [uuid, timestamp] of Object.entries(this.state.vipRejectedOffers)) {
+      if (Number(timestamp) < threshold) {
+        delete this.state.vipRejectedOffers[uuid];
+      }
+    }
+  }
+
+  private wasRecentlyVipRejected(uuid: string): boolean {
+    const timestamp = Number(this.state.vipRejectedOffers[uuid]);
+    return Number.isFinite(timestamp) &&
+      Date.now() - timestamp < VIP_REJECTION_COOLDOWN_MS;
+  }
+
+  private markVipRejected(uuid: string): void {
+    this.state.vipRejectedOffers[uuid] = String(Date.now());
+  }
+
   private async persist(): Promise<void> {
     const payload = JSON.stringify({ config: this.config, state: this.state }, null, 2);
     await mkdir(dirname(this.configPath), { recursive: true });
@@ -275,6 +312,7 @@ export class AutoApplyEngine {
 
     if (status !== "open") return false;
     if (type !== this.config.type) return false;
+    if (isVipOnlyOffer(offer)) return false;
     if (this.config.coin && coin !== this.config.coin) return false;
     if (!Number.isFinite(amount) || !Number.isFinite(currentRate)) return false;
     if (this.config.rateMin !== null && currentRate < this.config.rateMin) return false;
@@ -296,6 +334,7 @@ export class AutoApplyEngine {
     this.lastScanAt = new Date().toISOString();
     this.resetDailyStateIfNeeded();
     this.pruneAttempts();
+    this.pruneVipRejectedOffers();
 
     try {
       const processingCount = await this.ownProcessingCount();
@@ -329,7 +368,10 @@ export class AutoApplyEngine {
       const candidates = offers
         .filter((offer) => {
           const uuid = String(offer.uuid ?? offer.id ?? "");
-          return uuid && !this.state.appliedOfferIds.includes(uuid) && this.matches(offer);
+          return uuid &&
+            !this.state.appliedOfferIds.includes(uuid) &&
+            !this.wasRecentlyVipRejected(uuid) &&
+            this.matches(offer);
         })
         .sort((a, b) => {
           const rateA = Number(a.receive) / Number(a.amount);
@@ -384,6 +426,16 @@ export class AutoApplyEngine {
         this.statusMessage =
           "QvaPay rechazó la aplicación automática de " + uuid + ": HTTP " +
           response.status + " " + detail;
+
+        if (
+          response.status === 400 &&
+          detail.toLowerCase().includes("vip")
+        ) {
+          this.markVipRejected(uuid);
+          this.statusMessage =
+            "Oferta " + uuid + " descartada: QvaPay exige VIP para aplicar. " +
+            "No se volverá a intentar durante 5 minutos.";
+        }
 
         if (response.status === 429) {
           break;
