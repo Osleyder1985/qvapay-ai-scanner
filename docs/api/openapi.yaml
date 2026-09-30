@@ -1,0 +1,530 @@
+openapi: 3.1.0
+info:
+  title: QvaPay AI Scanner Internal API
+  version: 0.1.0
+  description: |
+    Contrato de la API HTTP interna del dashboard QvaPay AI Scanner.
+    La API actúa como backend/proxy frente a QvaPay y no expone las credenciales
+    de la aplicación al navegador.
+
+    Trust boundary actual:
+    - el dashboard solo puede iniciar en loopback (127.0.0.1, ::1 o localhost);
+    - no existe autenticación de usuario remoto en esta versión;
+    - las rutas sensibles dependen del boundary local y de la validación de
+      rol/estado antes de reenviar acciones a QvaPay.
+
+    Esta especificación describe el comportamiento implementado. No representa
+    capacidades futuras no implementadas.
+servers:
+  - url: http://127.0.0.1:8080
+    description: Deployment local por defecto
+tags:
+  - name: System
+  - name: Market
+  - name: Intelligence
+  - name: Operations
+  - name: Finance
+  - name: Automation
+  - name: Account
+paths:
+  /api/health:
+    get:
+      tags: [System]
+      summary: Health check
+      responses:
+        '200':
+          description: Servicio disponible
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, service]
+                properties:
+                  ok: { type: boolean, const: true }
+                  service: { type: string, example: p2p-market-dashboard }
+
+  /api/market/snapshot:
+    get:
+      tags: [Market]
+      summary: Market collector telemetry
+      responses:
+        '200':
+          description: Estado del collector/caché de mercado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  marketSnapshot:
+                    $ref: '#/components/schemas/MarketSnapshotStats'
+
+  /api/p2p:
+    get:
+      tags: [Market]
+      summary: Listar ofertas P2P
+      description: Proxy de lectura hacia QvaPay GET /p2p. El backend sanitiza parámetros, limita take a 100 y aplica la política central de caché, intervalo y backoff.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Take'
+        - $ref: '#/components/parameters/Type'
+        - $ref: '#/components/parameters/Coin'
+        - { name: orderBy, in: query, schema: { type: string } }
+        - { name: orderType, in: query, schema: { type: string, enum: [asc, desc] } }
+        - { name: min, in: query, schema: { type: number } }
+        - { name: max, in: query, schema: { type: number } }
+        - { name: ratio_min, in: query, schema: { type: number } }
+        - { name: ratio_max, in: query, schema: { type: number } }
+        - { name: only_vip, in: query, schema: { type: string } }
+        - { name: my, in: query, schema: { type: string, enum: ['1', 'true'] } }
+        - { name: status, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Respuesta de listado QvaPay
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QVaPayListResponse' }
+        '400': { $ref: '#/components/responses/UpstreamError' }
+        '429': { $ref: '#/components/responses/UpstreamError' }
+        '500': { $ref: '#/components/responses/MissingCredentials' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/p2p/{uuid}:
+    get:
+      tags: [Market, Operations]
+      summary: Obtener detalle de una oferta
+      parameters: [ { $ref: '#/components/parameters/Uuid' } ]
+      responses:
+        '200':
+          description: Detalle QvaPay envuelto por el backend
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [offer_uuid, qvapay]
+                properties:
+                  offer_uuid: { type: string, format: uuid }
+                  qvapay: { $ref: '#/components/schemas/FreeformObject' }
+        '400': { $ref: '#/components/responses/InvalidUuid' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/p2p/{uuid}/apply:
+    post:
+      tags: [Market, Operations]
+      summary: Aplicar a una oferta P2P
+      description: Mutación financiera sensible. Reenvía POST /p2p/{uuid}/apply a QvaPay usando credenciales del backend; el navegador nunca recibe app-secret.
+      parameters: [ { $ref: '#/components/parameters/Uuid' } ]
+      responses:
+        '200':
+          description: Aplicación aceptada por QvaPay
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [applied, offer_uuid, qvapay]
+                properties:
+                  applied: { type: boolean, const: true }
+                  offer_uuid: { type: string, format: uuid }
+                  qvapay: { $ref: '#/components/schemas/FreeformObject' }
+        '400': { $ref: '#/components/responses/UpstreamError' }
+        '429': { $ref: '#/components/responses/UpstreamError' }
+        '500': { $ref: '#/components/responses/MissingCredentials' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/intelligence:
+    get:
+      tags: [Intelligence]
+      summary: Calcular inteligencia de mercado
+      description: Recorre hasta el límite de páginas configurado por el backend y devuelve indicadores derivados y cobertura.
+      responses:
+        '200':
+          description: Intelligence y cobertura
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [intelligence, coverage]
+                properties:
+                  intelligence: { $ref: '#/components/schemas/FreeformObject' }
+                  coverage: { $ref: '#/components/schemas/Coverage' }
+        '500': { $ref: '#/components/responses/MissingCredentials' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/history:
+    get:
+      tags: [Intelligence]
+      summary: Consultar histórico local
+      parameters:
+        - $ref: '#/components/parameters/CoinOptional'
+        - $ref: '#/components/parameters/TypeOptional'
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, default: 200 } }
+      responses:
+        '200':
+          description: Puntos históricos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [history]
+                properties:
+                  history:
+                    type: array
+                    items: { $ref: '#/components/schemas/FreeformObject' }
+
+  /api/trends:
+    get:
+      tags: [Intelligence]
+      summary: Consultar tendencias locales
+      parameters:
+        - $ref: '#/components/parameters/CoinOptional'
+        - $ref: '#/components/parameters/TypeOptional'
+      responses:
+        '200':
+          description: Tendencias calculadas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [trends]
+                properties:
+                  trends:
+                    type: array
+                    items: { $ref: '#/components/schemas/FreeformObject' }
+
+  /api/baselines:
+    get:
+      tags: [Intelligence]
+      summary: Consultar baselines locales
+      parameters:
+        - $ref: '#/components/parameters/CoinOptional'
+        - $ref: '#/components/parameters/TypeOptional'
+        - { name: lookback, in: query, schema: { type: integer, minimum: 1, default: 24 } }
+      responses:
+        '200':
+          description: Baselines calculados
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [baselines]
+                properties:
+                  baselines:
+                    type: array
+                    items: { $ref: '#/components/schemas/FreeformObject' }
+
+  /api/operations:
+    get:
+      tags: [Operations]
+      summary: Consultar operaciones propias
+      description: Fuente operativa basada en QvaPay P2P con my=1. El endpoint actual consulta una página de hasta 100 registros.
+      responses:
+        '200':
+          description: Operaciones
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [operations]
+                properties:
+                  operations: { $ref: '#/components/schemas/FreeformObject' }
+        '500': { $ref: '#/components/responses/MissingCredentials' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/operations/{uuid}/chat:
+    get:
+      tags: [Operations]
+      summary: Leer chat de una operación
+      parameters: [ { $ref: '#/components/parameters/Uuid' } ]
+      responses:
+        '200': { $ref: '#/components/responses/OperationMutation200' }
+        '400': { $ref: '#/components/responses/InvalidUuid' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+    post:
+      tags: [Operations]
+      summary: Enviar mensaje de chat
+      parameters: [ { $ref: '#/components/parameters/Uuid' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string, minLength: 1, maxLength: 599 }
+      responses:
+        '200': { $ref: '#/components/responses/OperationMutation200' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/UpstreamError' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/operations/{uuid}/paid:
+    post:
+      tags: [Operations]
+      summary: Marcar operación como pagada
+      description: Acción financiera sensible; requiere tx_id y depende del rol y estado aceptados por QvaPay.
+      parameters: [ { $ref: '#/components/parameters/Uuid' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tx_id]
+              properties:
+                tx_id: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        '200': { $ref: '#/components/responses/OperationMutation200' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/UpstreamError' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/operations/{uuid}/received:
+    post:
+      tags: [Operations, Finance]
+      summary: Confirmar recepción
+      description: Acción financiera sensible. Tras una respuesta exitosa, intenta sincronizar el detalle y registra settlement cuando QvaPay devuelve gross amount, fee y net amount.
+      parameters: [ { $ref: '#/components/parameters/Uuid' } ]
+      responses:
+        '200': { $ref: '#/components/responses/OperationMutation200' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/UpstreamError' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/operations/{uuid}/cancel:
+    post:
+      tags: [Operations]
+      summary: Cancelar operación
+      description: Acción financiera sensible; la validez depende del rol y estado de la operación en QvaPay.
+      parameters: [ { $ref: '#/components/parameters/Uuid' } ]
+      responses:
+        '200': { $ref: '#/components/responses/OperationMutation200' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/UpstreamError' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/operations/{uuid}/rate:
+    post:
+      tags: [Operations]
+      summary: Valorar contraparte
+      parameters: [ { $ref: '#/components/parameters/Uuid' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating: { type: number, minimum: 1, maximum: 5 }
+                comment: { type: string, maxLength: 120 }
+      responses:
+        '200': { $ref: '#/components/responses/OperationMutation200' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/UpstreamError' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/account:
+    get:
+      tags: [Account]
+      summary: Obtener snapshot de cuenta
+      responses:
+        '200':
+          description: Balance e identidad observada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [account]
+                properties:
+                  account: { $ref: '#/components/schemas/FreeformObject' }
+        '500': { $ref: '#/components/responses/MissingCredentials' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/finance:
+    get:
+      tags: [Finance]
+      summary: Sincronizar y resumir finanzas
+      description: Sincroniza las páginas de operaciones completadas disponibles hasta el safety ceiling del reconciliador, actualiza el ledger local y devuelve diferencias entre fuente remota y persistencia local.
+      responses:
+        '200':
+          description: Resumen financiero y reconciliación
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [finance, fees, source, reconciliation]
+                properties:
+                  finance: { $ref: '#/components/schemas/FreeformObject' }
+                  fees: { $ref: '#/components/schemas/FeeSummary' }
+                  source: { $ref: '#/components/schemas/FinanceSource' }
+                  reconciliation: { $ref: '#/components/schemas/Reconciliation' }
+        '500': { $ref: '#/components/responses/MissingCredentials' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/auto-apply/config:
+    get:
+      tags: [Automation]
+      summary: Leer configuración Auto-Apply
+      responses:
+        '200':
+          description: Configuración actual
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [config]
+                properties:
+                  config: { $ref: '#/components/schemas/FreeformObject' }
+    put:
+      tags: [Automation]
+      summary: Actualizar configuración Auto-Apply
+      description: Mutación local que cambia las reglas del motor. Auto-Apply permanece separado de pagos y recepción.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FreeformObject' }
+      responses:
+        '200':
+          description: Configuración actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [config]
+                properties:
+                  config: { $ref: '#/components/schemas/FreeformObject' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      $ref: '#/paths/~1api~1auto-apply~1config/put'
+
+  /api/auto-apply/status:
+    get:
+      tags: [Automation]
+      summary: Estado del motor Auto-Apply
+      responses:
+        '200':
+          description: Estado runtime
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { $ref: '#/components/schemas/FreeformObject' }
+
+components:
+  parameters:
+    Page: { name: page, in: query, schema: { type: integer, minimum: 1 } }
+    Take: { name: take, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 100 } }
+    Type: { name: type, in: query, schema: { type: string } }
+    Coin: { name: coin, in: query, schema: { type: string } }
+    CoinOptional: { name: coin, in: query, schema: { type: string } }
+    TypeOptional: { name: type, in: query, schema: { type: string } }
+    Uuid:
+      name: uuid
+      in: path
+      required: true
+      schema: { type: string, maxLength: 200 }
+  responses:
+    MissingCredentials:
+      description: Credenciales QvaPay no configuradas
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    UpstreamUnavailable:
+      description: QvaPay no pudo ser contactado o se produjo un error de transporte
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    UpstreamError:
+      description: Error devuelto por QvaPay
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InvalidUuid:
+      description: Identificador inválido
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ValidationError:
+      description: Validación local rechazada
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    OperationMutation200:
+      description: Mutación aceptada por QvaPay
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/OperationMutationResponse' }
+  schemas:
+    FreeformObject: { type: object, additionalProperties: true }
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+        detail: {}
+    QVaPayListResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/FreeformObject' }
+        total: { type: integer }
+        per_page: { type: integer }
+    OperationMutationResponse:
+      type: object
+      required: [ok, action, offer_uuid, qvapay]
+      properties:
+        ok: { type: boolean, const: true }
+        action: { type: string }
+        offer_uuid: { type: string, format: uuid }
+        qvapay: { $ref: '#/components/schemas/FreeformObject' }
+    MarketSnapshotStats:
+      type: object
+      additionalProperties: true
+      properties:
+        cacheHits: { type: integer }
+        cacheMisses: { type: integer }
+        queuedRequests: { type: integer }
+        upstreamRequests: { type: integer }
+        lastUpstreamAt: { type: string, format: date-time, nullable: true }
+        rateLimitedResponses: { type: integer }
+    Coverage:
+      type: object
+      required: [total, pagesFetched, truncated]
+      properties:
+        total: { type: integer }
+        pagesFetched: { type: integer }
+        truncated: { type: boolean }
+    FeeSummary:
+      type: object
+      required: [knownQusd, knownOperations, unknownOperations]
+      properties:
+        knownQusd: { type: number }
+        knownOperations: { type: integer }
+        unknownOperations: { type: integer }
+    FinanceSource:
+      type: object
+      required: [status, fetched, remoteTotal, pagesFetched, truncated, persisted]
+      properties:
+        status: { type: string, const: completed }
+        fetched: { type: integer }
+        remoteTotal: { type: integer }
+        pagesFetched: { type: integer }
+        truncated: { type: boolean }
+        persisted: { type: integer }
+    Reconciliation:
+      type: object
+      additionalProperties: true
+      properties:
+        remoteCount: { type: integer }
+        ledgerCount: { type: integer }
+        missingInLedger:
+          type: array
+          items: { type: string }
+        staleLocal:
+          type: array
+          items: { type: string }
