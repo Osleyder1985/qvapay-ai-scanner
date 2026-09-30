@@ -125,7 +125,7 @@ function drawChat(){
  * @param id Input used by the operation.
  * @returns The operation result.
  */
-async function selectOperation(id){S.active=id;localStorage.setItem('qvapay.activeOperationId',id);await loadOperation(id);drawOperations();toast('Operación seleccionada','success')}
+async function selectOperation(id){S.active=id;localStorage.setItem('qvapay.activeOperationId',id);const loaded=await loadOperation(id);if(!loaded)return;if((location.hash.slice(1)||'/')==='/operations'&&!$('operationDetail'))nav();else{drawOperations();drawOperationDetail()}toast('Operación seleccionada','success')}
 /**
  * Implements the loadOperations operation for this module.
 
