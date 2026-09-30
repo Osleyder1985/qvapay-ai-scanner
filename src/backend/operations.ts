@@ -67,6 +67,7 @@ export function availableOperationActions(
   }
 
   if (["processing", "paid"].includes(status)) actions.push("cancel");
+  if (status === "open" && role === "owner") actions.push("cancel");
   if (
     status === "revision" &&
     ((type === "buy" && role === "owner") || (type === "sell" && role === "peer"))
