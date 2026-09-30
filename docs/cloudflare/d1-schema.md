@@ -80,9 +80,9 @@ Una transacción D1 no puede deshacer una mutación ya aceptada por QvaPay. El d
 2. Definir autenticación pública del dashboard.
 3. Definir si Auto-Apply requiere cadencia de 30 s o si 1 minuto es suficiente.
 4. Medir consumo real de D1/Workers.
-5. Implementar repositorio D1 y pruebas de idempotencia antes de migrar datos.
+5. Provisión y aceptación del recurso D1 productivo (#90).
 6. Mantener la aceptación real de QvaPay (#13) separada de esta migración.
 
 ## 8. Estado
 **Diseño:** baseline técnico de migración.
-**Implementación:** pendiente. Este documento no cambia todavía el runtime Node.
+**Implementación:** repositorio D1 y runtime Worker implementados en `production/cloudflare`. La provisión del recurso D1 productivo, aplicación remota de migraciones y despliegue siguen pendientes del Issue #90.
