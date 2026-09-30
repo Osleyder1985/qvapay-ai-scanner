@@ -45,11 +45,9 @@ test("disabled runtime does not construct QvaPay client or executor", async () =
   });
 
   const pending: Promise<unknown>[] = [];
-  await handler(
-    { scheduledTime: Date.now() },
-    env,
-    { waitUntil: (promise) => pending.push(promise) },
-  );
+  await handler({ scheduledTime: Date.now() }, env, {
+    waitUntil: (promise) => pending.push(promise),
+  });
 
   assert.equal(clientCalls, 0);
   assert.equal(executorCalls, 0);
@@ -68,11 +66,7 @@ test("enabled runtime fails closed when QvaPay credentials are absent", async ()
     },
   );
 
-  await handler(
-    { scheduledTime: Date.now() },
-    env,
-    { waitUntil: () => {} },
-  );
+  await handler({ scheduledTime: Date.now() }, env, { waitUntil: () => {} });
 
   assert.equal(clientCalls, 0);
 });
@@ -127,11 +121,9 @@ test("enabled runtime composes the executor and delegates through waitUntil", as
     },
   );
 
-  await handler(
-    { scheduledTime: Date.now() },
-    env,
-    { waitUntil: (promise) => pending.push(promise) },
-  );
+  await handler({ scheduledTime: Date.now() }, env, {
+    waitUntil: (promise) => pending.push(promise),
+  });
 
   assert.equal(executorFactoryCalls, 1);
   assert.equal(executions, 1);
