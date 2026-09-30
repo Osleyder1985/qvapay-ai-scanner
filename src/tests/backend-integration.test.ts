@@ -456,7 +456,9 @@ test(
 
     assert.equal(response.status, 502);
     assert.ok(elapsed >= 19_000, `timeout demasiado corto: ${elapsed}ms`);
-    assert.ok(elapsed < 22_000, `timeout demasiado largo: ${elapsed}ms`);
+    // The market collector/rate-control queue may add up to one scheduling interval
+    // before the upstream 20s timeout starts. Validate the end-to-end bound accordingly.
+    assert.ok(elapsed < 25_000, `timeout demasiado largo: ${elapsed}ms`);
     const payload = (await response.json()) as { error: string };
     assert.equal(payload.error, "No se pudo contactar con QvaPay");
   },
