@@ -18,14 +18,22 @@ import {
   type D1FinanceRow,
   type D1OperationRow,
 } from "../backend/cloudflare/d1-repository.js";
+import {
+  createAutoApplyScheduledHandler,
+  type CloudflareAutoApplyRuntimeEnv,
+} from "./auto-apply-runtime.js";
 
-export interface WorkerEnv {
-  DB: D1DatabaseLike;
+export interface WorkerEnv extends CloudflareAutoApplyRuntimeEnv {
   DASHBOARD_API_TOKEN?: string;
 }
 
 interface WorkerHandler {
   fetch(request: Request, env: WorkerEnv): Promise<Response>;
+  scheduled(
+    controller: { scheduledTime: number },
+    env: WorkerEnv,
+    context: { waitUntil(promise: Promise<unknown>): void },
+  ): Promise<void>;
 }
 
 function json(data: unknown, status = 200): Response {
@@ -274,6 +282,10 @@ const handler: WorkerHandler = {
     }
 
     return new Response("Not Found", { status: 404 });
+  },
+
+  async scheduled(controller, env, context): Promise<void> {
+    await createAutoApplyScheduledHandler(env)(controller, env, context);
   },
 };
 
