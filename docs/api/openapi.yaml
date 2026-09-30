@@ -225,7 +225,14 @@ paths:
                 type: object
                 required: [operations]
                 properties:
-                  operations: { $ref: '#/components/schemas/FreeformObject' }
+                  operations:
+                    $ref: '#/components/schemas/OperationsEnvelope'
+                  source:
+                    $ref: '#/components/schemas/OperationsSource'
+                  persistence:
+                    $ref: '#/components/schemas/OperationsPersistence'
+                  reconciliation:
+                    $ref: '#/components/schemas/Reconciliation'
         '500': { $ref: '#/components/responses/MissingCredentials' }
         '502': { $ref: '#/components/responses/UpstreamUnavailable' }
 
@@ -528,3 +535,29 @@ components:
         staleLocal:
           type: array
           items: { type: string }
+    OperationsEnvelope:
+      type: object
+      required: [data, total, per_page, page, pages_fetched, truncated]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/FreeformObject' }
+        total: { type: integer }
+        per_page: { type: integer }
+        page: { type: integer }
+        pages_fetched: { type: integer }
+        truncated: { type: boolean }
+    OperationsSource:
+      type: object
+      required: [remoteTotal, fetched, pagesFetched, truncated]
+      properties:
+        remoteTotal: { type: integer }
+        fetched: { type: integer }
+        pagesFetched: { type: integer }
+        truncated: { type: boolean }
+    OperationsPersistence:
+      type: object
+      required: [persisted, reconciled]
+      properties:
+        persisted: { type: integer }
+        reconciled: { type: boolean }
