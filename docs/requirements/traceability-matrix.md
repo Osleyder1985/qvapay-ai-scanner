@@ -26,7 +26,7 @@
 | NFR-003 | Single market collection service | `src/backend/market-snapshot.ts` | Market snapshot tests + routing review | Implemented |
 | NFR-004 | Local-only trust boundary | ADR-003 / dashboard trust boundary | `src/tests/dashboard-security.test.ts` | Implemented |
 | NFR-005 | Idempotent persistence | Finance ledger | Finance tests | Implemented |
-| NFR-006 | Reproducible quality gates | CI workflow + lockfile | `.github/workflows/ci.yml` | Implemented; GitHub run result not independently observed |
+| NFR-006 | Reproducible quality gates | CI workflow + lockfile | `.github/workflows/ci.yml` + evidence/ci/post-remediation-verification.md | Verified: CI #30 passed after remediation |
 | NFR-007 | Configurable upstream timeout | Backend integration configuration | `backend-integration.test.ts` | Implemented |
 | NFR-008 | Responsive application shell | Frontend architecture | Integration/build baseline | Implemented |
 | NFR-009 | Evidence-first unknown states | Finance/account/intelligence models | Code/documentation review | Implemented |
@@ -41,7 +41,7 @@
 | SEC-005 | VIP safety guard | `src/backend/auto-apply.ts` | VIP regression tests | Implemented |
 | SEC-006 | Central 429 backoff | `src/backend/market-snapshot.ts` | 429 market snapshot test | Implemented |
 | SEC-007 | Sensitive route validation | `src/backend/server.ts` | Backend integration tests | Implemented |
-| SEC-008 | Reproducible dependency security gate | `.github/workflows/security.yml`, `package-lock.json` | Workflow definition | Implemented; GitHub run result not independently observed |
+| SEC-008 | Reproducible dependency security gate | `.github/workflows/security.yml`, `package-lock.json` | Workflow definition + evidence/ci/post-remediation-verification.md | Verified: Security #30 passed |
 | SEC-009 | Formal threat model and risk register | `docs/security/threat-model.md`, `docs/security/risk-register.md` | Security review against current trust boundaries and controls | Implemented |
 
 | Req. | Architecture / decision | Implementation | Verification evidence | Status |
