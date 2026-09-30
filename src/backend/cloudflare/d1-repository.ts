@@ -390,6 +390,46 @@ export class D1Repository {
       .first<D1AutoApplyStateRow>();
   }
 
+  /** Returns true when an offer UUID has already been recorded as applied. */
+  async hasAppliedOffer(offerUuid: string): Promise<boolean> {
+    const row = await this.db
+      .prepare("SELECT 1 AS present FROM auto_apply_applied_offers WHERE offer_uuid = ? LIMIT 1")
+      .bind(offerUuid)
+      .first<{ present: number }>();
+    return row !== null;
+  }
+
+  /** Persists the durable Auto-Apply scan/action state. */
+  async updateAutoApplyState(input: {
+    dailyDate: string;
+    dailyAppliedQusd: number;
+    lastScanAt: string | null;
+    lastActionAt: string | null;
+    lastMessage: string;
+    updatedAt: string;
+  }): Promise<void> {
+    await this.db
+      .prepare(`INSERT INTO auto_apply_state (
+        id, daily_date, daily_applied_qusd, last_scan_at, last_action_at, last_message, updated_at
+      ) VALUES (1, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        daily_date = excluded.daily_date,
+        daily_applied_qusd = excluded.daily_applied_qusd,
+        last_scan_at = excluded.last_scan_at,
+        last_action_at = excluded.last_action_at,
+        last_message = excluded.last_message,
+        updated_at = excluded.updated_at`)
+      .bind(
+        input.dailyDate,
+        input.dailyAppliedQusd,
+        input.lastScanAt,
+        input.lastActionAt,
+        input.lastMessage,
+        input.updatedAt,
+      )
+      .run();
+  }
+
   /**
    * Atomically claims the singleton Auto-Apply execution lease.
    * Returns false when another non-expired execution owns the lease.
