@@ -93,10 +93,13 @@ const handler: WorkerHandler = {
           .prepare("SELECT 1 AS ok")
           .first<{ ok: number }>();
 
-        return json({
-          service: "qvapay-ai-scanner",
-          d1: row?.ok === 1 ? "ok" : "error",
-        }, row?.ok === 1 ? 200 : 503);
+        return json(
+          {
+            service: "qvapay-ai-scanner",
+            d1: row?.ok === 1 ? "ok" : "error",
+          },
+          row?.ok === 1 ? 200 : 503,
+        );
       } catch {
         return json({
           service: "qvapay-ai-scanner",
@@ -124,7 +127,8 @@ const handler: WorkerHandler = {
         const operations = rows
           .map(operationFromRow)
           .filter(
-            (operation): operation is Record<string, unknown> => operation !== null,
+            (operation): operation is Record<string, unknown> =>
+              operation !== null,
           );
 
         return json({
