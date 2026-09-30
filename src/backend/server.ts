@@ -5,6 +5,7 @@ import { AutoApplyEngine } from "./auto-apply.js";
 import { calculateMarketIntelligence } from "./market-intelligence.js";
 import { MarketHistoryStore } from "./market-history.js";
 import { summarizeTrends } from "./trend-engine.js";
+import { calculateBaselines } from "./market-baseline.js";
 
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
@@ -288,6 +289,15 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
 
   if (request.method === "GET" && url.pathname === "/api/auto-apply/status") {
     sendJson(response, 200, { status: autoApplyEngine.getStatus() });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/baselines") {
+    const coin=url.searchParams.get("coin")??undefined;
+    const type=url.searchParams.get("type")??undefined;
+    const lookback=Number(url.searchParams.get("lookback")??"24");
+    const points=marketHistory.query(coin,type,1000);
+    sendJson(response,200,{baselines:calculateBaselines(points,Number.isFinite(lookback)?lookback:24)});
     return;
   }
 
