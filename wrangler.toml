@@ -12,3 +12,9 @@ binding = "DB"
 database_name = "qvapay-ai-scanner"
 database_id = "REPLACE_WITH_PRODUCTION_D1_DATABASE_ID"
 migrations_dir = "migrations"
+
+[vars]
+AUTO_APPLY_RUNTIME_ENABLED = "false"
+
+[secrets]
+required = ["QVAPAY_APP_ID", "QVAPAY_APP_SECRET", "DASHBOARD_API_TOKEN"]
