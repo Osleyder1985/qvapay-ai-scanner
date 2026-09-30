@@ -1,3 +1,10 @@
+/**
+ * @file market-intelligence.ts
+ * @path src/backend/market-intelligence.ts
+ * @description Implements market intelligence for QvaPay AI Scanner.
+ * @module backend
+ * @status active
+ */
 export interface MarketOffer {
   uuid?: string;
   id?: string;
@@ -52,12 +59,23 @@ export interface MarketIntelligence {
 
 const n=(v:unknown)=>Number.isFinite(Number(v))?Number(v):NaN;
 
+/**
+ * Implements the median operation for this module.
+ * @param a Input used by the operation.
+ * @returns The operation result.
+ */
 function median(a:number[]):number|null {
   if(!a.length)return null;
   const x=[...a].sort((p,q)=>p-q),m=Math.floor(x.length/2),lower=x[m-1],upper=x[m];
   return x.length%2?upper??null:(lower!==undefined&&upper!==undefined?(lower+upper)/2:null);
 }
 
+/**
+ * Implements the calculateGroup operation for this module.
+ * @param coin Input used by the operation.
+ * @param offers Input used by the operation.
+ * @returns The operation result.
+ */
 function calculateGroup(coin:string,offers:MarketOffer[]):MarketCoinIntelligence {
   const valid=offers.map(o=>({o,amount:n(o.amount),receive:n(o.receive)}))
     .filter(x=>x.amount>0&&x.receive>=0)
@@ -102,6 +120,11 @@ function calculateGroup(coin:string,offers:MarketOffer[]):MarketCoinIntelligence
   };
 }
 
+/**
+ * Implements the calculateMarketIntelligence operation for this module.
+ * @param offers Input used by the operation.
+ * @returns The operation result.
+ */
 export function calculateMarketIntelligence(offers:MarketOffer[]):MarketIntelligence {
   const groups=new Map<string,MarketOffer[]>();
   for(const offer of offers){
