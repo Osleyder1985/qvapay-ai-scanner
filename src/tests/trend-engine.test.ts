@@ -1,3 +1,10 @@
+/**
+ * @file trend-engine.test.ts
+ * @path src/tests/trend-engine.test.ts
+ * @description Test coverage for trend-engine.test.ts in QvaPay AI Scanner.
+ * @module tests
+ * @status test
+ */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { calculateTrend, summarizeTrends } from "../backend/trend-engine.js";
