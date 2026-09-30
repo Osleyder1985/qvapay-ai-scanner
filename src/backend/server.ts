@@ -192,26 +192,6 @@ async function fetchP2PAction(uuid: string, action: string, method: "POST" | "GE
 }
 
 /**
- * Implements the fetchOperations operation for this module.
-
- * @returns The operation result.
- */
-async function fetchOperations(): Promise<Response> {
-  const endpoint = new URL("/p2p", QVAPAY_API_BASE_URL);
-  endpoint.search = new URLSearchParams({
-    my: "1",
-    take: "100",
-    page: "1",
-    sortByStatus: "true"
-  }).toString();
-  return marketSnapshot.fetch(endpoint, async (target) => fetch(target, {
-    method: "GET",
-    headers: qvapayHeaders(),
-    signal: AbortSignal.timeout(20_000)
-  }));
-}
-
-/**
  * Reconstructs the complete available own-operation history from QvaPay.
  * The local ledger is only updated after all pages are fetched successfully.
  * @returns Remote operations, pagination metadata and reconciliation data.
