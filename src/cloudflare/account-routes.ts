@@ -8,7 +8,11 @@
 
 import { evaluateQvaPayAccountContract } from "./qvapay-account-contract.js";
 import { parseQvaPayApplicationIdentity } from "./qvapay-identity.js";
-import { qvapay, readQvaPayPayload, type QvaPayHttpEnv } from "./qvapay-http.js";
+import {
+  qvapay,
+  readQvaPayPayload,
+  type QvaPayHttpEnv,
+} from "./qvapay-http.js";
 
 type JsonRecord = Record<string, unknown>;
 type JsonResponse = (payload: unknown, status?: number) => Response;
