@@ -135,7 +135,10 @@ export async function handleOperationsRoutes(
       const upstream = await qvapay(env, "/p2p/" + encodeURIComponent(uuid));
       const payload = await readQvaPayPayload(upstream);
       if (!upstream.ok) {
-        return json({ error: "No se pudo consultar la oferta." }, upstream.status);
+        return json(
+          { error: "No se pudo consultar la oferta." },
+          upstream.status,
+        );
       }
       const contract = parseQvaPayActionResponse(payload);
       if (!contract) return json({ error: "QvaPay API contract error." }, 502);
@@ -195,7 +198,10 @@ export async function handleOperationsRoutes(
             ? numberValue((body as JsonRecord).rating)
             : NaN;
         if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
-          return json({ error: "La calificación debe estar entre 1 y 5." }, 400);
+          return json(
+            { error: "La calificación debe estar entre 1 y 5." },
+            400,
+          );
         }
         const comment =
           body && typeof body === "object"
@@ -252,7 +258,9 @@ export async function handleOperationsRoutes(
   const chatMatch = url.pathname.match(/^\/api\/operations\/([^/]+)\/chat$/);
   if (request.method === "GET" && chatMatch?.[1]) {
     const uuid = safeUuid(chatMatch[1]);
-    if (!uuid) return json({ error: "Identificador de operación inválido." }, 400);
+    if (!uuid) {
+      return json({ error: "Identificador de operación inválido." }, 400);
+    }
     try {
       const upstream = await qvapay(
         env,
@@ -289,7 +297,10 @@ export async function handleOperationsRoutes(
       );
       const payload = await readQvaPayPayload(upstream);
       if (!upstream.ok) {
-        return json({ error: "No se pudo aplicar a la oferta." }, upstream.status);
+        return json(
+          { error: "No se pudo aplicar a la oferta." },
+          upstream.status,
+        );
       }
       const contract = parseQvaPayActionResponse(payload);
       if (!contract) return json({ error: "QvaPay API contract error." }, 502);
@@ -319,5 +330,7 @@ function safeUuid(value: string | undefined): string | null {
 }
 
 function errorStatus(error: unknown): number {
-  return error instanceof Error && error.message.includes("QVAPAY_") ? 500 : 502;
+  return error instanceof Error && error.message.includes("QVAPAY_")
+    ? 500
+    : 502;
 }
