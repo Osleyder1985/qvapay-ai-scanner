@@ -244,6 +244,7 @@ function numberValue(value: unknown): number {
   return Number.isFinite(number) ? number : NaN;
 }
 
+// QvaPay documents a top-level balance; this also tolerates nested success envelopes.
 function findNumericBalance(
   payload: unknown,
   path = "$",
