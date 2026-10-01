@@ -1,7 +1,7 @@
 /**
  * @file d1-repository.test.ts
  * @path src/tests/d1-repository.test.ts
- * @description Idempotency tests for the Cloudflare D1 repository boundary.
+ * @description Pruebas de idempotencia para la frontera del repositorio D1 de Cloudflare.
  * @module tests
  * @status test
  */
