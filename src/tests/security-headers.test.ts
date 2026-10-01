@@ -33,5 +33,5 @@ test("content security policy blocks object embedding and cross-origin framing",
   assert.match(policy, /object-src 'none'/);
   assert.match(policy, /frame-ancestors 'none'/);
   assert.match(policy, /form-action 'self'/);
-  assert.match(policy, /connect-src 'self' https:\/\/api\.qvapay\.com/);
+  assert.match(policy, /connect-src 'self'(?:;|$)/);\n  assert.doesNotMatch(policy, /api\\.qvapay\\.com/);
 });
