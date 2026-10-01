@@ -1,7 +1,7 @@
 /**
  * @file operations-ledger.test.ts
  * @path src/tests/operations-ledger.test.ts
- * @description Unit tests for persistent operation history and reconciliation.
+ * @description Pruebas unitarias del historial persistente de operaciones y su conciliación.
  * @module tests
  * @status test
  */
