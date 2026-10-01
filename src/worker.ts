@@ -15,7 +15,7 @@ import { calculateFinanceSummary } from "./backend/finance.js";
 import { summarizeTrends } from "./backend/trend-engine.js";
 import { calculateBaselines } from "./backend/market-baseline.js";
 import { parseQvaPayApplicationIdentity } from "./cloudflare/qvapay-identity.js";
-import { parseQvaPayBalance } from "./cloudflare/qvapay-balance.js";
+import { evaluateQvaPayAccountContract } from "./cloudflare/qvapay-account-contract.js";
 import {
   credentialsMatch,
   createSession,
@@ -707,49 +707,17 @@ async function handleApi(
       ]);
       const balancePayload = await readPayload(balance);
       const infoPayload = await readPayload(info);
-      const identity = info.ok
-        ? parseQvaPayApplicationIdentity(infoPayload)
-        : null;
+      const contract = evaluateQvaPayAccountContract({
+        identityStatus: info.status,
+        identityPayload: infoPayload,
+        balanceStatus: balance.status,
+        balancePayload,
+      });
 
       const balanceRecord =
         balancePayload && typeof balancePayload === "object"
           ? (balancePayload as JsonRecord)
           : null;
-      const balanceData =
-        balanceRecord?.data && typeof balanceRecord.data === "object"
-          ? (balanceRecord.data as JsonRecord)
-          : null;
-      const parsedBalance = parseQvaPayBalance(balancePayload);
-      const balanceValue = parsedBalance.balance?.balanceUsd ?? NaN;
-
-      const user = identity
-        ? {
-            uuid: identity.uuid,
-            name: identity.name,
-            active: identity.active,
-            enabled: identity.enabled,
-          }
-        : null;
-
-      const balanceError =
-        balance.ok && Number.isFinite(balanceValue)
-          ? null
-          : {
-              httpStatus: balance.status,
-              message:
-                parsedBalance.reason ??
-                upstreamMessage(balancePayload) ??
-                "QvaPay no devolvió un balance válido según el contrato documentado.",
-            };
-
-      const balanceRecordKeys = balanceRecord
-        ? Object.keys(balanceRecord).slice(0, 50)
-        : [];
-      const balanceDataKeys = balanceData
-        ? Object.keys(balanceData).slice(0, 50)
-        : [];
-      const rawBalanceField = balanceRecord?.balance;
-      const dataBalanceField = balanceData?.balance;
       const valueType = (value: unknown): string => {
         if (value === null) return "null";
         if (Array.isArray(value)) return "array";
@@ -757,42 +725,42 @@ async function handleApi(
       };
       const balanceDiagnostics = {
         payloadType: valueType(balancePayload),
-        payloadKeys: balanceRecordKeys,
-        dataKeys: balanceDataKeys,
-        balanceFieldType: valueType(rawBalanceField),
-        dataBalanceFieldType: valueType(dataBalanceField),
+        payloadKeys: balanceRecord
+          ? Object.keys(balanceRecord).slice(0, 50)
+          : [],
+        balanceFieldType: valueType(balanceRecord?.balance),
         balanceFieldPresent: Object.prototype.hasOwnProperty.call(
           balanceRecord ?? {},
-          "balance",
-        ),
-        dataBalanceFieldPresent: Object.prototype.hasOwnProperty.call(
-          balanceData ?? {},
           "balance",
         ),
       };
 
       return json({
         account: {
-          balanceUsd: Number.isFinite(balanceValue) ? balanceValue : null,
-          user,
-          identitySource: user ? "qvapay_v2_info" : "unavailable",
+          balanceUsd: contract.balanceUsd,
+          user: contract.user,
+          identitySource: contract.user ? "qvapay_v2_info" : "unavailable",
           identityHttpStatus: info.status,
           identityOk: info.ok,
-          identityError: identity
-            ? null
-            : {
+          identityError: contract.identityError
+            ? {
                 httpStatus: info.status,
-                message:
-                  upstreamMessage(infoPayload) ??
-                  "QvaPay no devolvió una identidad válida para la aplicación autenticada.",
-              },
-          balanceSource: parsedBalance.ok
+                message: contract.identityError,
+              }
+            : null,
+          balanceSource: contract.balanceUsd !== null
             ? "qvapay_v2_balance"
             : "qvapay_v2_balance_error",
           balanceHttpStatus: balance.status,
-          balanceOk: balance.ok,
-          balanceError,
+          balanceOk: contract.balanceUsd !== null,
+          balanceError: contract.balanceError
+            ? {
+                httpStatus: balance.status,
+                message: contract.balanceError,
+              }
+            : null,
           balanceDiagnostics,
+          integrationOk: contract.ok,
           fetchedAt: new Date().toISOString(),
         },
       });
