@@ -9,10 +9,7 @@
 import { parseQvaPayApplicationIdentity } from "./qvapay-identity.js";
 import { parseQvaPayBalance } from "./qvapay-balance.js";
 
-export type QvaPayAccountIntegrationStatus =
-  | "verified"
-  | "degraded"
-  | "failed";
+export type QvaPayAccountIntegrationStatus = "verified" | "degraded" | "failed";
 
 export interface QvaPayAccountUpstream {
   identityStatus: number;
@@ -79,6 +76,6 @@ export function evaluateQvaPayAccountContract(
       : "QvaPay no devolvió una identidad válida para la aplicación autenticada.",
     balanceError: balanceValid
       ? null
-      : balance.reason ?? "QvaPay no devolvió un balance válido.",
+      : (balance.reason ?? "QvaPay no devolvió un balance válido."),
   };
 }
