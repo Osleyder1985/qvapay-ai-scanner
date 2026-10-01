@@ -131,7 +131,7 @@ export async function routeRequest(request: Request, env: WorkerEnv): Promise<Re
       const response = await handleApi(request, env);
       if (response) return response;
     } catch (error) {
-      return json({ error: String(error) }, errorStatus(error));
+      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
     }
   }
 
