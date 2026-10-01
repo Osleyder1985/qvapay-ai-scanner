@@ -716,9 +716,11 @@ async function handleApi(
         balanceRecord?.data && typeof balanceRecord.data === "object"
           ? (balanceRecord.data as JsonRecord)
           : null;
-      const balanceValue =
-        numberValue(balanceRecord?.balance) ??
-        numberValue(balanceData?.balance);
+      const directBalance = numberValue(balanceRecord?.balance);
+      const wrappedBalance = numberValue(balanceData?.balance);
+      const balanceValue = Number.isFinite(directBalance)
+        ? directBalance
+        : wrappedBalance;
 
       const user =
         firstProfile(openPayload, "User") ?? firstProfile(ownPayload, "User");
