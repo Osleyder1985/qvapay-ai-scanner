@@ -272,14 +272,22 @@ function findNumericBalance(
         value: number,
         path: `${path}.${key}`,
         rawType:
-          value === null ? "null" : Array.isArray(value) ? "array" : typeof value,
+          value === null
+            ? "null"
+            : Array.isArray(value)
+              ? "array"
+              : typeof value,
       };
     }
   }
 
   for (const [key, value] of Object.entries(record)) {
     if (!value || typeof value !== "object") continue;
-    const found = findNumericBalance(value, `${path}.${key}`, depth + 1);
+    const found = findNumericBalance(
+      value,
+      `${path}.${key}`,
+      depth + 1,
+    );
     if (found) return found;
   }
 
