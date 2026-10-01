@@ -583,7 +583,7 @@ async function handleApi(
         {
           method: "POST",
           headers,
-          body: body === undefined ? undefined : JSON.stringify(body),
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         },
       );
       const payload = await readPayload(upstream);
