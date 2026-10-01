@@ -13,12 +13,12 @@ import {
   type WorkerEnv,
 } from "./cloudflare/cloudflare-router.js";
 
-function withSecurityHeaders(response: Response): Response {
+async function withSecurityHeaders(response: Response): Promise<Response> {
   const headers = new Headers(response.headers);
   Object.entries(securityHeaders()).forEach(([key, value]) => {
     headers.set(key, value);
   });
-  return new Response(response.body, {
+  return new Response(await response.arrayBuffer(), {
     status: response.status,
     statusText: response.statusText,
     headers,
