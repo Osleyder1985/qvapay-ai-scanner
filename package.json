@@ -14,7 +14,9 @@
     "test": "npm run build && node --test dist/tests/*.test.js",
     "lint": "tsc --noEmit",
     "format:check": "prettier --check \"src/**/*.ts\" \"package.json\" \"tsconfig.json\"",
-    "quality": "npm run lint && npm run format:check && npm test"
+    "quality": "npm run lint && npm run format:check && npm test",
+    "deploy:cloudflare": "npm run build && npx wrangler deploy",
+    "dev:cloudflare": "npx wrangler dev"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
