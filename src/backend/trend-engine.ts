@@ -1,7 +1,7 @@
 /**
  * @file trend-engine.ts
  * @path src/backend/trend-engine.ts
- * @description Implements trend engine for QvaPay AI Scanner.
+ * @description Implementa el motor de tendencias de QvaPay AI Scanner.
  * @module backend
  * @status active
  */
@@ -17,7 +17,7 @@ export interface TrendPoint {
 
 /**
 
- * Public interface TrendSummary used by the module.
+ * interface TrendSummary público utilizado por el módulo.
 
  */
 
@@ -40,9 +40,9 @@ const finite = (v: unknown): v is number =>
   typeof v === "number" && Number.isFinite(v);
 
 /**
- * Implements the calculateTrend operation for this module.
- * @param points Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación calculateTrend de este módulo.
+ * @param points Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 export function calculateTrend(points: TrendPoint[]): TrendSummary {
   if (!points.length)
@@ -92,9 +92,9 @@ export function calculateTrend(points: TrendPoint[]): TrendSummary {
 }
 
 /**
- * Implements the summarizeTrends operation for this module.
- * @param points Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación summarizeTrends de este módulo.
+ * @param points Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 export function summarizeTrends(points: TrendPoint[]): TrendSummary[] {
   const groups = new Map<string, TrendPoint[]>();
