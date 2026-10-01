@@ -15,10 +15,7 @@ test("security headers define the baseline browser protections", () => {
 
   assert.equal(headers["X-Content-Type-Options"], "nosniff");
   assert.equal(headers["X-Frame-Options"], "DENY");
-  assert.equal(
-    headers["Referrer-Policy"],
-    "strict-origin-when-cross-origin",
-  );
+  assert.equal(headers["Referrer-Policy"], "strict-origin-when-cross-origin");
   assert.equal(
     headers["Permissions-Policy"],
     "camera=(), microphone=(), geolocation=(), payment=()",
