@@ -117,6 +117,14 @@ function closeCommands(){const p=$('commandPalette');if(p){p.classList.remove('o
  */
 function setupCommands(){document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCommands()}if(e.key==='Escape')closeCommands()});$('commandBackdrop')?.addEventListener('click',closeCommands);$('commandInput')?.addEventListener('input',e=>renderCommands(e.target.value));document.querySelector('.mobile-nav')?.addEventListener('click',closeCommands)}
 window.refreshAccount=refreshAccount;window.refreshFinance=refreshFinance;window.openCommands=openCommands;
+async function ensureAuthenticated(){
+  try{
+    await api('/api/auth/session');
+    return true;
+  }catch(e){
+    return false;
+  }
+}
 async function init(){
   document.getElementById('menuButton')?.addEventListener('click',()=>document.getElementById('sidebar')?.classList.toggle('open'));
   document.getElementById('mobileOverlay')?.addEventListener('click',()=>document.getElementById('sidebar')?.classList.remove('open'));
@@ -124,6 +132,7 @@ async function init(){
   document.getElementById('commandButton')?.addEventListener('click',openCommands);
   setupCommands();
   addEventListener('hashchange',nav);
+  if(!(await ensureAuthenticated()))return;
   nav();
   void refreshAll();
   setInterval(loadAuto,5000);

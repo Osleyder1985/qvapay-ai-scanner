@@ -33,7 +33,7 @@ function errorText(value){
   }
   return String(value);
 }
-async function api(u,o={}){const r=await fetch(u,{cache:'no-store',...o});let p;try{p=await r.json()}catch{p={error:'Respuesta no válida del servidor',status:r.status}}if(!r.ok)throw new Error(errorText(p?.detail?.message||p?.detail||p?.error||p));return p}
+async function api(u,o={}){const r=await fetch(u,{cache:'no-store',credentials:'same-origin',...o});let p;try{p=await r.json()}catch{p={error:'Respuesta no válida del servidor',status:r.status}}if(r.status===401){if(location.pathname!=='/login'){location.replace('/login')}throw new Error('Autenticación requerida.')}if(!r.ok)throw new Error(errorText(p?.detail?.message||p?.detail||p?.error||p));return p}
 /**
  * Implements the toast operation for this module.
  * @param m Input used by the operation.
