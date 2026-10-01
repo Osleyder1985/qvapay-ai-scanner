@@ -19,6 +19,7 @@ import { evaluateQvaPayAccountContract } from "./cloudflare/qvapay-account-contr
 import { qvapay, readQvaPayPayload } from "./cloudflare/qvapay-http.js";
 import { handleAuthRoutes } from "./cloudflare/auth-routes.js";
 import { requireSession, type SessionDatabase } from "./cloudflare/access.js";
+import { handleFinanceRoutes } from "./cloudflare/finance-routes.js";
 import { handleAccountRoutes } from "./cloudflare/account-routes.js";
 
 
@@ -806,104 +807,8 @@ async function handleApi(
     }
   }
 
-  if (request.method === "GET" && url.pathname === "/api/finance") {
-    try {
-      const remoteEntries: FinanceLedgerEntry[] = [];
-      for (let page = 1; page <= MAX_OPERATION_PAGES; page += 1) {
-        const pageUrl = new URL(url);
-        pageUrl.search = "";
-        pageUrl.searchParams.set("my", "1");
-        pageUrl.searchParams.set("status", "completed");
-        pageUrl.searchParams.set("take", String(MAX_PAGE_SIZE));
-        pageUrl.searchParams.set("page", String(page));
-        pageUrl.searchParams.set("orderBy", "updated_at");
-        pageUrl.searchParams.set("orderType", "asc");
-        const upstream = await qvapay(env, "/p2p?" + pageUrl.searchParams);
-        const payload = await readQvaPayPayload(upstream);
-        if (!upstream.ok) {
-          return json(
-            { error: "QvaPay API error", detail: payload },
-            upstream.status,
-          );
-        }
-        const pageRecords = records(payload);
-        for (const offer of pageRecords) {
-          const status = String(offer.status ?? "").toLowerCase();
-          const type = String(offer.type ?? "").toLowerCase();
-          const amount = numberValue(offer.amount);
-          const receive = numberValue(offer.receive);
-          const uuid = String(offer.uuid ?? offer.id ?? "").trim();
-          if (
-            uuid &&
-            status === "completed" &&
-            (type === "buy" || type === "sell") &&
-            Number.isFinite(amount) &&
-            amount > 0 &&
-            Number.isFinite(receive) &&
-            receive >= 0
-          ) {
-            const createdAt = String(
-              offer.created_at ??
-                offer.createdAt ??
-                offer.updated_at ??
-                new Date(0).toISOString(),
-            );
-            remoteEntries.push({
-              uuid,
-              status: "completed",
-              type: type as "buy" | "sell",
-              coin: String(offer.coin ?? "QUSD"),
-              amount,
-              receive,
-              createdAt,
-              updatedAt: String(
-                offer.updated_at ?? offer.updatedAt ?? createdAt,
-              ),
-              recordedAt: new Date().toISOString(),
-              grossAmountQusd: amount,
-              feeQusd: null,
-              netAmountQusd: null,
-              feeSource: "unknown",
-            });
-          }
-        }
-        const meta = pagination(payload, remoteEntries.length);
-        const lastPage = Math.max(1, Math.ceil(meta.total / meta.perPage));
-        if (page >= lastPage || !pageRecords.length) break;
-      }
-
-      await upsertFinanceEntries(env.DB, remoteEntries);
-      const ledger = await listFinanceEntries(env.DB);
-      const knownFees = ledger.filter(
-        (entry) => entry.feeSource === "qvapay_received",
-      );
-      const feeQusd = knownFees.reduce(
-        (sum, entry) => sum + (entry.feeQusd ?? 0),
-        0,
-      );
-      return json({
-        finance: calculateFinanceSummary(ledger),
-        fees: {
-          knownQusd: feeQusd,
-          knownOperations: knownFees.length,
-          unknownOperations: ledger.length - knownFees.length,
-        },
-        source: {
-          status: "completed",
-          fetched: remoteEntries.length,
-          persisted: ledger.length,
-        },
-      });
-    } catch (error) {
-      return json(
-        {
-          error: "No se pudo sincronizar el ledger financiero",
-          detail: String(error),
-        },
-        503,
-      );
-    }
-  }
+  const financeResponse = await handleFinanceRoutes(request, env, url, json);
+  if (financeResponse) return financeResponse;
 
   if (request.method === "GET" && url.pathname === "/api/auto-apply/config") {
     return json({
