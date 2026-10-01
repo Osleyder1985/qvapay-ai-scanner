@@ -18,44 +18,16 @@ import {
   readQvaPayPayload,
   type QvaPayHttpEnv,
 } from "./qvapay-http.js";
+import {
+  finiteNumber,
+  parseQvaPayCollection,
+  type QvaPayRecord,
+} from "./qvapay-contracts.js";
 
-type JsonRecord = Record<string, unknown>;
 type JsonResponse = (payload: unknown, status?: number) => Response;
 
 const MAX_PAGE_SIZE = 100;
 const MAX_OPERATION_PAGES = 100;
-
-function records(payload: unknown): JsonRecord[] {
-  if (!payload || typeof payload !== "object") return [];
-  const data = (payload as JsonRecord).data;
-  return Array.isArray(data)
-    ? data.filter(
-        (value): value is JsonRecord =>
-          Boolean(value) && typeof value === "object",
-      )
-    : [];
-}
-
-function pagination(
-  payload: unknown,
-  fallback: number,
-): { total: number; perPage: number } {
-  if (!payload || typeof payload !== "object") {
-    return { total: fallback, perPage: MAX_PAGE_SIZE };
-  }
-  const record = payload as JsonRecord;
-  const total = Number(record.total ?? fallback);
-  const perPage = Number(record.per_page ?? MAX_PAGE_SIZE);
-  return {
-    total: Number.isFinite(total) ? total : fallback,
-    perPage: Number.isFinite(perPage) && perPage > 0 ? perPage : MAX_PAGE_SIZE,
-  };
-}
-
-function numberValue(value: unknown): number {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : NaN;
-}
 
 /**
  * Sincroniza operaciones completadas de QvaPay con el ledger local.
@@ -66,9 +38,7 @@ export async function handleFinanceRoutes(
   url: URL,
   json: JsonResponse,
 ): Promise<Response | null> {
-  if (request.method !== "GET" || url.pathname !== "/api/finance") {
-    return null;
-  }
+  if (request.method !== "GET" || url.pathname !== "/api/finance") return null;
 
   try {
     const remoteEntries: FinanceLedgerEntry[] = [];
@@ -87,44 +57,67 @@ export async function handleFinanceRoutes(
       const payload = await readQvaPayPayload(upstream);
 
       if (!upstream.ok) {
-        return json(
-          { error: "QvaPay API error", detail: payload },
-          upstream.status,
-        );
+        return json({ error: "QvaPay API error" }, upstream.status);
       }
 
-      const pageRecords = records(payload);
-      for (const offer of pageRecords) {
-        const status = String(offer.status ?? "").toLowerCase();
-        const type = String(offer.type ?? "").toLowerCase();
-        const amount = numberValue(offer.amount);
-        const receive = numberValue(offer.receive);
-        const uuid = String(offer.uuid ?? offer.id ?? "").trim();
+      const collection = parseQvaPayCollection(
+        payload,
+        remoteEntries.length,
+        MAX_PAGE_SIZE,
+      );
+      if (!collection) {
+        return json({ error: "QvaPay API contract error." }, 502);
+      }
+
+      for (const offer of collection.data as QvaPayRecord[]) {
+        const status = typeof offer.status === "string"
+          ? offer.status.toLowerCase()
+          : "";
+        const type = typeof offer.type === "string"
+          ? offer.type.toLowerCase()
+          : "";
+        const amount = finiteNumber(offer.amount);
+        const receive = finiteNumber(offer.receive);
+        const uuid =
+          typeof offer.uuid === "string"
+            ? offer.uuid.trim()
+            : typeof offer.id === "string"
+              ? offer.id.trim()
+              : "";
 
         if (
           uuid &&
           status === "completed" &&
           (type === "buy" || type === "sell") &&
-          Number.isFinite(amount) &&
+          amount !== null &&
           amount > 0 &&
-          Number.isFinite(receive) &&
+          receive !== null &&
           receive >= 0
         ) {
-          const createdAt = String(
-            offer.created_at ??
-              offer.createdAt ??
-              offer.updated_at ??
-              new Date(0).toISOString(),
-          );
+          const createdAt =
+            typeof offer.created_at === "string"
+              ? offer.created_at
+              : typeof offer.createdAt === "string"
+                ? offer.createdAt
+                : typeof offer.updated_at === "string"
+                  ? offer.updated_at
+                  : new Date(0).toISOString();
+          const updatedAt =
+            typeof offer.updated_at === "string"
+              ? offer.updated_at
+              : typeof offer.updatedAt === "string"
+                ? offer.updatedAt
+                : createdAt;
+
           remoteEntries.push({
             uuid,
             status: "completed",
             type: type as "buy" | "sell",
-            coin: String(offer.coin ?? "QUSD"),
+            coin: typeof offer.coin === "string" ? offer.coin : "QUSD",
             amount,
             receive,
             createdAt,
-            updatedAt: String(offer.updated_at ?? offer.updatedAt ?? createdAt),
+            updatedAt,
             recordedAt: new Date().toISOString(),
             grossAmountQusd: amount,
             feeQusd: null,
@@ -134,9 +127,11 @@ export async function handleFinanceRoutes(
         }
       }
 
-      const meta = pagination(payload, remoteEntries.length);
-      const lastPage = Math.max(1, Math.ceil(meta.total / meta.perPage));
-      if (page >= lastPage || !pageRecords.length) break;
+      const lastPage = Math.max(
+        1,
+        Math.ceil(collection.total / collection.perPage),
+      );
+      if (page >= lastPage || collection.data.length === 0) break;
     }
 
     await upsertFinanceEntries(env.DB, remoteEntries);
