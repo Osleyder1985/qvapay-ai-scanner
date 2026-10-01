@@ -1,7 +1,7 @@
 /**
  * @file d1-repository.ts
  * @path src/backend/cloudflare/d1-repository.ts
- * @description D1 persistence boundary for QvaPay AI Scanner.
+ * @description Frontera de persistencia D1 de QvaPay AI Scanner.
  * @module backend/cloudflare
  * @status migration
  *
@@ -268,7 +268,7 @@ export class D1Repository {
   constructor(private readonly db: D1DatabaseLike) {}
 
   /**
-   * Upserts operations by QvaPay UUID without changing the original recordedAt.
+   * Realiza upsert de operaciones por UUID de QvaPay sin cambiar el recordedAt original.
    */
   async upsertOperations(
     operations: P2POperation[],
@@ -288,7 +288,7 @@ export class D1Repository {
   }
 
   /**
-   * Returns one operation by its QvaPay UUID.
+   * Devuelve una operación mediante su UUID de QvaPay.
    */
   async getOperation(uuid: string): Promise<D1OperationRow | null> {
     return this.db
@@ -298,7 +298,7 @@ export class D1Repository {
   }
 
   /**
-   * Lists operations in most-recently-seen order.
+   * Lista las operaciones en orden de última observación.
    */
   async listOperations(limit = 100): Promise<D1OperationRow[]> {
     const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 1000);
@@ -312,8 +312,8 @@ export class D1Repository {
   }
 
   /**
-   * Upserts completed finance entries while preserving a previously confirmed fee.
-   * The referenced operation must already exist because the D1 schema uses a foreign key.
+   * Realiza upsert de entradas financieras completadas preservando una comisión previamente confirmada.
+   * La operación referenciada debe existir previamente porque el esquema D1 utiliza una clave foránea.
    */
   async upsertFinance(entries: FinanceLedgerEntry[]): Promise<number> {
     let written = 0;
@@ -390,7 +390,7 @@ export class D1Repository {
       .first<D1AutoApplyStateRow>();
   }
 
-  /** Returns true when an offer UUID has already been recorded as applied. */
+  /** Devuelve true cuando un UUID de oferta ya fue registrado como aplicado. */
   async hasAppliedOffer(offerUuid: string): Promise<boolean> {
     const row = await this.db
       .prepare(
@@ -401,7 +401,7 @@ export class D1Repository {
     return row !== null;
   }
 
-  /** Persists the durable Auto-Apply scan/action state. */
+  /** Persiste el estado durable de escaneo/acción de Auto-Apply. */
   async updateAutoApplyState(input: {
     dailyDate: string;
     dailyAppliedQusd: number;
@@ -435,8 +435,8 @@ export class D1Repository {
   }
 
   /**
-   * Atomically claims the singleton Auto-Apply execution lease.
-   * Returns false when another non-expired execution owns the lease.
+   * Adquiere atómicamente el lease único de ejecución de Auto-Apply.
+   * Devuelve false cuando otra ejecución no expirada posee el lease.
    */
   async claimAutoApplyExecutionLease(input: {
     ownerId: string;
@@ -459,7 +459,7 @@ export class D1Repository {
   }
 
   /**
-   * Releases the execution lease only when owned by the supplied run ID.
+   * Libera el lease de ejecución únicamente cuando pertenece al run ID suministrado.
    */
   async releaseAutoApplyExecutionLease(
     ownerId: string,
@@ -496,8 +496,8 @@ export class D1Repository {
   }
 
   /**
-   * INSERT OR IGNORE makes this operation safe to repeat after a retry.
-   * A duplicate offer UUID never creates a second applied-offer record.
+   * INSERT OR IGNORE hace segura esta operación ante reintentos.
+   * Un UUID de oferta duplicado nunca crea un segundo registro de oferta aplicada.
    */
   async recordAppliedOffer(
     offerUuid: string,
