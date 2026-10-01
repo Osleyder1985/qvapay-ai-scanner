@@ -8,7 +8,9 @@
 
 export interface D1PreparedStatement {
   bind(...values: unknown[]): D1PreparedStatement;
-  run<T = unknown>(): Promise<{ success: boolean; meta?: { changes?: number } } & T>;
+  run<T = unknown>(): Promise<
+    { success: boolean; meta?: { changes?: number } } & T
+  >;
   all<T = Record<string, unknown>>(): Promise<{
     success: boolean;
     results: T[];
@@ -170,8 +172,7 @@ export async function queryMarketHistory(
     type: row.type,
     samples: asNumber(row.samples),
     minRate: row.min_rate === null ? null : asNumber(row.min_rate),
-    medianRate:
-      row.median_rate === null ? null : asNumber(row.median_rate),
+    medianRate: row.median_rate === null ? null : asNumber(row.median_rate),
     maxRate: row.max_rate === null ? null : asNumber(row.max_rate),
     spread: row.spread === null ? null : asNumber(row.spread),
   }));
@@ -198,15 +199,15 @@ export async function upsertOperations(
         )
         .bind(uuid, JSON.stringify(operation), now, now);
     })
-    .filter((statement): statement is D1PreparedStatement => statement !== null);
+    .filter(
+      (statement): statement is D1PreparedStatement => statement !== null,
+    );
   if (!statements.length) return 0;
   const results = await db.batch(statements);
   return results.length;
 }
 
-export async function listOperationIds(
-  db: D1Database,
-): Promise<string[]> {
+export async function listOperationIds(db: D1Database): Promise<string[]> {
   const rows = await db
     .prepare("SELECT uuid FROM operations_ledger ORDER BY last_seen_at DESC")
     .all<{ uuid: string }>();
@@ -286,9 +287,7 @@ export async function listFinanceEntries(
       netAmountQusd:
         row.net_amount_qusd === null ? null : asNumber(row.net_amount_qusd),
       feeSource:
-        row.fee_source === "qvapay_received"
-          ? "qvapay_received"
-          : "unknown",
+        row.fee_source === "qvapay_received" ? "qvapay_received" : "unknown",
     }));
 }
 

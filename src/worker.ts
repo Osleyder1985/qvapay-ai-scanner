@@ -183,7 +183,10 @@ async function market(
   const payload = await readPayload(upstream);
   if (upstream.ok && params.get("page") === "1") {
     try {
-      await appendMarketHistory(env.DB, summarizeMarketOffers(records(payload)));
+      await appendMarketHistory(
+        env.DB,
+        summarizeMarketOffers(records(payload)),
+      );
     } catch (error) {
       console.error("D1 market history persistence:", error);
     }
@@ -230,13 +233,20 @@ function summarizeMarketOffers(
   offers: JsonRecord[],
   timestamp = new Date().toISOString(),
 ): MarketHistoryPoint[] {
-  const groups = new Map<string, { rates: number[]; coin: string; type: string }>();
+  const groups = new Map<
+    string,
+    { rates: number[]; coin: string; type: string }
+  >();
   for (const offer of offers) {
     const amount = numberValue(offer.amount);
     const receive = numberValue(offer.receive);
     if (!(amount > 0) || !(receive >= 0)) continue;
-    const coin = String(offer.coin ?? "").trim().toUpperCase();
-    const type = String(offer.type ?? "").trim().toLowerCase();
+    const coin = String(offer.coin ?? "")
+      .trim()
+      .toUpperCase();
+    const type = String(offer.type ?? "")
+      .trim()
+      .toLowerCase();
     if (!coin || !type) continue;
     const key = type + "|" + coin;
     const group = groups.get(key) ?? { rates: [], coin, type };
@@ -415,7 +425,10 @@ async function handleApi(
     return json({ ok: true, service: "qvapay-ai-scanner-worker" });
   }
 
-  if (request.method === "GET" && url.pathname === "/api/cloudflare/d1/health") {
+  if (
+    request.method === "GET" &&
+    url.pathname === "/api/cloudflare/d1/health"
+  ) {
     try {
       return json(await d1Health(env.DB));
     } catch (error) {
@@ -441,7 +454,10 @@ async function handleApi(
       });
     } catch (error) {
       return json(
-        { error: "No se pudo consultar el estado de D1", detail: String(error) },
+        {
+          error: "No se pudo consultar el estado de D1",
+          detail: String(error),
+        },
         503,
       );
     }
@@ -462,7 +478,10 @@ async function handleApi(
       });
     } catch (error) {
       return json(
-        { error: "No se pudo consultar el histórico de mercado", detail: String(error) },
+        {
+          error: "No se pudo consultar el histórico de mercado",
+          detail: String(error),
+        },
         503,
       );
     }
@@ -476,7 +495,10 @@ async function handleApi(
       return json({ trends: summarizeTrends(points) });
     } catch (error) {
       return json(
-        { error: "No se pudieron calcular las tendencias", detail: String(error) },
+        {
+          error: "No se pudieron calcular las tendencias",
+          detail: String(error),
+        },
         503,
       );
     }
@@ -496,7 +518,10 @@ async function handleApi(
       });
     } catch (error) {
       return json(
-        { error: "No se pudieron calcular las líneas base", detail: String(error) },
+        {
+          error: "No se pudieron calcular las líneas base",
+          detail: String(error),
+        },
         503,
       );
     }
@@ -639,7 +664,9 @@ async function handleApi(
       const ledgerIds = await listOperationIds(env.DB);
       const remoteIds = new Set(
         operations
-          .map((operation) => String(operation.uuid ?? operation.id ?? "").trim())
+          .map((operation) =>
+            String(operation.uuid ?? operation.id ?? "").trim(),
+          )
           .filter(Boolean),
       );
       const localIds = new Set(ledgerIds);
