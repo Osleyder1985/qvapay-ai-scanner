@@ -1,7 +1,7 @@
 /**
  * @file cloudflare-auto-apply-executor.ts
  * @path src/backend/cloudflare/cloudflare-auto-apply-executor.ts
- * @description One-shot, lease-protected Auto-Apply execution for Cloudflare.
+ * @description Ejecución única de Auto-Apply protegida mediante lease para Cloudflare.
  * @module backend/cloudflare
  * @status migration
  */
@@ -105,8 +105,8 @@ function offerUuid(offer: MarketOffer): string {
 }
 
 /**
- * Creates the Cloudflare Auto-Apply executor. It performs exactly one durable
- * scan/action cycle and owns no timer or scheduler.
+ * Crea el executor de Auto-Apply de Cloudflare. Realiza exactamente un
+ * ciclo de escaneo/acción durable y no posee temporizador ni scheduler.
  */
 export function createCloudflareAutoApplyExecutor(
   dependencies: CloudflareAutoApplyDependencies,
