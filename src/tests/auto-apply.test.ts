@@ -1,7 +1,7 @@
 /**
  * @file auto-apply.test.ts
  * @path src/tests/auto-apply.test.ts
- * @description auto-apply.test.ts source for QvaPay AI Scanner.
+ * @description Pruebas de auto-apply para QvaPay AI Scanner.
  * @module tests
  * @status test
  */
@@ -13,10 +13,10 @@ import { test } from "node:test";
 import { AutoApplyEngine, isVipOnlyOffer } from "../backend/auto-apply.js";
 
 /**
- * Implements the response operation for this module.
- * @param payload Input used by the operation.
- * @param status Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación response de este módulo.
+ * @param payload Entrada utilizada por la operación.
+ * @param status Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 function response(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
