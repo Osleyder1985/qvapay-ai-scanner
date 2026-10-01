@@ -1,7 +1,7 @@
 /**
  * @file auto-apply-scheduler.test.ts
  * @path src/tests/auto-apply-scheduler.test.ts
- * @description Tests the Cloudflare scheduled-event delegation boundary.
+ * @description Prueba la frontera de delegación de eventos programados de Cloudflare.
  * @module tests
  * @status active
  */
