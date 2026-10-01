@@ -244,6 +244,48 @@ function numberValue(value: unknown): number {
   return Number.isFinite(number) ? number : NaN;
 }
 
+function findNumericBalance(
+  payload: unknown,
+  path = "$",
+  depth = 0,
+): { value: number; path: string; rawType: string } | null {
+  if (depth > 6 || payload === null || payload === undefined) return null;
+  if (Array.isArray(payload)) {
+    for (let index = 0; index < payload.length; index += 1) {
+      const found = findNumericBalance(
+        payload[index],
+        `${path}[${index}]`,
+        depth + 1,
+      );
+      if (found) return found;
+    }
+    return null;
+  }
+  if (typeof payload !== "object") return null;
+
+  const record = payload as JsonRecord;
+  for (const [key, value] of Object.entries(record)) {
+    if (key.toLowerCase() !== "balance") continue;
+    const number = numberValue(value);
+    if (Number.isFinite(number)) {
+      return {
+        value: number,
+        path: `${path}.${key}`,
+        rawType:
+          value === null ? "null" : Array.isArray(value) ? "array" : typeof value,
+      };
+    }
+  }
+
+  for (const [key, value] of Object.entries(record)) {
+    if (!value || typeof value !== "object") continue;
+    const found = findNumericBalance(value, `${path}.${key}`, depth + 1);
+    if (found) return found;
+  }
+
+  return null;
+}
+
 function upstreamMessage(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") return null;
   const record = payload as JsonRecord;
@@ -730,14 +772,8 @@ async function handleApi(
         balanceRecord?.data && typeof balanceRecord.data === "object"
           ? (balanceRecord.data as JsonRecord)
           : null;
-      const directBalance = numberValue(balanceRecord?.balance);
-      const wrappedBalance = numberValue(balanceData?.balance);
-      const envelopeBalance = numberValue(balanceRecord?.data);
-      const balanceValue = Number.isFinite(directBalance)
-        ? directBalance
-        : Number.isFinite(wrappedBalance)
-          ? wrappedBalance
-          : envelopeBalance;
+      const balanceFound = findNumericBalance(balancePayload);
+      const balanceValue = balanceFound?.value ?? NaN;
 
       const user =
         firstProfile(openPayload, "User") ?? firstProfile(ownPayload, "User");
@@ -779,6 +815,8 @@ async function handleApi(
           balanceData ?? {},
           "balance",
         ),
+        discoveredBalancePath: balanceFound?.path ?? null,
+        discoveredBalanceType: balanceFound?.rawType ?? null,
       };
 
       return json({
