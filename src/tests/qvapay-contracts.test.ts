@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
@@ -66,4 +67,19 @@ test("names the P2P offer, action and chat contracts explicitly", () => {
   assert.deepEqual(parseQvaPayP2POfferResponse(payload), { payload });
   assert.deepEqual(parseQvaPayP2PActionResponse(payload), { payload });
   assert.deepEqual(parseQvaPayP2PChatResponse(payload), { payload });
+});
+
+
+test("validates the sanitized P2P fixture at the integration boundary", () => {
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/qvapay-p2p-response.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const contract = parseQvaPayP2PCollection(fixture);
+  assert.equal(contract?.data.length, 1);
+  assert.equal(contract?.data[0]?.amount, 100);
+  assert.equal(contract?.total, 1);
+  assert.equal(contract?.perPage, 100);
 });
