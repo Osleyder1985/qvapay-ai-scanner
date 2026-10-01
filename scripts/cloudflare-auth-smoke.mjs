@@ -35,7 +35,7 @@ function assertSecurityHeaders(response, label) {
     "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
-    "connect-src 'self',
+    "connect-src 'self'",
   ]) {
     assert(
       csp.includes(directive),
