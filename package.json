@@ -18,7 +18,8 @@
     "deploy:cloudflare": "npm run build && npx wrangler deploy",
     "dev:cloudflare": "npx wrangler dev",
     "d1:migrate:local": "npx wrangler d1 migrations apply qvapay-ai-scanner --local",
-    "d1:migrate:remote": "npx wrangler d1 migrations apply qvapay-ai-scanner --remote"
+    "d1:migrate:remote": "npx wrangler d1 migrations apply qvapay-ai-scanner --remote",
+    "smoke:cloudflare": "node scripts/cloudflare-auth-smoke.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
