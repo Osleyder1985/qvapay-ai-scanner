@@ -1,4 +1,4 @@
-/** 
+/**
  * @file security-headers.test.ts
  * @path src/tests/security-headers.test.ts
  * @description Verifica la política HTTP de cabeceras de seguridad.
