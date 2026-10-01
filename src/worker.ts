@@ -14,6 +14,12 @@ import {
 import { calculateFinanceSummary } from "./backend/finance.js";
 import { summarizeTrends } from "./backend/trend-engine.js";
 import { calculateBaselines } from "./backend/market-baseline.js";
+import {
+  isSameOrigin,
+  requireAccess,
+  requiresSameOrigin,
+  type WorkerAccessContext,
+} from "./cloudflare/access.js";
 
 /**
  * @file worker.ts
@@ -1012,8 +1018,25 @@ async function handleApi(
 }
 
 export default {
-  async fetch(request: Request, env: WorkerEnv): Promise<Response> {
-    if (new URL(request.url).pathname.startsWith("/api/")) {
+  async fetch(
+    request: Request,
+    env: WorkerEnv,
+    ctx: WorkerAccessContext,
+  ): Promise<Response> {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/api/") && url.pathname !== "/api/health") {
+      const access = await requireAccess(ctx);
+      if (!access.ok) return access.response;
+
+      if (requiresSameOrigin(request) && !isSameOrigin(request)) {
+        return json(
+          { error: "Las mutaciones sólo aceptan solicitudes same-origin." },
+          403,
+        );
+      }
+    }
+
+    if (url.pathname.startsWith("/api/")) {
       try {
         const response = await handleApi(request, env);
         if (response) return response;
