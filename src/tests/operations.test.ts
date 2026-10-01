@@ -1,7 +1,7 @@
 /**
  * @file operations.test.ts
  * @path src/tests/operations.test.ts
- * @description Test coverage for operations.test.ts in QvaPay AI Scanner.
+ * @description Cobertura de pruebas para operations.test.ts en QvaPay AI Scanner.
  * @module tests
  * @status test
  */
