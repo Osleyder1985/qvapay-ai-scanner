@@ -1,7 +1,7 @@
 /**
  * @file auto-apply-runtime-boundary.test.ts
  * @path src/tests/auto-apply-runtime-boundary.test.ts
- * @description Tests the scheduler/executor separation used by Auto-Apply.
+ * @description Prueba la separación scheduler/executor utilizada por Auto-Apply.
  * @module tests
  * @status active
  */
