@@ -145,7 +145,6 @@ test("does not require P2P offers to establish account identity", () => {
   assert.equal(result.user?.uuid, "app-uuid-123");
 });
 
-
 test("classifies balance-only availability as degraded", () => {
   const result = evaluateQvaPayAccountContract({
     identityStatus: 503,
