@@ -836,9 +836,7 @@ async function handleApi(
                 active:
                   typeof record?.active === "boolean" ? record.active : null,
                 enabled:
-                  typeof record?.enabled === "boolean"
-                    ? record.enabled
-                    : null,
+                  typeof record?.enabled === "boolean" ? record.enabled : null,
               },
               httpStatus: upstream.status,
               ok: upstream.ok,
@@ -846,8 +844,7 @@ async function handleApi(
           : {
               error: "QvaPay API error",
               detail:
-                upstreamMessage(payload) ??
-                "Respuesta no válida de /v2/info.",
+                upstreamMessage(payload) ?? "Respuesta no válida de /v2/info.",
               httpStatus: upstream.status,
               ok: upstream.ok,
             },
