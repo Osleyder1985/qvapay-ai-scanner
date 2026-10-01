@@ -424,7 +424,7 @@ export async function handleMarketRoutes(
 }
 
 function errorStatus(error: unknown): number {
-  return error instanceof Error && error.message.includes("QVAPAY_")
-    ? 500
+  return error instanceof Error && error.message === "QVAPAY_CONFIG_MISSING"
+    ? 503
     : 502;
 }
