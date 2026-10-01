@@ -4,7 +4,7 @@ import { queryMarketHistory, type D1Database } from "../cloudflare/d1.js";
 
 test("market history returns newest points first", async () => {
   let query = "";
-  const db: D1Database = {
+  const db = {
     prepare(sql) {
       query = sql;
       return {
