@@ -174,7 +174,8 @@ export async function handleOperationsRoutes(
         if (!txId || txId.length > 500) {
           return json(
             {
-              error: "tx_id es obligatorio y debe tener como máximo 500 caracteres.",
+              error:
+                "tx_id es obligatorio y debe tener como máximo 500 caracteres.",
             },
             400,
           );
@@ -288,7 +289,9 @@ export async function handleOperationsRoutes(
   ) {
     const match = url.pathname.match(/^\/api\/p2p\/([^/]+)\/apply$/);
     const uuid = safeUuid(match?.[1]);
-    if (!uuid) return json({ error: "Identificador de oferta inválido." }, 400);
+    if (!uuid) {
+      return json({ error: "Identificador de oferta inválido." }, 400);
+    }
     try {
       const upstream = await qvapay(
         env,
