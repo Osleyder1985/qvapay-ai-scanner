@@ -332,7 +332,10 @@ export async function handleMarketRoutes(
         ),
       });
     } catch (error) {
-      return json({ error: "No se pudo consultar el histórico de mercado." }, 503);
+      return json(
+        { error: "No se pudo consultar el histórico de mercado." },
+        503,
+      );
     }
   }
 
@@ -343,7 +346,10 @@ export async function handleMarketRoutes(
       const points = await queryMarketHistory(env.DB, coin, type, 1000);
       return json({ trends: summarizeTrends(points) });
     } catch (error) {
-      return json({ error: "No se pudieron calcular las tendencias." }, 503);
+      return json(
+        { error: "No se pudieron calcular las tendencias." },
+        503,
+      );
     }
   }
 
@@ -360,7 +366,10 @@ export async function handleMarketRoutes(
         ),
       });
     } catch (error) {
-      return json({ error: "No se pudieron calcular las líneas base." }, 503);
+      return json(
+        { error: "No se pudieron calcular las líneas base." },
+        503,
+      );
     }
   }
 
@@ -412,7 +421,10 @@ export async function handleMarketRoutes(
         },
       });
     } catch (error) {
-      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
+      return json(
+        { error: "No se pudo completar la solicitud." },
+        errorStatus(error),
+      );
     }
   }
 
