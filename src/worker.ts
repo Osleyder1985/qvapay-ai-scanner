@@ -749,33 +749,25 @@ async function handleApi(
                 "QvaPay no devolvió un balance numérico.",
             };
 
-      const balanceRecordKeys =
-        balanceRecord ? Object.keys(balanceRecord).slice(0, 50) : [];
-      const balanceDataKeys =
-        balanceData ? Object.keys(balanceData).slice(0, 50) : [];
+      const balanceRecordKeys = balanceRecord
+        ? Object.keys(balanceRecord).slice(0, 50)
+        : [];
+      const balanceDataKeys = balanceData
+        ? Object.keys(balanceData).slice(0, 50)
+        : [];
       const rawBalanceField = balanceRecord?.balance;
       const dataBalanceField = balanceData?.balance;
+      const valueType = (value: unknown): string => {
+        if (value === null) return "null";
+        if (Array.isArray(value)) return "array";
+        return typeof value;
+      };
       const balanceDiagnostics = {
-        payloadType:
-          balancePayload === null
-            ? "null"
-            : Array.isArray(balancePayload)
-              ? "array"
-              : typeof balancePayload,
+        payloadType: valueType(balancePayload),
         payloadKeys: balanceRecordKeys,
         dataKeys: balanceDataKeys,
-        balanceFieldType:
-          rawBalanceField === null
-            ? "null"
-            : Array.isArray(rawBalanceField)
-              ? "array"
-              : typeof rawBalanceField,
-        dataBalanceFieldType:
-          dataBalanceField === null
-            ? "null"
-            : Array.isArray(dataBalanceField)
-              ? "array"
-              : typeof dataBalanceField,
+        balanceFieldType: valueType(rawBalanceField),
+        dataBalanceFieldType: valueType(dataBalanceField),
         balanceFieldPresent: Object.prototype.hasOwnProperty.call(
           balanceRecord ?? {},
           "balance",
