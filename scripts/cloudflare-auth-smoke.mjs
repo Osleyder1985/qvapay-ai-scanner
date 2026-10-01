@@ -35,7 +35,7 @@ function assertSecurityHeaders(response, label) {
     "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
-    "connect-src 'self' https://api.qvapay.com",
+    "connect-src 'self',
   ]) {
     assert(
       csp.includes(directive),
