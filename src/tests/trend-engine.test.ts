@@ -1,7 +1,7 @@
 /**
  * @file trend-engine.test.ts
  * @path src/tests/trend-engine.test.ts
- * @description Test coverage for trend-engine.test.ts in QvaPay AI Scanner.
+ * @description Cobertura de pruebas para trend-engine.test.ts en QvaPay AI Scanner.
  * @module tests
  * @status test
  */
