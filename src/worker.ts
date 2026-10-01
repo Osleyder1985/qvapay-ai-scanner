@@ -30,6 +30,7 @@ import {
  * @description Cloudflare Worker entrypoint for QvaPay AI Scanner.
  * @module cloudflare
  * @status active
+ * @balance-contract Supports direct and nested numeric QvaPay balance responses.
  *
  * The legacy Node runtime remains available through src/backend/server.ts for
  * local development. This entrypoint adapts the dashboard API to the
