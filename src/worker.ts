@@ -179,7 +179,15 @@ async function market(
   const params = sanitizeMarketParams(url);
   Object.entries(overrides).forEach(([key, value]) => params.set(key, value));
   const upstream = await qvapay(env, "/p2p?" + params.toString());
-  return { response: upstream, payload: await readPayload(upstream) };
+  const payload = await readPayload(upstream);
+  if (upstream.ok && params.get("page") === "1") {
+    try {
+      await appendMarketHistory(env.DB, summarizeMarketOffers(records(payload)));
+    } catch (error) {
+      console.error("D1 market history persistence:", error);
+    }
+  }
+  return { response: upstream, payload };
 }
 
 function records(payload: unknown): JsonRecord[] {
