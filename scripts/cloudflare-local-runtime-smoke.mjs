@@ -58,6 +58,27 @@ async function request(path, init = {}, cookie = "") {
   });
 }
 
+async function applyLocalD1Migrations() {
+  console.log("Applying D1 migrations to the local smoke database...");
+  await new Promise((resolve, reject) => {
+    const child = spawn(
+      process.platform === "win32" ? "npx.cmd" : "npx",
+      ["wrangler", "d1", "migrations", "apply", "qvapay-ai-scanner", "--local"],
+      { stdio: "inherit", env: { ...process.env } },
+    );
+    child.once("error", reject);
+    child.once("exit", (code, signal) => {
+      if (code === 0) return resolve();
+      reject(
+        new Error(
+          `wrangler d1 migrations apply failed with code ${code ?? "null"}${signal ? ` (signal ${signal})` : ""}`,
+        ),
+      );
+    });
+  });
+  console.log("Local D1 migrations: PASS");
+}
+
 async function waitForServer() {
   let lastError = "";
   for (let attempt = 0; attempt < 60; attempt += 1) {
@@ -144,6 +165,8 @@ server = spawn(
 
 server.stdout.on("data", (chunk) => process.stdout.write(`[wrangler] ${chunk}`));
 server.stderr.on("data", (chunk) => process.stderr.write(`[wrangler] ${chunk}`));
+
+await applyLocalD1Migrations();
 
 await waitForServer();
 
