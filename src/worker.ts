@@ -1,14 +1,11 @@
-import {
-  d1Health,
-  type D1Database,
-} from "./cloudflare/d1.js";
-import { calculateFinanceSummary } from "./backend/finance.js";
-import { summarizeTrends } from "./backend/trend-engine.js";
-import { parseQvaPayApplicationIdentity } from "./cloudflare/qvapay-identity.js";
-import { evaluateQvaPayAccountContract } from "./cloudflare/qvapay-account-contract.js";
-import { qvapay, readQvaPayPayload } from "./cloudflare/qvapay-http.js";
+import { d1Health, type D1Database } from "./cloudflare/d1.js";
 import { handleAuthRoutes } from "./cloudflare/auth-routes.js";
-import { requireSession, type SessionDatabase } from "./cloudflare/access.js";
+import {
+  isSameOrigin,
+  requiresSameOrigin,
+  requireSession,
+  type SessionDatabase,
+} from "./cloudflare/access.js";
 import { handleFinanceRoutes } from "./cloudflare/finance-routes.js";
 import { handleOperationsRoutes } from "./cloudflare/operations-routes.js";
 import { handleMarketRoutes } from "./cloudflare/market-routes.js";
@@ -39,13 +36,7 @@ interface WorkerEnv {
   AUTH_PASSWORD?: string;
 }
 
-const MAX_PAGE_SIZE = 100;
-const MAX_MARKET_PAGES = 10;
-const MAX_OPERATION_PAGES = 100;
-
-type JsonRecord = Record<string, unknown>;
-
-function json(
+/function json(
   payload: unknown,
   status = 200,
   headers: Record<string, string> = {},
