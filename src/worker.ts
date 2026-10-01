@@ -634,6 +634,14 @@ async function handleApi(
         if (page >= lastPage || !records(payload).length) break;
       }
 
+      await upsertOperations(env.DB, operations);
+      const ledgerIds = await listOperationIds(env.DB);
+      const remoteIds = new Set(
+        operations
+          .map((operation) => String(operation.uuid ?? operation.id ?? "").trim())
+          .filter(Boolean),
+      );
+      const localIds = new Set(ledgerIds);
       return json({
         operations: {
           data: operations,
@@ -650,15 +658,16 @@ async function handleApi(
           truncated: lastPage > MAX_OPERATION_PAGES,
         },
         persistence: {
-          persisted: operations.length,
-          reconciled: true,
+          persisted: ledgerIds.length,
+          reconciled: [...remoteIds].every((id) => localIds.has(id)),
         },
         reconciliation: {
-          remoteCount: operations.length,
-          ledgerCount: operations.length,
-          missingInLedger: [],
-          staleLocal: [],
+          remoteCount: remoteIds.size,
+          ledgerCount: localIds.size,
+          missingInLedger: [...remoteIds].filter((id) => !localIds.has(id)),
+          staleLocal: [...localIds].filter((id) => !remoteIds.has(id)),
         },
+      });
       });
     } catch (error) {
       return json({ error: String(error) }, errorStatus(error));
