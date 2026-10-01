@@ -29,6 +29,7 @@ import { calculateBaselines } from "./backend/market-baseline.js";
  */
 
 interface WorkerEnv {
+  DB: D1Database;
   ASSETS: { fetch(request: Request): Promise<Response> };
   QVAPAY_API_BASE_URL?: string;
   QVAPAY_APP_ID?: string;
