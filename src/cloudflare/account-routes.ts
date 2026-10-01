@@ -18,7 +18,9 @@ type JsonRecord = Record<string, unknown>;
 type JsonResponse = (payload: unknown, status?: number) => Response;
 
 function errorStatus(error: unknown): number {
-  return error instanceof Error && error.message.includes("QVAPAY_") ? 500 : 502;
+  return error instanceof Error && error.message.includes("QVAPAY_")
+    ? 500
+    : 502;
 }
 
 function upstreamMessage(payload: unknown): string | null {
