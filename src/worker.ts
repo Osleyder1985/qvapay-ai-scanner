@@ -13,12 +13,12 @@ import {
   type WorkerEnv,
 } from "./cloudflare/cloudflare-router.js";
 
-async function withSecurityHeaders(response: Response): Promise<Response> {
+function withSecurityHeaders(response: Response): Response {
   const headers = new Headers(response.headers);
-  Object.entries(securityHeaders()).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(securityHeaders())) {
     headers.set(key, value);
-  });
-  return new Response(await response.arrayBuffer(), {
+  }
+  return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
     headers,
@@ -30,11 +30,10 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/login") {
-      return withSecurityHeaders(
-        await env.ASSETS.fetch(
-          new Request(new URL("/login.html", request.url), request),
-        ),
+      const assetResponse = await env.ASSETS.fetch(
+        new Request(new URL("/login.html", request.url), request),
       );
+      return withSecurityHeaders(assetResponse);
     }
 
     const apiResponse = await routeRequest(request, env);
@@ -52,6 +51,7 @@ export default {
       }
     }
 
-    return withSecurityHeaders(await env.ASSETS.fetch(request));
+    const assetResponse = await env.ASSETS.fetch(request);
+    return withSecurityHeaders(assetResponse);
   },
 };
