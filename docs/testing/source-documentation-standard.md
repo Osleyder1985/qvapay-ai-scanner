@@ -36,6 +36,10 @@ Functions that form a module API, implement domain rules, perform I/O, mutate pe
 
 Small private helpers may use a concise description when their behavior is self-evident. Repeating the implementation line-by-line is discouraged.
 
+## Language rule
+
+Los comentarios explicativos y el contenido humano de JSDoc se redactan en español. Se mantienen sin traducir los tags JSDoc, identificadores del lenguaje, nombres propios y nomenclatura exacta de APIs o contratos externos.
+
 ## Documentation quality rule
 
 Documentation describes the behavior actually implemented. It must not claim a capability merely because it is planned, and it must distinguish unavailable/unknown data from verified data.
