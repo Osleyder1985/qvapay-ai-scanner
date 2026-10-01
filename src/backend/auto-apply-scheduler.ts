@@ -1,7 +1,7 @@
 /**
  * @file auto-apply-scheduler.ts
  * @path src/backend/auto-apply-scheduler.ts
- * @description Defines an interchangeable scheduler for Auto-Apply execution.
+ * @description Define un scheduler intercambiable para la ejecución de Auto-Apply.
  * @module backend
  * @status active
  */
@@ -14,10 +14,10 @@ export interface AutoApplyScheduler {
 }
 
 /**
- * Creates a process-local scheduler for the Node runtime.
+ * Crea un scheduler local al proceso para el runtime Node.
  *
- * This adapter exists only for compatibility with the current runtime.
- * Cloudflare should invoke the executor directly from Cron or Workflows.
+ * Este adaptador existe únicamente por compatibilidad con el runtime actual.
+ * Cloudflare debe invocar el executor directamente desde Cron o Workflows.
  */
 export function createIntervalAutoApplyScheduler(
   executor: AutoApplyExecutor,
