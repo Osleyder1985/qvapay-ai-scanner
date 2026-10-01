@@ -149,8 +149,7 @@ export async function handleOperationsRoutes(
   const offerMatch = url.pathname.match(/^\/api\/p2p\/([^/]+)$/);
   if (request.method === "GET" && offerMatch?.[1]) {
     const uuid = safeUuid(offerMatch[1]);
-    if (!uuid)
-      return json({ error: "Identificador de oferta inválido." }, 400);
+    if (!uuid) return json({ error: "Identificador de oferta inválido." }, 400);
     try {
       const upstream = await qvapay(env, "/p2p/" + encodeURIComponent(uuid));
       const payload = await readQvaPayPayload(upstream);
@@ -278,9 +277,7 @@ export async function handleOperationsRoutes(
       );
       const payload = await readQvaPayPayload(upstream);
       return json(
-        upstream.ok
-          ? { qvapay: payload }
-          : { error: "QvaPay API error." },
+        upstream.ok ? { qvapay: payload } : { error: "QvaPay API error." },
         upstream.status,
       );
     } catch (error) {
