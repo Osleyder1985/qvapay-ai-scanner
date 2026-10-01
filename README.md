@@ -35,6 +35,12 @@ Estas normas se utilizan como marco de buenas prácticas; no se declara conformi
 - `scripts/`: automatizaciones reproducibles.
 - `evidence/`: evidencias de investigación y validación.
 
+## Requisitos de ejecución
+
+El toolchain actual requiere **Node.js 22 o superior**. La versión mínima soportada está declarada en `package.json` mediante `engines.node >=22`, y CI utiliza Node.js 22 para mantener el mismo contrato de ejecución.
+
+Wrangler y sus dependencias pueden exigir una versión mínima de Node.js superior a la del código de aplicación; por ello, cualquier cambio del toolchain debe actualizar conjuntamente `package.json`, CI y esta sección.
+
 ## Idioma
 
 Los nombres de archivos, directorios, ramas, etiquetas, Issues y Pull Requests se mantienen en inglés. El contenido documental y las discusiones se redactan en español.
