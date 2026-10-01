@@ -19,6 +19,7 @@ import { evaluateQvaPayAccountContract } from "./cloudflare/qvapay-account-contr
 import { qvapay, readQvaPayPayload } from "./cloudflare/qvapay-http.js";
 import { handleAuthRoutes } from "./cloudflare/auth-routes.js";
 import { requireSession, type SessionDatabase } from "./cloudflare/access.js";
+import { handleAccountRoutes } from "./cloudflare/account-routes.js";
 
 
 /**
@@ -570,112 +571,8 @@ async function handleApi(
     }
   }
 
-  if (url.pathname === "/api/account" && request.method === "GET") {
-    try {
-      const [balance, info] = await Promise.all([
-        qvapay(env, "/v2/balance", { method: "POST" }),
-        qvapay(env, "/v2/info", { method: "POST" }),
-      ]);
-      const balancePayload = await readQvaPayPayload(balance);
-      const infoPayload = await readQvaPayPayload(info);
-      const contract = evaluateQvaPayAccountContract({
-        identityStatus: info.status,
-        identityPayload: infoPayload,
-        balanceStatus: balance.status,
-        balancePayload,
-      });
-
-      const balanceRecord =
-        balancePayload && typeof balancePayload === "object"
-          ? (balancePayload as JsonRecord)
-          : null;
-      const valueType = (value: unknown): string => {
-        if (value === null) return "null";
-        if (Array.isArray(value)) return "array";
-        return typeof value;
-      };
-      const balanceDiagnostics = {
-        payloadType: valueType(balancePayload),
-        payloadKeys: balanceRecord
-          ? Object.keys(balanceRecord).slice(0, 50)
-          : [],
-        balanceFieldType: valueType(balanceRecord?.balance),
-        balanceFieldPresent: Object.prototype.hasOwnProperty.call(
-          balanceRecord ?? {},
-          "balance",
-        ),
-      };
-
-      return json({
-        account: {
-          balanceUsd: contract.balanceUsd,
-          user: contract.user,
-          identitySource: contract.user ? "qvapay_v2_info" : "unavailable",
-          identityHttpStatus: info.status,
-          identityOk: info.ok,
-          identityError: contract.identityError
-            ? {
-                httpStatus: info.status,
-                message: contract.identityError,
-              }
-            : null,
-          balanceSource: contract.balanceUsd !== null
-            ? "qvapay_v2_balance"
-            : "qvapay_v2_balance_error",
-          balanceHttpStatus: balance.status,
-          balanceOk: contract.balanceUsd !== null,
-          balanceError: contract.balanceError
-            ? {
-                httpStatus: balance.status,
-                message: contract.balanceError,
-              }
-            : null,
-          balanceDiagnostics,
-          integrationOk: contract.ok,
-          integrationStatus: contract.integrationStatus,
-          fetchedAt: new Date().toISOString(),
-        },
-      });
-    } catch (error) {
-      return json({ error: String(error) }, errorStatus(error));
-    }
-  }
-
-  if (url.pathname === "/api/qvapay/info" && request.method === "GET") {
-    try {
-      const upstream = await qvapay(env, "/v2/info", { method: "POST" });
-      const payload = await readQvaPayPayload(upstream);
-      const record =
-        payload && typeof payload === "object" && !Array.isArray(payload)
-          ? (payload as JsonRecord)
-          : null;
-      return json(
-        upstream.ok
-          ? {
-              info: {
-                uuid: typeof record?.uuid === "string" ? record.uuid : null,
-                name: typeof record?.name === "string" ? record.name : null,
-                active:
-                  typeof record?.active === "boolean" ? record.active : null,
-                enabled:
-                  typeof record?.enabled === "boolean" ? record.enabled : null,
-              },
-              httpStatus: upstream.status,
-              ok: upstream.ok,
-            }
-          : {
-              error: "QvaPay API error",
-              detail:
-                upstreamMessage(payload) ?? "Respuesta no válida de /v2/info.",
-              httpStatus: upstream.status,
-              ok: upstream.ok,
-            },
-        upstream.status,
-      );
-    } catch (error) {
-      return json({ error: String(error) }, errorStatus(error));
-    }
-  }
+  const accountResponse = await handleAccountRoutes(request, env, url, json);
+  if (accountResponse) return accountResponse;
 
   if (url.pathname === "/api/operations" && request.method === "GET") {
     try {
