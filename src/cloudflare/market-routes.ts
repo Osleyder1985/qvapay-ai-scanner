@@ -16,12 +16,16 @@ import {
 import { summarizeTrends } from "../backend/trend-engine.js";
 import { calculateBaselines } from "../backend/market-baseline.js";
 import {
+  parseQvaPayP2PCollection,
+  type QvaPayRecord,
+} from "./qvapay-contracts.js";
+import {
   qvapay,
   readQvaPayPayload,
   type QvaPayHttpEnv,
 } from "./qvapay-http.js";
 
-type JsonRecord = Record<string, unknown>;
+type JsonRecord = QvaPayRecord;
 type JsonResponse = (payload: unknown, status?: number) => Response;
 
 const MAX_PAGE_SIZE = 100;
@@ -32,35 +36,25 @@ interface MarketEnv extends QvaPayHttpEnv {
 }
 
 function numberValue(value: unknown): number {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : NaN;
+  return typeof value === "number" && Number.isFinite(value) ? value : NaN;
 }
 
 function records(payload: unknown): JsonRecord[] {
-  if (!payload || typeof payload !== "object") return [];
-  const data = (payload as JsonRecord).data;
-  return Array.isArray(data)
-    ? data.filter(
-        (value): value is JsonRecord =>
-          Boolean(value) && typeof value === "object",
-      )
-    : [];
+  return parseQvaPayP2PCollection(payload, 0, MAX_PAGE_SIZE)?.data ?? [];
 }
 
 function pagination(
   payload: unknown,
   fallback: number,
 ): { total: number; perPage: number } {
-  if (!payload || typeof payload !== "object") {
-    return { total: fallback, perPage: MAX_PAGE_SIZE };
-  }
-  const record = payload as JsonRecord;
-  const total = Number(record.total ?? fallback);
-  const perPage = Number(record.per_page ?? MAX_PAGE_SIZE);
-  return {
-    total: Number.isFinite(total) ? total : fallback,
-    perPage: Number.isFinite(perPage) && perPage > 0 ? perPage : MAX_PAGE_SIZE,
-  };
+  const contract = parseQvaPayP2PCollection(
+    payload,
+    fallback,
+    MAX_PAGE_SIZE,
+  );
+  return contract
+    ? { total: contract.total, perPage: contract.perPage }
+    : { total: fallback, perPage: MAX_PAGE_SIZE };
 }
 
 function median(values: number[]): number | null {
@@ -282,6 +276,9 @@ async function market(
   Object.entries(overrides).forEach(([key, value]) => params.set(key, value));
   const upstream = await qvapay(env, "/p2p?" + params.toString());
   const payload = await readQvaPayPayload(upstream);
+  if (upstream.ok && !parseQvaPayP2PCollection(payload, 0, MAX_PAGE_SIZE)) {
+    throw new Error("QVAPAY_CONTRACT_INVALID");
+  }
   if (upstream.ok && params.get("page") === "1") {
     try {
       await appendMarketHistory(
