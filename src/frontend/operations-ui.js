@@ -1,29 +1,29 @@
 /**
  * @file operations-ui.js
  * @path src/frontend/operations-ui.js
- * @description P2P operation rendering, role-aware actions, chat, and operation controls.
+ * @description Renderizado de operaciones P2P, acciones según rol, chat y controles de operación.
  * @module frontend/operations
  * @status active
  */
 /**
- * Implements the operationRole operation for this module.
- * @param o Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación operationRole de este módulo.
+ * @param o Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 function operationRole(o){
   const current=o?.currentUserId;
   const username=String(S.account?.user?.username||'').replace(/^@/,'').toLowerCase();
   /**
- * Implements the same operation for this module.
- * @param a Input used by the operation.
- * @param b Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación same de este módulo.
+ * @param a Entrada utilizada por la operación.
+ * @param b Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
   const same=(a,b)=>a!=null&&b!=null&&String(a)===String(b);
   /**
- * Implements the sameUsername operation for this module.
- * @param a Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación sameUsername de este módulo.
+ * @param a Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
   const sameUsername=(a)=>username&&String(a||'').replace(/^@/,'').toLowerCase()===username;
   if(same(o?.User?.uuid,current)||same(o?.User?.id,current)||sameUsername(o?.User?.username))return'owner';
@@ -31,10 +31,10 @@ function operationRole(o){
   return'unknown';
 }
 /**
- * Implements the operationActions operation for this module.
- * @param o Input used by the operation.
- * @param role Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación operationActions de este módulo.
+ * @param o Entrada utilizada por la operación.
+ * @param role Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 function operationActions(o,role=operationRole(o)){
   const type=String(o?.type||'').toLowerCase(),status=String(o?.status||'').toLowerCase(),a=['chat'];
@@ -47,36 +47,36 @@ function operationActions(o,role=operationRole(o)){
   return [...new Set(a)];
 }
 /**
- * Implements the operationActionCount operation for this module.
+ * Implementa la operación operationActionCount de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 function operationActionCount(){
   return S.operations.filter(o=>operationActions(o).some(a=>a==='paid'||a==='received')).length;
 }
 /**
- * Implements the operationStatusLabel operation for this module.
- * @param v Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación operationStatusLabel de este módulo.
+ * @param v Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 function operationStatusLabel(v){return({revision:'REVISIÓN',processing:'PROCESANDO',paid:'PAGADA',open:'ABIERTA',completed:'COMPLETADA',cancelled:'CANCELADA'}[String(v||'').toLowerCase()]||String(v||'—').toUpperCase())}
 /**
- * Implements the operationCounterparty operation for this module.
- * @param o Input used by the operation.
- * @param role Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación operationCounterparty de este módulo.
+ * @param o Entrada utilizada por la operación.
+ * @param role Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 function operationCounterparty(o,role=operationRole(o)){const p=role==='owner'?o?.Peer:role==='peer'?o?.User:(o?.Peer||o?.User);return p?.username||p?.name||'—'}
 /**
- * Implements the operationRate operation for this module.
- * @param o Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación operationRate de este módulo.
+ * @param o Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 function operationRate(o){return Number(o?.amount)>0?Number(o?.receive)/Number(o?.amount):null}
 /**
- * Implements the operationActionButton operation for this module.
- * @param action Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación operationActionButton de este módulo.
+ * @param action Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 function operationActionButton(action){
   if(action==='paid')return'<button class="button primary compact" onclick="markOperationPaid()">✓ Marcar pagada</button>';
@@ -86,9 +86,9 @@ function operationActionButton(action){
   return'';
 }
 /**
- * Implements the drawOperations operation for this module.
+ * Implementa la operación drawOperations de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 function drawOperations(){
   const list=$('operationsList');if(!list)return;
@@ -99,9 +99,9 @@ function drawOperations(){
   $('ofStatus')?.addEventListener('change',drawOperations);$('ofType')?.addEventListener('change',drawOperations);$('ofCoin')?.addEventListener('input',drawOperations);
 }
 /**
- * Implements the drawOperationDetail operation for this module.
+ * Implementa la operación drawOperationDetail de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 function drawOperationDetail(){
   const e=$('operationDetail');if(!e||!S.operation)return;
@@ -111,14 +111,14 @@ function drawOperationDetail(){
   $('chatForm')?.addEventListener('submit',sendChat);
 }
 /**
- * Implements the drawChat operation for this module.
+ * Implementa la operación drawChat de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 /**
- * Mounts the operation-detail panel after the operation list when the route
- * was rendered before an operation became active.
- * @returns Whether the detail mount exists after this call.
+ * Monta el panel de detalle de operación después de la lista cuando la ruta
+ * se renderizó antes de que una operación quedara activa.
+ * @returns Indica si el montaje del detalle existe después de esta llamada.
  */
 function mountOperationDetail(){
   if($('operationDetail'))return true;
@@ -138,63 +138,63 @@ function drawChat(){
   e.scrollTop=e.scrollHeight;
 }
 /**
- * Implements the selectOperation operation for this module.
- * @param id Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación selectOperation de este módulo.
+ * @param id Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 function selectOperation(id){S.active=id;localStorage.setItem('qvapay.activeOperationId',id);location.hash='#/operations/'+encodeURIComponent(id)}
 /**
- * Implements the loadOperations operation for this module.
+ * Implementa la operación loadOperations de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 async function loadOperations(){try{const p=await api('/api/operations');const q=p.operations||{};S.operations=Array.isArray(q)?q:(q.data||[]);if(S.active&&!S.operations.some(o=>String(o.uuid)===String(S.active))&&!S.operation){S.active=null;S.chat=[];localStorage.removeItem('qvapay.activeOperationId')}if(!S.active){const pending=S.operations.find(o=>['processing','paid','revision'].includes(String(o.status||'').toLowerCase()));if(pending){S.active=String(pending.uuid);localStorage.setItem('qvapay.activeOperationId',S.active)}}return true}catch(e){return false}}
 /**
- * Implements the loadOperation operation for this module.
- * @param id Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación loadOperation de este módulo.
+ * @param id Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 /**
- * Waits briefly for a newly applied P2P operation to appear in the authenticated listing.
- * @param id Applied P2P operation UUID.
- * @param attempts Maximum number of authenticated-list refreshes.
- * @returns The synchronized operation, or null while QvaPay is still propagating it.
+ * Espera brevemente a que una operación P2P recién aplicada aparezca en el listado autenticado.
+ * @param id UUID de la operación P2P aplicada.
+ * @param attempts Número máximo de actualizaciones del listado autenticado.
+ * @returns La operación sincronizada, o null mientras QvaPay continúa propagándola.
  */
 async function waitForOperation(id,attempts=3){for(let attempt=0;attempt<attempts;attempt+=1){await loadOperations();const operation=S.operations.find(o=>String(o.uuid)===String(id));if(operation)return operation;if(attempt<attempts-1)await new Promise(resolve=>setTimeout(resolve,750*(attempt+1)))}return null}
 async function loadOperation(id=S.active,fallback=null,notify=true){if(!id)return false;try{const local=S.operations.find(o=>String(o.uuid)===String(id));const operation=local||fallback||(String(S.operation?.uuid||'')===String(id)?S.operation:null);if(!operation){if(notify)toast('La operación aún no aparece en el listado autenticado.','error');return false}S.operation=operation;S.active=id;S.operationRole=operationRole(S.operation);await loadChat();const raw=location.hash.slice(1)||'/';if(raw==='/operations'||raw.startsWith('/operations/')){if(raw.startsWith('/operations/'))drawOperationDetail();else{mountOperationDetail();drawOperations();drawOperationDetail()}}return true}catch(e){if(notify)toast(e.message,'error');return false}}
 /**
- * Implements the loadChat operation for this module.
+ * Implementa la operación loadChat de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 async function loadChat(){if(!S.active)return;try{const p=await api('/api/operations/'+encodeURIComponent(S.active)+'/chat');const q=p?.qvapay;S.chat=Array.isArray(q?.chat)?q.chat:Array.isArray(q?.data)?q.data:Array.isArray(q)?q:[]}catch(e){S.chat=[]}}
 /**
- * Implements the markOperationPaid operation for this module.
+ * Implementa la operación markOperationPaid de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 async function markOperationPaid(){if(!S.active)return;const tx=prompt('Introduce el identificador/referencia del pago (tx_id):','');if(tx==null||!tx.trim())return;try{await api('/api/operations/'+encodeURIComponent(S.active)+'/paid',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tx_id:tx.trim()})});toast('Pago registrado en QvaPay','success');await refreshOperations()}catch(e){toast(e.message,'error')}}
 /**
- * Implements the markOperationReceived operation for this module.
+ * Implementa la operación markOperationReceived de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 async function markOperationReceived(){if(!S.active||!confirm('¿Confirmas que recibiste el pago fiat? Esta acción completa la operación en QvaPay.'))return;try{await api('/api/operations/'+encodeURIComponent(S.active)+'/received',{method:'POST'});toast('Recepción confirmada y operación completada','success');await refreshOperations()}catch(e){toast(e.message,'error')}}
 /**
- * Implements the cancelOperation operation for this module.
+ * Implementa la operación cancelOperation de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 async function cancelOperation(){if(!S.active||!confirm('¿Cancelar esta operación? QvaPay determinará el resultado según tu rol y el estado.'))return;try{await api('/api/operations/'+encodeURIComponent(S.active)+'/cancel',{method:'POST'});toast('Solicitud de cancelación enviada','success');await refreshOperations()}catch(e){toast(e.message,'error')}}
 /**
- * Implements the rateOperation operation for this module.
+ * Implementa la operación rateOperation de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 async function rateOperation(){if(!S.active)return;const rating=Number(prompt('Calificación de la contraparte (1 a 5):','5'));if(!Number.isFinite(rating)||rating<1||rating>5)return;const comment=prompt('Comentario opcional (máximo 120 caracteres):','')??'';try{await api('/api/operations/'+encodeURIComponent(S.active)+'/rate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rating,comment})});toast('Calificación enviada','success');await loadOperation(S.active)}catch(e){toast(e.message,'error')}}
 /**
- * Implements the sendChat operation for this module.
- * @param e Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación sendChat de este módulo.
+ * @param e Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 async function sendChat(e){e.preventDefault();const input=$('chatMessage'),message=input?.value.trim();if(!message||!S.active)return;try{await api('/api/operations/'+encodeURIComponent(S.active)+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message})});input.value='';await loadChat();drawChat();toast('Mensaje enviado','success')}catch(err){toast(err.message,'error')}}
