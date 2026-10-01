@@ -2,11 +2,11 @@
 /**
  * @file validate-qvapay-real.mjs
  * @path scripts/validate-qvapay-real.mjs
- * @description Captures real QvaPay API acceptance evidence without persisting secrets.
+ * @description Captura evidencia real de aceptación de la API de QvaPay sin persistir secretos.
  * @module validation
  * @status active
  *
- * Read-only by default. A real P2P application requires both --apply <uuid> and
+ * El modo de sólo lectura es el predeterminado. Una aplicación P2P real requiere --apply <uuid> y
  * ALLOW_REAL_MUTATION=YES. The script never prints app-secret.
  */
 const baseUrl = (process.env.QVAPAY_API_BASE_URL ?? "https://api.qvapay.com").replace(/\/$/, "");
