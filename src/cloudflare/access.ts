@@ -1,7 +1,7 @@
 /**
  * @file access.ts
  * @path src/cloudflare/access.ts
- * @description Cookie-session authentication and same-origin protections.
+ * @description Autenticación mediante sesión de cookie y protecciones de mismo origen.
  * @module cloudflare
  * @status active
  */
