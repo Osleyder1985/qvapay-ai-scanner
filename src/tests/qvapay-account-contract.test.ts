@@ -18,6 +18,7 @@ test("accepts coherent identity and positive balance", () => {
   });
 
   assert.equal(result.ok, true);
+  assert.equal(result.integrationStatus, "verified");
   assert.equal(result.user?.name, "QvaPay AI Scanner");
   assert.equal(result.balanceUsd, 125.5);
   assert.equal(result.identityError, null);
@@ -33,6 +34,7 @@ test("accepts zero balance", () => {
   });
 
   assert.equal(result.ok, true);
+  assert.equal(result.integrationStatus, "verified");
   assert.equal(result.balanceUsd, 0);
 });
 
@@ -45,6 +47,7 @@ test("fails closed when identity is missing", () => {
   });
 
   assert.equal(result.ok, false);
+  assert.equal(result.integrationStatus, "degraded");
   assert.equal(result.user, null);
   assert.equal(result.balanceUsd, 50);
   assert.notEqual(result.identityError, null);
@@ -140,4 +143,48 @@ test("does not require P2P offers to establish account identity", () => {
 
   assert.equal(result.ok, true);
   assert.equal(result.user?.uuid, "app-uuid-123");
+});
+
+
+test("classifies balance-only availability as degraded", () => {
+  const result = evaluateQvaPayAccountContract({
+    identityStatus: 503,
+    identityPayload: null,
+    balanceStatus: 200,
+    balancePayload: { balance: 25 },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.integrationStatus, "degraded");
+  assert.equal(result.identityValid, false);
+  assert.equal(result.balanceValid, true);
+});
+
+test("classifies identity-only availability as degraded", () => {
+  const result = evaluateQvaPayAccountContract({
+    identityStatus: 200,
+    identityPayload: identity,
+    balanceStatus: 503,
+    balancePayload: null,
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.integrationStatus, "degraded");
+  assert.equal(result.identityValid, true);
+  assert.equal(result.balanceValid, false);
+  assert.equal(result.balanceUsd, null);
+});
+
+test("classifies total dependency failure as failed", () => {
+  const result = evaluateQvaPayAccountContract({
+    identityStatus: 503,
+    identityPayload: null,
+    balanceStatus: 503,
+    balancePayload: null,
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.integrationStatus, "failed");
+  assert.equal(result.identityValid, false);
+  assert.equal(result.balanceValid, false);
 });
