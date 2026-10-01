@@ -315,10 +315,7 @@ export async function handleMarketRoutes(
       });
     } catch (error) {
       return json(
-        {
-          error: "No se pudo consultar el estado de D1",
-          detail: String(error),
-        },
+        { error: "No se pudo consultar el estado de D1." },
         503,
       );
     }
@@ -339,10 +336,7 @@ export async function handleMarketRoutes(
       });
     } catch (error) {
       return json(
-        {
-          error: "No se pudo consultar el histórico de mercado",
-          detail: String(error),
-        },
+        { error: "No se pudo consultar el histórico de mercado." },
         503,
       );
     }
@@ -356,10 +350,7 @@ export async function handleMarketRoutes(
       return json({ trends: summarizeTrends(points) });
     } catch (error) {
       return json(
-        {
-          error: "No se pudieron calcular las tendencias",
-          detail: String(error),
-        },
+        { error: "No se pudieron calcular las tendencias." },
         503,
       );
     }
@@ -379,10 +370,7 @@ export async function handleMarketRoutes(
       });
     } catch (error) {
       return json(
-        {
-          error: "No se pudieron calcular las líneas base",
-          detail: String(error),
-        },
+        { error: "No se pudieron calcular las líneas base." },
         503,
       );
     }
@@ -399,7 +387,7 @@ export async function handleMarketRoutes(
       );
     } catch (error) {
       return json(
-        { error: "No se pudo contactar con QvaPay", detail: String(error) },
+        { error: "No se pudo contactar con QvaPay." },
         errorStatus(error),
       );
     }
@@ -439,7 +427,7 @@ export async function handleMarketRoutes(
         },
       });
     } catch (error) {
-      return json({ error: String(error) }, errorStatus(error));
+      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
     }
   }
 
