@@ -1,3 +1,20 @@
+import {
+  appendMarketHistory,
+  d1Health,
+  listFinanceEntries,
+  listOperationIds,
+  queryMarketHistory,
+  recordFinanceSettlement,
+  upsertFinanceEntries,
+  upsertOperations,
+  type D1Database,
+  type FinanceLedgerEntry,
+  type MarketHistoryPoint,
+} from "./cloudflare/d1.js";
+import { calculateFinanceSummary } from "./backend/finance.js";
+import { summarizeTrends } from "./backend/trend-engine.js";
+import { calculateBaselines } from "./backend/market-baseline.js";
+
 /**
  * @file worker.ts
  * @path src/worker.ts
