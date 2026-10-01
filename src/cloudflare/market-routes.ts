@@ -47,11 +47,7 @@ function pagination(
   payload: unknown,
   fallback: number,
 ): { total: number; perPage: number } {
-  const contract = parseQvaPayP2PCollection(
-    payload,
-    fallback,
-    MAX_PAGE_SIZE,
-  );
+  const contract = parseQvaPayP2PCollection(payload, fallback, MAX_PAGE_SIZE);
   return contract
     ? { total: contract.total, perPage: contract.perPage }
     : { total: fallback, perPage: MAX_PAGE_SIZE };
