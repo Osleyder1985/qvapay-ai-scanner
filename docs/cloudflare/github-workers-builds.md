@@ -2,48 +2,54 @@
 
 ## Objetivo
 
-Conectar el Worker `qvapay-ai-scanner` con GitHub mediante **Cloudflare Workers Builds**, de forma que Cloudflare construya y despliegue automáticamente los cambios de la rama `production/cloudflare`.
+Conectar el Worker `qvapay-ai-scanner` con GitHub mediante Cloudflare Workers Builds, de forma que Cloudflare construya y despliegue los cambios de la rama `production/cloudflare`.
 
-La integración debe conservar `main` como rama de desarrollo/base y utilizar `production/cloudflare` como rama de producción de Cloudflare.
+La rama `production/cloudflare` es la rama de producción del Worker. La configuración efectiva del Worker está definida por `wrangler.jsonc`.
 
-## Estado de la configuración del repositorio
+## Estado del repositorio
 
-La rama `production/cloudflare` ya contiene:
+La rama de producción contiene:
 
-- `wrangler.toml` con `name = "qvapay-ai-scanner"`.
-- Entry point `src/worker/index.ts`.
-- Assets en `dist`.
-- D1 binding `DB`.
-- D1 database ID productivo `839d0bc1-6f86-49ff-939a-91dc238783aa`.
-- Wrangler `4.145.0` fijado mediante `package.json`/lockfile.
-- `AUTO_APPLY_RUNTIME_ENABLED = "false"`.
-- Nombres de secretos declarados sin valores:
-  - `QVAPAY_APP_ID`
-  - `QVAPAY_APP_SECRET`
-  - `DASHBOARD_API_TOKEN`
+- configuración Wrangler en `wrangler.jsonc`;
+- entry point del Worker en `src/worker.ts`;
+- frontend estático en `src/frontend`;
+- binding D1 `DB`;
+- binding de assets `ASSETS`;
+- D1 productivo `qvapay-ai-scanner`;
+- migraciones versionadas en `migrations/`;
+- observabilidad habilitada en Wrangler.
 
-No se almacenan credenciales de Cloudflare ni credenciales QvaPay en Git.
+No se utiliza `wrangler.toml`.
 
-## Configuración requerida en Cloudflare
+## Secretos
 
-En el Worker **qvapay-ai-scanner**:
+El Worker requiere:
+
+- `QVAPAY_APP_ID`
+- `QVAPAY_APP_SECRET`
+
+Los nombres están declarados en `wrangler.jsonc` mediante `secrets.required`. Los valores sólo deben configurarse como secrets de Cloudflare o mediante los mecanismos locales de desarrollo de Wrangler; nunca deben entrar en Git.
+
+No se debe usar una variable `vars` de Wrangler para almacenar estas credenciales.
+
+## Configuración de Workers Builds
+
+En el Worker `qvapay-ai-scanner`:
 
 1. Abrir **Settings → Builds**.
-2. Conectar GitHub mediante la **Cloudflare Workers & Pages GitHub App**.
-3. Seleccionar:
-   - Repository: `Osleyder1985/qvapay-ai-scanner`
-   - Production branch: `production/cloudflare`
-   - Root directory: raíz del repositorio
-4. Configurar el build command:
+2. Conectar el repositorio `Osleyder1985/qvapay-ai-scanner`.
+3. Seleccionar la rama de producción `production/cloudflare`.
+4. Usar como directorio raíz la raíz del repositorio.
+5. Build command:
    `npm run build`
-5. Configurar el deploy command:
+6. Deploy command:
    `npx wrangler deploy`
-6. Mantener los builds de ramas no productivas habilitados sólo si se desea usar previews.
-7. Configurar los secretos de runtime exclusivamente en Cloudflare.
+
+Workers Builds ejecuta el build y posteriormente el deploy para los commits de la rama de producción.
 
 ## Flujo esperado
 
-```
+```text
 GitHub
   │
   │ push/merge a production/cloudflare
@@ -57,43 +63,48 @@ Cloudflare Workers Builds
           ▼
   Cloudflare Worker
           │
-          ├── Static Assets
-          └── D1
+          ├── Static Assets (src/frontend)
+          └── D1 (binding DB)
 ```
 
-Para una rama distinta de `production/cloudflare`, Cloudflare puede ejecutar builds de preview si esa función está habilitada. Los previews no deben recibir automáticamente la configuración de producción de Auto-Apply.
+## Producción y previews
+
+La rama `production/cloudflare` debe producir el deployment activo de producción.
+
+Las ramas no productivas sólo deben utilizar previews si están explícitamente habilitadas en Cloudflare. Los previews no deben recibir automáticamente los secretos de producción ni habilitar Auto-Apply.
+
+## Estado de aceptación
+
+### Verificado
+
+- [x] Worker desplegado y accesible mediante `workers.dev`.
+- [x] Frontend servido por el Worker.
+- [x] D1 binding `DB` configurado.
+- [x] Migraciones D1 `0001`, `0002` y `0003` aplicadas en producción.
+- [x] Secrets `QVAPAY_APP_ID` y `QVAPAY_APP_SECRET` configurados en producción.
+- [x] El dashboard obtiene datos P2P reales desde QvaPay mediante el Worker.
+- [x] Auto-Apply continúa deshabilitado.
+
+### Pendiente de verificación en Cloudflare
+
+- [ ] Workers Builds conectado al repositorio correcto.
+- [ ] Rama de producción de Workers Builds = `production/cloudflare`.
+- [ ] Build command = `npm run build`.
+- [ ] Deploy command = `npx wrangler deploy`.
+- [ ] Un build automático exitoso después de un push/merge a producción.
+- [ ] El deployment automático corresponde al commit de `production/cloudflare`.
 
 ## Seguridad
 
-- Los secretos QvaPay nunca deben entrar en `wrangler.toml`, GitHub, el frontend o los assets estáticos.
-- `AUTO_APPLY_RUNTIME_ENABLED` permanece en `false` hasta completar la aceptación real de QvaPay.
-- La integración GitHub → Cloudflare no sustituye los controles de autorización del dashboard.
-- La conexión de Workers Builds y la configuración de secretos son operaciones de cuenta Cloudflare; su estado debe verificarse desde Cloudflare antes de declarar la producción desplegada.
+- Los secretos QvaPay no se almacenan en `wrangler.jsonc`, GitHub, el frontend ni los assets estáticos.
+- `secrets.required` declara los nombres sin valores.
+- Auto-Apply permanece deshabilitado hasta completar su aceptación funcional y sus controles de concurrencia, límites y reconciliación.
+- La configuración de Workers Builds y los secrets son recursos de cuenta Cloudflare; su estado debe verificarse desde Cloudflare antes de declarar automatización CI/CD completamente aceptada.
 
-## Criterios de aceptación
+## Fuentes oficiales
 
-- [ ] Worker Cloudflare conectado al repositorio correcto.
-- [ ] Rama de producción = `production/cloudflare`.
-- [ ] Build command = `npm run build`.
-- [ ] Deploy command = `npx wrangler deploy`.
-- [ ] Primer build exitoso.
-- [ ] Deployment activo corresponde al commit de `production/cloudflare`.
-- [ ] D1 binding `DB` resuelve el recurso productivo.
-- [ ] Secretos configurados sólo en Cloudflare.
-- [ ] `/api/health` responde correctamente.
-- [ ] `/api/cloudflare/d1/health` confirma D1.
-- [ ] Endpoints autenticados rechazan solicitudes sin token.
-- [ ] No hay exposición de credenciales.
-- [ ] Auto-Apply continúa deshabilitado.
-- [ ] Issue #13 y master audit #39 permanecen abiertos hasta completar aceptación real.
-
-## Evidencia externa
-
-Cloudflare documenta que Workers Builds puede conectar un Worker existente a GitHub, seleccionar una rama de producción y ejecutar automáticamente un build y deployment en cada push. También publica el estado de los builds mediante GitHub check runs y comentarios de Pull Request.
-
-Fuentes oficiales:
-
+- https://developers.cloudflare.com/workers/wrangler/configuration/
+- https://developers.cloudflare.com/workers/configuration/secrets/
 - https://developers.cloudflare.com/workers/ci-cd/builds/
-- https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/github-integration/
 - https://developers.cloudflare.com/workers/ci-cd/builds/configuration/
 - https://developers.cloudflare.com/workers/ci-cd/builds/build-branches/
