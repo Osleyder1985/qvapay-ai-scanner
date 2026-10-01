@@ -244,6 +244,16 @@ function numberValue(value: unknown): number {
   return Number.isFinite(number) ? number : NaN;
 }
 
+function upstreamMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as JsonRecord;
+  for (const key of ["error", "message", "detail", "reason"]) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
 function summarizeMarketOffers(
   offers: JsonRecord[],
   timestamp = new Date().toISOString(),
@@ -729,6 +739,16 @@ async function handleApi(
       const user =
         firstProfile(openPayload, "User") ?? firstProfile(ownPayload, "User");
 
+      const balanceError =
+        balance.ok || Number.isFinite(balanceValue)
+          ? null
+          : {
+              httpStatus: balance.status,
+              message:
+                upstreamMessage(balancePayload) ??
+                "QvaPay no devolvió un balance numérico.",
+            };
+
       return json({
         account: {
           balanceUsd: Number.isFinite(balanceValue) ? balanceValue : null,
@@ -736,7 +756,12 @@ async function handleApi(
           identitySource: user ? "own_open_offer" : "unavailable",
           balanceSource: Number.isFinite(balanceValue)
             ? "qvapay_v2_balance"
-            : "unavailable",
+            : balanceError
+              ? "qvapay_v2_balance_error"
+              : "unavailable",
+          balanceHttpStatus: balance.status,
+          balanceOk: balance.ok,
+          balanceError,
           fetchedAt: new Date().toISOString(),
         },
       });
