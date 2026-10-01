@@ -382,7 +382,7 @@ export async function handleMarketRoutes(
       return json(
         result.response.ok
           ? result.payload
-          : { error: "QvaPay API error", detail: result.payload },
+          : { error: "QvaPay API error." },
         result.response.status,
       );
     } catch (error) {
@@ -408,7 +408,7 @@ export async function handleMarketRoutes(
         const result = await market(env, pageUrl);
         if (!result.response.ok) {
           return json(
-            { error: "QvaPay API error", detail: result.payload },
+            { error: "QvaPay API error." },
             result.response.status,
           );
         }
