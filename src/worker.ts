@@ -18,7 +18,7 @@ import { parseQvaPayApplicationIdentity } from "./cloudflare/qvapay-identity.js"
 import { evaluateQvaPayAccountContract } from "./cloudflare/qvapay-account-contract.js";
 import { qvapay, readQvaPayPayload } from "./cloudflare/qvapay-http.js";
 import { handleAuthRoutes } from "./cloudflare/auth-routes.js";
-import type { SessionDatabase } from "./cloudflare/access.js";
+import { requireSession, type SessionDatabase } from "./cloudflare/access.js";
 
 
 /**
