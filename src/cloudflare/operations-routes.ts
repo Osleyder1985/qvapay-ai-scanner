@@ -261,7 +261,8 @@ export async function handleOperationsRoutes(
   const chatMatch = url.pathname.match(/^\/api\/operations\/([^/]+)\/chat$/);
   if (request.method === "GET" && chatMatch?.[1]) {
     const uuid = safeUuid(chatMatch[1]);
-    if (!uuid) return json({ error: "Identificador de operación inválido." }, 400);
+    if (!uuid)
+      return json({ error: "Identificador de operación inválido." }, 400);
     try {
       const upstream = await qvapay(
         env,
