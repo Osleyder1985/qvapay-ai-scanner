@@ -5,6 +5,8 @@ La migración a Cloudflare Workers eliminó el límite de red local-only que pro
 
 La solución productiva de este proyecto no depende de Cloudflare Zero Trust/Access. Utiliza autenticación propia del Worker con una sesión HTTP-only persistida en D1.
 
+**Estado arquitectónico vigente:** Cloudflare Access/Zero Trust no forma parte de la frontera de autenticación de este Worker. La opción se evaluó durante la migración, pero no se adopta. Cualquier documentación que describa Access como requisito de producción debe considerarse obsoleta.
+
 ## Modelo de confianza
 Internet → Worker → sesión HTTP-only → D1 / QvaPay API
 
@@ -85,6 +87,8 @@ No se acepta como sustituto:
 - headers de identidad controlables por el cliente;
 - Cloudflare Access.
 
+Cloudflare Access puede existir como una capa externa independiente en otro diseño futuro, pero no debe marcarse como requisito de esta implementación ni mezclarse con la autorización del Worker.
+
 ## Frontend
 El frontend no contiene QVAPAY_APP_ID, QVAPAY_APP_SECRET, AUTH_PASSWORD, token de sesión ni credenciales QvaPay.
 La cookie de sesión es HttpOnly.
@@ -103,3 +107,7 @@ La validación de producción debe comprobar el login real, el acceso al dashboa
 
 ## Referencias
 La implementación utiliza las primitivas Web Crypto y cookies HTTP del runtime de Cloudflare Workers y D1 para persistencia. No requiere habilitar Cloudflare Zero Trust para esta arquitectura.
+
+## Regla de documentación
+
+La fuente de verdad para la frontera de acceso es este documento y el código de `src/cloudflare/access.ts` + `src/worker.ts`. No debe documentarse `ctx.access`, una política de Access, "Protect this Worker behind Access" ni un bypass de Access como parte de la configuración requerida. La única configuración de autenticación necesaria para esta implementación son los cuatro Worker Secrets documentados arriba.
