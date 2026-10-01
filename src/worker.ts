@@ -1063,20 +1063,39 @@ async function handleApi(
   return null;
 }
 
-const LOGIN_PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QvaPay AI Scanner — Login</title><style>body{font-family:system-ui,sans-serif;max-width:420px;margin:12vh auto;padding:24px}form{display:grid;gap:12px}input,button{font:inherit;padding:10px}button{cursor:pointer}.error{color:#b00020;min-height:1.5em}</style></head><body><h1>QvaPay AI Scanner</h1><p>Inicia sesión para acceder al dashboard.</p><form id="login"><label>Usuario<input name="username" autocomplete="username" required></label><label>Contraseña<input name="password" type="password" autocomplete="current-password" required></label><button>Iniciar sesión</button><div class="error" id="error"></div></form><script>document.getElementById("login").addEventListener("submit",async(e)=>{e.preventDefault();const f=e.currentTarget;const r=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json","Origin":location.origin},credentials:"same-origin",body:JSON.stringify({username:f.username.value,password:f.password.value})});if(r.ok){location.replace("/");return}document.getElementById("error").textContent=(await r.json()).error||"No se pudo iniciar sesión";});</script></body></html>`;
-
 export default {
   async fetch(request: Request, env: WorkerEnv): Promise<Response> {
     const url = new URL(request.url);
 
+    if (url.pathname === "/login") {
+      return env.ASSETS.fetch(
+        new Request(new URL("/login.html", request.url), request),
+      );
+    }
+
     if (url.pathname.startsWith("/api/")) {
-      if (url.pathname !== "/api/health" && !url.pathname.startsWith("/api/auth/")) {
-        const session = await requireSession(request, env.DB as unknown as SessionDatabase);
+      if (
+        url.pathname !== "/api/health" &&
+        !url.pathname.startsWith("/api/auth/")
+      ) {
+        const session = await requireSession(
+          request,
+          env.DB as unknown as SessionDatabase,
+        );
         if (!session.ok) return session.response;
       }
-      if (url.pathname !== "/api/health" && requiresSameOrigin(request) && !isSameOrigin(request)) {
-        return json({ error: "Las mutaciones sólo aceptan solicitudes same-origin." }, 403);
+
+      if (
+        url.pathname !== "/api/health" &&
+        requiresSameOrigin(request) &&
+        !isSameOrigin(request)
+      ) {
+        return json(
+          { error: "Las mutaciones sólo aceptan solicitudes same-origin." },
+          403,
+        );
       }
+
       try {
         const response = await handleApi(request, env);
         if (response) return response;
@@ -1085,13 +1104,14 @@ export default {
       }
     }
 
-    if (url.pathname === "/login") {
-      return new Response(LOGIN_PAGE, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
-    }
-
     if (url.pathname === "/" || url.pathname.endsWith(".html")) {
-      const session = await requireSession(request, env.DB as unknown as SessionDatabase);
-      if (!session.ok) return Response.redirect(new URL("/login", request.url), 302);
+      const session = await requireSession(
+        request,
+        env.DB as unknown as SessionDatabase,
+      );
+      if (!session.ok) {
+        return Response.redirect(new URL("/login", request.url), 302);
+      }
     }
 
     return env.ASSETS.fetch(request);
