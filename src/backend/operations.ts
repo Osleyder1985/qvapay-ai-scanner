@@ -1,19 +1,19 @@
 /**
  * @file operations.ts
  * @path src/backend/operations.ts
- * @description Implements operations for QvaPay AI Scanner.
+ * @description Implementa las operaciones de QvaPay AI Scanner.
  * @module backend
  * @status active
  */
 export type OperationRole = "owner" | "peer" | "unknown";
 /**
- * Public type OperationAction used by the module.
+ * type OperationAction público utilizado por el módulo.
  */
 export type OperationAction = "paid" | "received" | "cancel" | "rate" | "chat";
 
 /**
 
- * Public interface OperationParty used by the module.
+ * interface OperationParty público utilizado por el módulo.
 
  */
 
@@ -26,7 +26,7 @@ export interface OperationParty {
 
 /**
 
- * Public interface P2POperation used by the module.
+ * interface P2POperation público utilizado por el módulo.
 
  */
 
@@ -42,20 +42,20 @@ export interface P2POperation {
 }
 
 /**
- * Implements the sameId operation for this module.
- * @param a Input used by the operation.
- * @param b Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación sameId de este módulo.
+ * @param a Entrada utilizada por la operation.
+ * @param b Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 function sameId(a: unknown, b: unknown): boolean {
   return a != null && b != null && String(a) === String(b);
 }
 
 /**
- * Implements the partyMatchesCurrentUser operation for this module.
- * @param party Input used by the operation.
- * @param currentUserId Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación partyMatchesCurrentUser de este módulo.
+ * @param party Entrada utilizada por la operation.
+ * @param currentUserId Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 function partyMatchesCurrentUser(
   party: OperationParty | null | undefined,
@@ -68,9 +68,9 @@ function partyMatchesCurrentUser(
 }
 
 /**
- * Implements the identifyOperationRole operation for this module.
- * @param operation Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación identifyOperationRole de este módulo.
+ * @param operation Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 export function identifyOperationRole(
   operation: P2POperation,
@@ -82,10 +82,10 @@ export function identifyOperationRole(
 }
 
 /**
- * Implements the availableOperationActions operation for this module.
- * @param operation Input used by the operation.
- * @param role Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación availableOperationActions de este módulo.
+ * @param operation Entrada utilizada por la operation.
+ * @param role Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 export function availableOperationActions(
   operation: P2POperation,
@@ -129,9 +129,9 @@ export function availableOperationActions(
 }
 
 /**
- * Implements the operationBucket operation for this module.
- * @param status Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación operationBucket de este módulo.
+ * @param status Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 export function operationBucket(status: unknown): string {
   switch (String(status ?? "").toLowerCase()) {
