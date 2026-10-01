@@ -136,7 +136,8 @@ export async function destroySession(
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
-      "Set-Cookie": `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${cookieSecureAttribute(request)}`,
+      "Set-Cookie":
+        `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${cookieSecureAttribute(request)}`,
     },
   });
 }
