@@ -89,23 +89,8 @@ export async function handleApi(
   );
   if (authResponse) return authResponse;
 
-  if (
-    request.method === "GET" &&
-    url.pathname === "/api/cloudflare/d1/health"
-  ) {
-    try {
-      return json(await d1Health(env.DB));
-    } catch (error) {
-      return json(
-        {
-          ok: false,
-          error: "D1 no está disponible o no tiene el esquema aplicado.",
-          detail: String(error),
-        },
-        503,
-      );
-    }
-  }
+  const diagnosticsResponse = await handleDiagnosticsRoutes(request, env, url, json);
+  if (diagnosticsResponse) return diagnosticsResponse;
 
   const marketResponse = await handleMarketRoutes(request, env, url, json);
   if (marketResponse) return marketResponse;
@@ -115,6 +100,9 @@ export async function handleApi(
 
   const financeResponse = await handleFinanceRoutes(request, env, url, json);
   if (financeResponse) return financeResponse;
+
+  const accountResponse = await handleAccountRoutes(request, env, url, json);
+  if (accountResponse) return accountResponse;
 
   const autoApplyResponse = handleAutoApplyRoutes(request, url, json);
   if (autoApplyResponse) return autoApplyResponse;
