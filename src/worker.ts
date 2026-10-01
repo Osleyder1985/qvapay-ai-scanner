@@ -435,47 +435,83 @@ async function handleApi(
   if (request.method === "GET" && url.pathname === "/api/health") {
     return json({ ok: true, service: "qvapay-ai-scanner-worker" });
   }
+
   if (request.method === "POST" && url.pathname === "/api/auth/login") {
     if (!isSameOrigin(request)) {
-      return json({ error: "El inicio de sesión sólo acepta solicitudes same-origin." }, 403);
+      return json(
+        { error: "El inicio de sesión sólo acepta solicitudes same-origin." },
+        403,
+      );
     }
+
     try {
       const body = await readJson(request);
-      const username = body && typeof body === "object"
-        ? String((body as JsonRecord).username ?? "").trim() : "";
-      const password = body && typeof body === "object"
-        ? String((body as JsonRecord).password ?? "") : "";
-      if (!username || !password || username.length > 200 || password.length > 500 ||
-          !credentialsMatch(env, username, password)) {
+      const username =
+        body && typeof body === "object"
+          ? String((body as JsonRecord).username ?? "").trim()
+          : "";
+      const password =
+        body && typeof body === "object"
+          ? String((body as JsonRecord).password ?? "")
+          : "";
+
+      if (
+        !username ||
+        !password ||
+        username.length > 200 ||
+        password.length > 500 ||
+        !credentialsMatch(env, username, password)
+      ) {
         return json({ error: "Credenciales inválidas." }, 401);
       }
-      return await createSession(request, env.DB as unknown as SessionDatabase, username);
+
+      return await createSession(
+        request,
+        env.DB as unknown as SessionDatabase,
+        username,
+      );
     } catch (error) {
-      return json({ error: "No se pudo iniciar sesión.", detail: String(error) }, 500);
+      return json(
+        { error: "No se pudo iniciar sesión.", detail: String(error) },
+        500,
+      );
     }
   }
 
   if (request.method === "POST" && url.pathname === "/api/auth/logout") {
     if (!isSameOrigin(request)) {
-      return json({ error: "El cierre de sesión sólo acepta solicitudes same-origin." }, 403);
+      return json(
+        { error: "El cierre de sesión sólo acepta solicitudes same-origin." },
+        403,
+      );
     }
+
     try {
-      return await destroySession(request, env.DB as unknown as SessionDatabase);
+      return await destroySession(
+        request,
+        env.DB as unknown as SessionDatabase,
+      );
     } catch (error) {
-      return json({ error: "No se pudo cerrar la sesión.", detail: String(error) }, 500);
+      return json(
+        { error: "No se pudo cerrar la sesión.", detail: String(error) },
+        500,
+      );
     }
   }
 
   if (request.method === "GET" && url.pathname === "/api/auth/session") {
-    const session = await requireSession(request, env.DB as unknown as SessionDatabase);
+    const session = await requireSession(
+      request,
+      env.DB as unknown as SessionDatabase,
+    );
     if (!session.ok) return session.response;
+
     return json({
       authenticated: true,
       username: session.session.username,
       expiresAt: session.session.expiresAt,
     });
   }
-
 
   if (
     request.method === "GET" &&
