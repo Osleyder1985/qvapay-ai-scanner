@@ -4,7 +4,7 @@
 
 Los nombres técnicos del repositorio se escriben en inglés: archivos, directorios, ramas, commits, Issues y Pull Requests.
 
-El contenido descriptivo puede estar en español.
+El contenido descriptivo debe estar en español; los comentarios explicativos y JSDoc del código mantenido siguen la misma convención, salvo identificadores, nombres propios y nomenclatura normativa de APIs externas.
 
 ## Flujo
 
