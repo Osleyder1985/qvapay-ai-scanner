@@ -732,9 +732,12 @@ async function handleApi(
           : null;
       const directBalance = numberValue(balanceRecord?.balance);
       const wrappedBalance = numberValue(balanceData?.balance);
+      const envelopeBalance = numberValue(balanceRecord?.data);
       const balanceValue = Number.isFinite(directBalance)
         ? directBalance
-        : wrappedBalance;
+        : Number.isFinite(wrappedBalance)
+          ? wrappedBalance
+          : envelopeBalance;
 
       const user =
         firstProfile(openPayload, "User") ?? firstProfile(ownPayload, "User");
