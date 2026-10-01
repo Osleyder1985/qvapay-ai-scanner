@@ -27,8 +27,7 @@ export interface SessionDatabase {
 }
 
 export type AuthCheck =
-  | { ok: true; session: AuthSession }
-  | { ok: false; response: Response };
+  { ok: true; session: AuthSession } | { ok: false; response: Response };
 
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 const COOKIE_NAME = "qvas_session";
@@ -89,9 +88,7 @@ export async function createSession(
   ).toISOString();
 
   await db
-    .prepare(
-      "DELETE FROM auth_sessions WHERE expires_at <= ? OR username = ?",
-    )
+    .prepare("DELETE FROM auth_sessions WHERE expires_at <= ? OR username = ?")
     .bind(now.toISOString(), username)
     .run();
 
@@ -99,13 +96,7 @@ export async function createSession(
     .prepare(
       "INSERT INTO auth_sessions (token_hash, username, created_at, expires_at, last_seen_at) VALUES (?, ?, ?, ?, ?)",
     )
-    .bind(
-      tokenHash,
-      username,
-      now.toISOString(),
-      expiresAt,
-      now.toISOString(),
-    )
+    .bind(tokenHash, username, now.toISOString(), expiresAt, now.toISOString())
     .run();
 
   return new Response(JSON.stringify({ ok: true }), {
@@ -113,8 +104,7 @@ export async function createSession(
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
-      "Set-Cookie":
-        `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_TTL_SECONDS}${cookieSecureAttribute(request)}`,
+      "Set-Cookie": `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_TTL_SECONDS}${cookieSecureAttribute(request)}`,
     },
   });
 }
@@ -136,8 +126,7 @@ export async function destroySession(
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
-      "Set-Cookie":
-        `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${cookieSecureAttribute(request)}`,
+      "Set-Cookie": `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${cookieSecureAttribute(request)}`,
     },
   });
 }
@@ -196,9 +185,9 @@ export function credentialsMatch(
 ): boolean {
   return Boolean(
     env.AUTH_USERNAME &&
-      env.AUTH_PASSWORD &&
-      username === env.AUTH_USERNAME &&
-      password === env.AUTH_PASSWORD,
+    env.AUTH_PASSWORD &&
+    username === env.AUTH_USERNAME &&
+    password === env.AUTH_PASSWORD,
   );
 }
 
