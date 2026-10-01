@@ -3,52 +3,186 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>QvaPay AI Scanner — Login</title>
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#070b14">
+  <title>QvaPay AI Scanner — Acceso</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 420px; margin: 12vh auto; padding: 24px; }
-    form { display: grid; gap: 12px; }
-    input, button { font: inherit; padding: 10px; }
-    button { cursor: pointer; }
-    .error { color: #b00020; min-height: 1.5em; }
+    :root{
+      color-scheme:dark;
+      --bg:#070b14;--panel:rgba(15,23,42,.78);--panel-border:rgba(148,163,184,.18);
+      --text:#f8fafc;--muted:#94a3b8;--accent:#22d3ee;--accent-2:#6366f1;
+      --danger:#fb7185;--input:#0b1220;--focus:rgba(34,211,238,.22);
+    }
+    *{box-sizing:border-box}
+    html,body{min-height:100%}
+    body{
+      margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;
+      color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:
+        radial-gradient(circle at 15% 15%,rgba(34,211,238,.13),transparent 32rem),
+        radial-gradient(circle at 85% 85%,rgba(99,102,241,.16),transparent 30rem),
+        var(--bg);
+    }
+    .shell{width:min(100%,430px)}
+    .brand{text-align:center;margin-bottom:24px}
+    .mark{
+      width:64px;height:64px;margin:0 auto 18px;border:1px solid rgba(103,232,249,.35);
+      border-radius:18px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(34,211,238,.18),rgba(99,102,241,.18));
+      box-shadow:0 18px 50px rgba(0,0,0,.28);
+    }
+    .mark svg{width:34px;height:34px}
+    .brand h1{margin:0;font-size:24px;letter-spacing:-.04em}
+    .brand p{margin:8px 0 0;color:var(--muted);font-size:14px}
+    .card{
+      padding:28px;border:1px solid var(--panel-border);border-radius:24px;background:var(--panel);
+      box-shadow:0 24px 80px rgba(0,0,0,.38);backdrop-filter:blur(18px);
+    }
+    .card-header{margin-bottom:24px}
+    .card-header h2{margin:0;font-size:20px;letter-spacing:-.025em}
+    .card-header p{margin:7px 0 0;color:var(--muted);font-size:13px;line-height:1.5}
+    form{display:grid;gap:18px}
+    .field{display:grid;gap:8px}
+    label{font-size:13px;font-weight:650;color:#dbeafe}
+    .input-wrap{position:relative}
+    input{
+      width:100%;height:48px;border:1px solid rgba(148,163,184,.2);border-radius:12px;
+      outline:0;background:var(--input);color:var(--text);padding:0 14px;font:inherit;font-size:15px;
+      transition:border-color .18s,box-shadow .18s,background .18s;
+    }
+    input.has-action{padding-right:48px}
+    input::placeholder{color:#64748b}
+    input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--focus);background:#0d1627}
+    .toggle{
+      position:absolute;right:8px;top:8px;width:32px;height:32px;border:0;border-radius:8px;
+      background:transparent;color:#94a3b8;cursor:pointer;display:grid;place-items:center;
+    }
+    .toggle:hover{background:rgba(148,163,184,.1);color:#fff}
+    .toggle:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+    .submit{
+      width:100%;height:48px;border:0;border-radius:12px;color:#041018;font-weight:750;font-size:14px;
+      cursor:pointer;background:linear-gradient(135deg,var(--accent),#67e8f9);
+      box-shadow:0 10px 30px rgba(34,211,238,.18);transition:transform .18s,filter .18s,opacity .18s;
+    }
+    .submit:hover{filter:brightness(1.05);transform:translateY(-1px)}
+    .submit:focus-visible{outline:2px solid #fff;outline-offset:3px}
+    .submit:disabled{cursor:wait;opacity:.65;transform:none}
+    .error{
+      display:none;padding:11px 12px;border:1px solid rgba(251,113,133,.28);border-radius:10px;
+      color:#fecdd3;background:rgba(159,18,57,.12);font-size:13px;line-height:1.45;
+    }
+    .error.visible{display:block}
+    .status{min-height:18px;text-align:center;color:var(--muted);font-size:12px;margin-top:18px}
+    .footer{text-align:center;color:#64748b;font-size:11px;margin-top:18px}
+    @media (max-width:480px){body{padding:16px}.card{padding:22px;border-radius:20px}.brand{margin-bottom:20px}}
+    @media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
   </style>
 </head>
 <body>
-  <h1>QvaPay AI Scanner</h1>
-  <p>Inicia sesión para acceder al dashboard.</p>
-  <form id="login">
-    <label>
-      Usuario
-      <input name="username" autocomplete="username" required>
-    </label>
-    <label>
-      Contraseña
-      <input name="password" type="password" autocomplete="current-password" required>
-    </label>
-    <button>Iniciar sesión</button>
-    <div class="error" id="error"></div>
-  </form>
+  <main class="shell">
+    <header class="brand">
+      <div class="mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 28.5 16.2 20l5 5L32 14" stroke="#67E8F9" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M27 14h5v5" stroke="#818CF8" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1>QvaPay AI Scanner</h1>
+      <p>Inteligencia y monitorización del mercado P2P</p>
+    </header>
+
+    <section class="card" aria-labelledby="login-title">
+      <div class="card-header">
+        <h2 id="login-title">Iniciar sesión</h2>
+        <p>Accede al panel privado para consultar tus datos y operaciones.</p>
+      </div>
+
+      <form id="login" novalidate>
+        <div class="field">
+          <label for="username">Usuario</label>
+          <input id="username" name="username" type="text" autocomplete="username"
+                 autocapitalize="none" spellcheck="false" placeholder="Introduce tu usuario" required>
+        </div>
+
+        <div class="field">
+          <label for="password">Contraseña</label>
+          <div class="input-wrap">
+            <input id="password" class="has-action" name="password" type="password"
+                   autocomplete="current-password" placeholder="Introduce tu contraseña" required>
+            <button class="toggle" id="toggle-password" type="button"
+                    aria-label="Mostrar contraseña" aria-pressed="false">◉</button>
+          </div>
+        </div>
+
+        <div class="error" id="error" role="alert" aria-live="assertive"></div>
+        <button class="submit" id="submit" type="submit">Entrar al dashboard</button>
+      </form>
+      <div class="status" id="status" aria-live="polite"></div>
+    </section>
+
+    <div class="footer">Acceso privado · Sesión protegida por Cloudflare Worker</div>
+  </main>
+
   <script>
-    document.getElementById("login").addEventListener("submit", async (event) => {
+    const form=document.getElementById("login");
+    const username=document.getElementById("username");
+    const password=document.getElementById("password");
+    const submit=document.getElementById("submit");
+    const error=document.getElementById("error");
+    const status=document.getElementById("status");
+    const toggle=document.getElementById("toggle-password");
+
+    toggle.addEventListener("click",()=>{
+      const visible=password.type==="text";
+      password.type=visible?"password":"text";
+      toggle.setAttribute("aria-pressed",String(!visible));
+      toggle.setAttribute("aria-label",visible?"Mostrar contraseña":"Ocultar contraseña");
+      toggle.textContent=visible?"◉":"◉";
+    });
+
+    function showError(message){
+      error.textContent=message;
+      error.classList.add("visible");
+    }
+
+    form.addEventListener("submit",async event=>{
       event.preventDefault();
-      const form = event.currentTarget;
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({
-          username: form.username.value,
-          password: form.password.value
-        })
-      });
+      error.classList.remove("visible");
+      status.textContent="Verificando credenciales…";
+      submit.disabled=true;
+      submit.textContent="Iniciando sesión…";
 
-      if (response.ok) {
-        location.replace("/");
-        return;
+      try{
+        const response=await fetch("/api/auth/login",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          credentials:"same-origin",
+          body:JSON.stringify({username:username.value.trim(),password:password.value})
+        });
+
+        let payload={};
+        try{payload=await response.json()}catch{}
+
+        if(response.ok){
+          status.textContent="Acceso concedido. Abriendo dashboard…";
+          location.replace("/");
+          return;
+        }
+
+        if(response.status===401){
+          showError(payload.error||"Usuario o contraseña incorrectos.");
+        }else if(response.status===503){
+          showError(payload.error||"El servicio de autenticación no está disponible. Inténtalo de nuevo en unos minutos.");
+        }else{
+          showError(payload.error||"No se pudo completar el inicio de sesión.");
+        }
+        status.textContent="";
+      }catch{
+        status.textContent="";
+        showError("No se pudo conectar con el servicio. Comprueba tu conexión e inténtalo de nuevo.");
+      }finally{
+        submit.disabled=false;
+        submit.textContent="Entrar al dashboard";
       }
-
-      const payload = await response.json();
-      document.getElementById("error").textContent =
-        payload.error || "No se pudo iniciar sesión";
     });
   </script>
 </body>
