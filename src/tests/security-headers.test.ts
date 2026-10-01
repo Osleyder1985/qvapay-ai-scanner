@@ -30,7 +30,7 @@ test("security headers define the baseline browser protections", () => {
 });
 
 test("content security policy blocks object embedding and cross-origin framing", () => {
-  const policy = securityHeaders()["Content-Security-Policy"];
+  const policy = securityHeaders()["Content-Security-Policy"] ?? "";
 
   assert.match(policy, /default-src 'self'/);
   assert.match(policy, /object-src 'none'/);
