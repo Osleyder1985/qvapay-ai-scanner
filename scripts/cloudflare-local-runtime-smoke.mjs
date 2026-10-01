@@ -117,7 +117,7 @@ qvapayMockServer.listen(8788, "127.0.0.1");
 
 writeFileSync(
   devVarsPath,
-  `AUTH_USERNAME=\${username}\\nAUTH_PASSWORD=\${password}\\nQVAPAY_API_BASE_URL=\${qvapayMockUrl}\\nQVAPAY_APP_ID=ci-smoke-app\\nQVAPAY_APP_SECRET=ci-smoke-secret\\n`,
+  `AUTH_USERNAME=${username}\nAUTH_PASSWORD=${password}\nQVAPAY_API_BASE_URL=${qvapayMockUrl}\nQVAPAY_APP_ID=ci-smoke-app\nQVAPAY_APP_SECRET=ci-smoke-secret\n`,
   "utf8",
 );
 
