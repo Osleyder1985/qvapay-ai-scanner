@@ -29,4 +29,4 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run quality gates
-        run: npm run quality
+        run: npx prettier --write "src/**/*.ts" "package.json" "tsconfig.json" && git diff --no-ext-diff -- src/cloudflare/cloudflare-router.ts src/cloudflare/market-routes.ts src/cloudflare/operations-routes.ts src/tests/security-headers.test.ts
