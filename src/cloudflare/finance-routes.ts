@@ -20,7 +20,7 @@ import {
 } from "./qvapay-http.js";
 import {
   finiteNumber,
-  parseQvaPayCollection,
+  parseQvaPayP2PCollection,
   type QvaPayRecord,
 } from "./qvapay-contracts.js";
 
@@ -60,7 +60,7 @@ export async function handleFinanceRoutes(
         return json({ error: "QvaPay API error" }, upstream.status);
       }
 
-      const collection = parseQvaPayCollection(
+      const collection = parseQvaPayP2PCollection(
         payload,
         remoteEntries.length,
         MAX_PAGE_SIZE,
