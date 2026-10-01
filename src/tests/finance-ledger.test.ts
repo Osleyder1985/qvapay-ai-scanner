@@ -1,7 +1,7 @@
 /**
  * @file finance-ledger.test.ts
  * @path src/tests/finance-ledger.test.ts
- * @description finance-ledger.test.ts source for QvaPay AI Scanner.
+ * @description Pruebas del ledger financiero de QvaPay AI Scanner.
  * @module tests
  * @status test
  */
