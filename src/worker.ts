@@ -15,10 +15,13 @@ import { calculateFinanceSummary } from "./backend/finance.js";
 import { summarizeTrends } from "./backend/trend-engine.js";
 import { calculateBaselines } from "./backend/market-baseline.js";
 import {
+  credentialsMatch,
+  createSession,
+  destroySession,
   isSameOrigin,
-  requireAccess,
+  requireSession,
   requiresSameOrigin,
-  type WorkerAccessContext,
+  type SessionDatabase,
 } from "./cloudflare/access.js";
 
 /**
@@ -40,6 +43,8 @@ interface WorkerEnv {
   QVAPAY_API_BASE_URL?: string;
   QVAPAY_APP_ID?: string;
   QVAPAY_APP_SECRET?: string;
+  AUTH_USERNAME?: string;
+  AUTH_PASSWORD?: string;
 }
 
 const DEFAULT_API_BASE = "https://api.qvapay.com";
@@ -430,6 +435,47 @@ async function handleApi(
   if (request.method === "GET" && url.pathname === "/api/health") {
     return json({ ok: true, service: "qvapay-ai-scanner-worker" });
   }
+  if (request.method === "POST" && url.pathname === "/api/auth/login") {
+    if (!isSameOrigin(request)) {
+      return json({ error: "El inicio de sesión sólo acepta solicitudes same-origin." }, 403);
+    }
+    try {
+      const body = await readJson(request);
+      const username = body && typeof body === "object"
+        ? String((body as JsonRecord).username ?? "").trim() : "";
+      const password = body && typeof body === "object"
+        ? String((body as JsonRecord).password ?? "") : "";
+      if (!username || !password || username.length > 200 || password.length > 500 ||
+          !credentialsMatch(env, username, password)) {
+        return json({ error: "Credenciales inválidas." }, 401);
+      }
+      return await createSession(request, env.DB as unknown as SessionDatabase, username);
+    } catch (error) {
+      return json({ error: "No se pudo iniciar sesión.", detail: String(error) }, 500);
+    }
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/auth/logout") {
+    if (!isSameOrigin(request)) {
+      return json({ error: "El cierre de sesión sólo acepta solicitudes same-origin." }, 403);
+    }
+    try {
+      return await destroySession(request, env.DB as unknown as SessionDatabase);
+    } catch (error) {
+      return json({ error: "No se pudo cerrar la sesión.", detail: String(error) }, 500);
+    }
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/auth/session") {
+    const session = await requireSession(request, env.DB as unknown as SessionDatabase);
+    if (!session.ok) return session.response;
+    return json({
+      authenticated: true,
+      username: session.session.username,
+      expiresAt: session.session.expiresAt,
+    });
+  }
+
 
   if (
     request.method === "GET" &&
@@ -1017,32 +1063,35 @@ async function handleApi(
   return null;
 }
 
-export default {
-  async fetch(
-    request: Request,
-    env: WorkerEnv,
-    ctx: WorkerAccessContext,
-  ): Promise<Response> {
-    const url = new URL(request.url);
-    if (url.pathname.startsWith("/api/") && url.pathname !== "/api/health") {
-      const access = await requireAccess(ctx);
-      if (!access.ok) return access.response;
+const LOGIN_PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QvaPay AI Scanner — Login</title><style>body{font-family:system-ui,sans-serif;max-width:420px;margin:12vh auto;padding:24px}form{display:grid;gap:12px}input,button{font:inherit;padding:10px}button{cursor:pointer}.error{color:#b00020;min-height:1.5em}</style></head><body><h1>QvaPay AI Scanner</h1><p>Inicia sesión para acceder al dashboard.</p><form id="login"><label>Usuario<input name="username" autocomplete="username" required></label><label>Contraseña<input name="password" type="password" autocomplete="current-password" required></label><button>Iniciar sesión</button><div class="error" id="error"></div></form><script>document.getElementById("login").addEventListener("submit",async(e)=>{e.preventDefault();const f=e.currentTarget;const r=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json","Origin":location.origin},credentials:"same-origin",body:JSON.stringify({username:f.username.value,password:f.password.value})});if(r.ok){location.replace("/");return}document.getElementById("error").textContent=(await r.json()).error||"No se pudo iniciar sesión";});</script></body></html>`;
 
-      if (requiresSameOrigin(request) && !isSameOrigin(request)) {
-        return json(
-          { error: "Las mutaciones sólo aceptan solicitudes same-origin." },
-          403,
-        );
-      }
-    }
+export default {
+  async fetch(request: Request, env: WorkerEnv): Promise<Response> {
+    const url = new URL(request.url);
 
     if (url.pathname.startsWith("/api/")) {
+      if (url.pathname !== "/api/health" && !url.pathname.startsWith("/api/auth/")) {
+        const session = await requireSession(request, env.DB as unknown as SessionDatabase);
+        if (!session.ok) return session.response;
+      }
+      if (url.pathname !== "/api/health" && requiresSameOrigin(request) && !isSameOrigin(request)) {
+        return json({ error: "Las mutaciones sólo aceptan solicitudes same-origin." }, 403);
+      }
       try {
         const response = await handleApi(request, env);
         if (response) return response;
       } catch (error) {
         return json({ error: String(error) }, errorStatus(error));
       }
+    }
+
+    if (url.pathname === "/login") {
+      return new Response(LOGIN_PAGE, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+    }
+
+    if (url.pathname === "/" || url.pathname.endsWith(".html")) {
+      const session = await requireSession(request, env.DB as unknown as SessionDatabase);
+      if (!session.ok) return Response.redirect(new URL("/login", request.url), 302);
     }
 
     return env.ASSETS.fetch(request);
