@@ -721,30 +721,15 @@ async function handleApi(
 
   if (url.pathname === "/api/account" && request.method === "GET") {
     try {
-      const [balance, open, own] = await Promise.all([
+      const [balance, info] = await Promise.all([
         qvapay(env, "/v2/balance", { method: "POST" }),
-        qvapay(
-          env,
-          "/p2p?my=1&status=open&take=100&orderBy=updated_at&orderType=desc",
-        ),
-        qvapay(env, "/p2p?my=1&take=100&orderBy=updated_at&orderType=desc"),
+        qvapay(env, "/v2/info", { method: "POST" }),
       ]);
       const balancePayload = await readPayload(balance);
-      const openPayload = await readPayload(open);
-      const ownPayload = await readPayload(own);
-
-      const firstProfile = (
-        payload: unknown,
-        preferred: string,
-      ): JsonRecord | null => {
-        for (const item of records(payload)) {
-          const candidate =
-            item[preferred] ?? item[preferred === "User" ? "Peer" : "User"];
-          if (candidate && typeof candidate === "object")
-            return candidate as JsonRecord;
-        }
-        return null;
-      };
+      const infoPayload = await readPayload(info);
+      const identity = info.ok
+        ? parseQvaPayApplicationIdentity(infoPayload)
+        : null;
 
       const balanceRecord =
         balancePayload && typeof balancePayload === "object"
