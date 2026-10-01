@@ -244,6 +244,29 @@ function numberValue(value: unknown): number {
   return Number.isFinite(number) ? number : NaN;
 }
 
+function findBalanceValue(payload: unknown): number {
+  if (!payload || typeof payload !== "object") return NaN;
+  if (Array.isArray(payload)) {
+    for (const item of payload) {
+      const found = findBalanceValue(item);
+      if (Number.isFinite(found)) return found;
+    }
+    return NaN;
+  }
+  const record = payload as JsonRecord;
+  if (Object.prototype.hasOwnProperty.call(record, "balance")) {
+    const direct = numberValue(record.balance);
+    if (Number.isFinite(direct)) return direct;
+  }
+  for (const value of Object.values(record)) {
+    if (value && typeof value === "object") {
+      const found = findBalanceValue(value);
+      if (Number.isFinite(found)) return found;
+    }
+  }
+  return NaN;
+}
+
 function upstreamMessage(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") return null;
   const record = payload as JsonRecord;
@@ -730,14 +753,7 @@ async function handleApi(
         balanceRecord?.data && typeof balanceRecord.data === "object"
           ? (balanceRecord.data as JsonRecord)
           : null;
-      const directBalance = numberValue(balanceRecord?.balance);
-      const wrappedBalance = numberValue(balanceData?.balance);
-      const envelopeBalance = numberValue(balanceRecord?.data);
-      const balanceValue = Number.isFinite(directBalance)
-        ? directBalance
-        : Number.isFinite(wrappedBalance)
-          ? wrappedBalance
-          : envelopeBalance;
+      const balanceValue = findBalanceValue(balancePayload);
 
       const user =
         firstProfile(openPayload, "User") ?? firstProfile(ownPayload, "User");
@@ -798,6 +814,42 @@ async function handleApi(
           fetchedAt: new Date().toISOString(),
         },
       });
+    } catch (error) {
+      return json({ error: String(error) }, errorStatus(error));
+    }
+  }
+
+  if (url.pathname === "/api/qvapay/info" && request.method === "GET") {
+    try {
+      const upstream = await qvapay(env, "/v2/info", { method: "POST" });
+      const payload = await readPayload(upstream);
+      const record =
+        payload && typeof payload === "object" && !Array.isArray(payload)
+          ? (payload as JsonRecord)
+          : null;
+      return json(
+        upstream.ok
+          ? {
+              info: {
+                uuid: typeof record?.uuid === "string" ? record.uuid : null,
+                name: typeof record?.name === "string" ? record.name : null,
+                active:
+                  typeof record?.active === "boolean" ? record.active : null,
+                enabled:
+                  typeof record?.enabled === "boolean" ? record.enabled : null,
+              },
+              httpStatus: upstream.status,
+              ok: upstream.ok,
+            }
+          : {
+              error: "QvaPay API error",
+              detail:
+                upstreamMessage(payload) ?? "Respuesta no válida de /v2/info.",
+              httpStatus: upstream.status,
+              ok: upstream.ok,
+            },
+        upstream.status,
+      );
     } catch (error) {
       return json({ error: String(error) }, errorStatus(error));
     }
