@@ -1,7 +1,7 @@
 /**
  * @file d1.ts
  * @path src/cloudflare/d1.ts
- * @description Durable D1 persistence primitives for the Cloudflare Worker runtime.
+ * @description Primitivas de persistencia durable D1 para el runtime de Cloudflare Worker.
  * @module cloudflare
  * @status active
  */
