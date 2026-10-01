@@ -33,9 +33,7 @@ export function parseQvaPayCollection(
   if (data.length !== payload.data.length) return null;
 
   const total =
-    payload.total === undefined
-      ? fallbackTotal
-      : finiteNumber(payload.total);
+    payload.total === undefined ? fallbackTotal : finiteNumber(payload.total);
   const perPage =
     payload.per_page === undefined
       ? fallbackPerPage
