@@ -1,0 +1,706 @@
+/**
+ * @file worker.ts
+ * @path src/worker.ts
+ * @description Cloudflare Worker entrypoint for QvaPay AI Scanner.
+ * @module cloudflare
+ * @status active
+ *
+ * The legacy Node runtime remains available through src/backend/server.ts for
+ * local development. This entrypoint adapts the dashboard API to the
+ * request/response model used by Cloudflare Workers and serves the existing
+ * frontend through Workers Static Assets.
+ */
+
+interface WorkerEnv {
+  ASSETS: { fetch(request: Request): Promise<Response> };
+  QVAPAY_API_BASE_URL?: string;
+  QVAPAY_APP_ID?: string;
+  QVAPAY_APP_SECRET?: string;
+}
+
+const DEFAULT_API_BASE = "https://api.qvapay.com";
+const MAX_PAGE_SIZE = 100;
+const MAX_MARKET_PAGES = 10;
+const MAX_OPERATION_PAGES = 100;
+
+type JsonRecord = Record<string, unknown>;
+
+function json(
+  payload: unknown,
+  status = 200,
+  headers: Record<string, string> = {},
+): Response {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      ...headers,
+    },
+  });
+}
+
+function apiBase(env: WorkerEnv): string {
+  return (env.QVAPAY_API_BASE_URL ?? DEFAULT_API_BASE).replace(/\\/$/, "");
+}
+
+function qvapayHeaders(env: WorkerEnv): Record<string, string> {
+  if (!env.QVAPAY_APP_ID || !env.QVAPAY_APP_SECRET) {
+    throw new Error(
+      "Faltan QVAPAY_APP_ID y QVAPAY_APP_SECRET en los secrets del Worker.",
+    );
+  }
+
+  return {
+    Accept: "application/json",
+    "app-id": env.QVAPAY_APP_ID,
+    "app-secret": env.QVAPAY_APP_SECRET,
+    "User-Agent": "qvapay-ai-scanner-cloudflare-worker/1.0",
+  };
+}
+
+async function readPayload(response: Response): Promise<unknown> {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+}
+
+async function qvapay(
+  env: WorkerEnv,
+  path: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const headers = new Headers(qvapayHeaders(env));
+  if (init.headers) {
+    new Headers(init.headers).forEach((value, key) => headers.set(key, value));
+  }
+
+  return fetch(new URL(path, apiBase(env)), {
+    ...init,
+    headers,
+    signal: AbortSignal.timeout(20_000),
+  });
+}
+
+function requestUrl(request: Request): URL {
+  return new URL(request.url);
+}
+
+function safeUuid(value: string | undefined): string | null {
+  if (!value || value.length > 200) return null;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
+async function readJson(request: Request): Promise<unknown> {
+  const length = Number(request.headers.get("content-length") ?? "0");
+  if (length > 1_000_000) throw new Error("Cuerpo de solicitud demasiado grande.");
+  const text = await request.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("JSON inválido.");
+  }
+}
+
+function sanitizeMarketParams(url: URL): URLSearchParams {
+  const allowed = new Set([
+    "page",
+    "take",
+    "type",
+    "coin",
+    "orderBy",
+    "orderType",
+    "min",
+    "max",
+    "ratio_min",
+    "ratio_max",
+    "only_vip",
+    "my",
+    "status",
+  ]);
+  const params = new URLSearchParams();
+
+  for (const [key, value] of url.searchParams) {
+    if (allowed.has(key) && value) params.set(key, value);
+  }
+
+  const take = Number(params.get("take") ?? "100");
+  params.set(
+    "take",
+    String(
+      Number.isFinite(take)
+        ? Math.min(Math.max(Math.trunc(take), 1), MAX_PAGE_SIZE)
+        : MAX_PAGE_SIZE,
+    ),
+  );
+
+  if (
+    params.get("orderBy") === "best_rate" &&
+    (!params.get("type") || !params.get("coin"))
+  ) {
+    params.set("orderBy", "updated_at");
+  }
+
+  return params;
+}
+
+async function market(
+  env: WorkerEnv,
+  url: URL,
+  overrides: Record<string, string> = {},
+): Promise<{ response: Response; payload: unknown }> {
+  const params = sanitizeMarketParams(url);
+  Object.entries(overrides).forEach(([key, value]) => params.set(key, value));
+  const upstream = await qvapay(env, "/p2p?" + params.toString());
+  return { response: upstream, payload: await readPayload(upstream) };
+}
+
+function records(payload: unknown): JsonRecord[] {
+  if (!payload || typeof payload !== "object") return [];
+  const data = (payload as JsonRecord).data;
+  return Array.isArray(data)
+    ? data.filter(
+        (value): value is JsonRecord =>
+          Boolean(value) && typeof value === "object",
+      )
+    : [];
+}
+
+function pagination(payload: unknown, fallback: number): {
+  total: number;
+  perPage: number;
+} {
+  if (!payload || typeof payload !== "object") {
+    return { total: fallback, perPage: MAX_PAGE_SIZE };
+  }
+  const record = payload as JsonRecord;
+  const total = Number(record.total ?? fallback);
+  const perPage = Number(record.per_page ?? MAX_PAGE_SIZE);
+  return {
+    total: Number.isFinite(total) ? total : fallback,
+    perPage:
+      Number.isFinite(perPage) && perPage > 0 ? perPage : MAX_PAGE_SIZE,
+  };
+}
+
+function numberValue(value: unknown): number {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : NaN;
+}
+
+function median(values: number[]): number | null {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  if (sorted.length % 2) return sorted[middle] ?? null;
+  const lower = sorted[middle - 1];
+  const upper = sorted[middle];
+  return lower !== undefined && upper !== undefined
+    ? (lower + upper) / 2
+    : null;
+}
+
+function intelligence(offers: JsonRecord[]): JsonRecord {
+  const groups = new Map<string, JsonRecord[]>();
+
+  for (const offer of offers) {
+    const coin = String(offer.coin ?? "").trim().toUpperCase() || "SIN_MONEDA";
+    const group = groups.get(coin) ?? [];
+    group.push(offer);
+    groups.set(coin, group);
+  }
+
+  const byCoin = [...groups.entries()].map(([coin, items]) => {
+    const valid = items
+      .map((offer) => {
+        const amount = numberValue(offer.amount);
+        const receive = numberValue(offer.receive);
+        return {
+          offer,
+          amount,
+          receive,
+          rate: amount > 0 && receive >= 0 ? receive / amount : NaN,
+        };
+      })
+      .filter((item) => Number.isFinite(item.rate));
+
+    const rates = valid.map((item) => item.rate);
+    const med = median(rates);
+    const opportunities = valid
+      .map((item) => {
+        const offer = item.offer;
+        const reasons: string[] = [];
+        if (med !== null && item.rate > med) {
+          reasons.push("Tasa por encima de la mediana de esta moneda");
+        }
+        if (String(offer.status ?? "open").toLowerCase() === "open") {
+          reasons.push("Oferta abierta");
+        }
+        if (offer.User && typeof offer.User === "object" && offer.User.kyc) {
+          reasons.push("KYC informado");
+        }
+
+        const rating = numberValue(
+          offer.User && typeof offer.User === "object"
+            ? (offer.User as JsonRecord).rating_avg
+            : undefined,
+        );
+        let score =
+          String(offer.status ?? "open").toLowerCase() === "open" ? 25 : 0;
+        if (med !== null && med > 0) {
+          score += Math.min(40, Math.max(0, (item.rate / med - 1) * 1000));
+        }
+        if (offer.User && typeof offer.User === "object" && offer.User.kyc) {
+          score += 15;
+        }
+        if (Number.isFinite(rating) && rating > 0) {
+          score += Math.min(20, rating * 4);
+        }
+
+        return {
+          uuid: String(offer.uuid ?? offer.id ?? ""),
+          type: String(offer.type ?? ""),
+          coin,
+          amount: item.amount,
+          receive: item.receive,
+          rate: item.rate,
+          score: Math.round(Math.min(100, score)),
+          reasons,
+        };
+      })
+      .filter((item) => item.uuid)
+      .sort((a, b) => Number(b.score) - Number(a.score))
+      .slice(0, 10);
+
+    return {
+      coin,
+      sampleSize: items.length,
+      validRates: rates.length,
+      bestRate: rates.length ? Math.max(...rates) : null,
+      medianRate: med,
+      minRate: rates.length ? Math.min(...rates) : null,
+      maxRate: rates.length ? Math.max(...rates) : null,
+      spread: rates.length ? Math.max(...rates) - Math.min(...rates) : null,
+      sellCount: items.filter(
+        (item) => String(item.type).toLowerCase() === "sell",
+      ).length,
+      buyCount: items.filter(
+        (item) => String(item.type).toLowerCase() === "buy",
+      ).length,
+      openCount: items.filter(
+        (item) => String(item.status ?? "open").toLowerCase() === "open",
+      ).length,
+      opportunities,
+    };
+  });
+
+  const allValid = offers
+    .map((offer) => {
+      const amount = numberValue(offer.amount);
+      const receive = numberValue(offer.receive);
+      return amount > 0 && receive >= 0 ? receive / amount : NaN;
+    })
+    .filter(Number.isFinite);
+
+  return {
+    sampleSize: offers.length,
+    validRates: allValid.length,
+    bestRate: allValid.length ? Math.max(...allValid) : null,
+    medianRate: median(allValid),
+    minRate: allValid.length ? Math.min(...allValid) : null,
+    maxRate: allValid.length ? Math.max(...allValid) : null,
+    spread: allValid.length ? Math.max(...allValid) - Math.min(...allValid) : null,
+    sellCount: offers.filter(
+      (offer) => String(offer.type).toLowerCase() === "sell",
+    ).length,
+    buyCount: offers.filter(
+      (offer) => String(offer.type).toLowerCase() === "buy",
+    ).length,
+    coins: byCoin.map((item) => item.coin),
+    opportunities: byCoin
+      .flatMap((item) => (item.opportunities as JsonRecord[]) ?? [])
+      .sort((a, b) => Number(b.score) - Number(a.score))
+      .slice(0, 10),
+    byCoin,
+  };
+}
+
+function errorStatus(error: unknown): number {
+  return error instanceof Error && error.message.includes("QVAPAY_")
+    ? 500
+    : 502;
+}
+
+async function handleApi(
+  request: Request,
+  env: WorkerEnv,
+): Promise<Response | null> {
+  const url = requestUrl(request);
+
+  if (request.method === "GET" && url.pathname === "/api/health") {
+    return json({ ok: true, service: "qvapay-ai-scanner-worker" });
+  }
+
+  if (url.pathname === "/api/p2p" && request.method === "GET") {
+    try {
+      const result = await market(env, url);
+      return json(
+        result.response.ok
+          ? result.payload
+          : { error: "QvaPay API error", detail: result.payload },
+        result.response.status,
+      );
+    } catch (error) {
+      return json(
+        { error: "No se pudo contactar con QvaPay", detail: String(error) },
+        errorStatus(error),
+      );
+    }
+  }
+
+  if (url.pathname === "/api/intelligence" && request.method === "GET") {
+    try {
+      const base = sanitizeMarketParams(url);
+      base.set("page", "1");
+      base.set("take", String(MAX_PAGE_SIZE));
+      const offers: JsonRecord[] = [];
+      let total = 0;
+      let lastPage = 1;
+
+      for (let page = 1; page <= MAX_MARKET_PAGES; page += 1) {
+        const pageUrl = new URL(url);
+        pageUrl.search = base.toString();
+        pageUrl.searchParams.set("page", String(page));
+        const result = await market(env, pageUrl);
+        if (!result.response.ok) {
+          return json(
+            { error: "QvaPay API error", detail: result.payload },
+            result.response.status,
+          );
+        }
+        offers.push(...records(result.payload));
+        const meta = pagination(result.payload, offers.length);
+        total = meta.total;
+        lastPage = Math.max(1, Math.ceil(meta.total / meta.perPage));
+        if (page >= lastPage || !records(result.payload).length) break;
+      }
+
+      return json({
+        intelligence: intelligence(offers),
+        coverage: {
+          total,
+          pagesFetched: Math.min(lastPage, MAX_MARKET_PAGES),
+          truncated: lastPage > MAX_MARKET_PAGES,
+        },
+      });
+    } catch (error) {
+      return json({ error: String(error) }, errorStatus(error));
+    }
+  }
+
+  if (url.pathname === "/api/account" && request.method === "GET") {
+    try {
+      const [balance, open, own] = await Promise.all([
+        qvapay(env, "/v2/balance", { method: "POST" }),
+        qvapay(
+          env,
+          "/p2p?my=1&status=open&take=100&orderBy=updated_at&orderType=desc",
+        ),
+        qvapay(env, "/p2p?my=1&take=100&orderBy=updated_at&orderType=desc"),
+      ]);
+      const balancePayload = await readPayload(balance);
+      const openPayload = await readPayload(open);
+      const ownPayload = await readPayload(own);
+
+      const firstProfile = (payload: unknown, preferred: string): JsonRecord | null => {
+        for (const item of records(payload)) {
+          const candidate = item[preferred] ?? item[preferred === "User" ? "Peer" : "User"];
+          if (candidate && typeof candidate === "object") return candidate as JsonRecord;
+        }
+        return null;
+      };
+
+      const balanceValue =
+        balancePayload && typeof balancePayload === "object"
+          ? numberValue((balancePayload as JsonRecord).balance)
+          : NaN;
+
+      const user =
+        firstProfile(openPayload, "User") ?? firstProfile(ownPayload, "User");
+
+      return json({
+        account: {
+          balanceUsd: Number.isFinite(balanceValue) ? balanceValue : null,
+          user,
+          identitySource: user ? "own_open_offer" : "unavailable",
+          fetchedAt: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      return json({ error: String(error) }, errorStatus(error));
+    }
+  }
+
+  if (url.pathname === "/api/operations" && request.method === "GET") {
+    try {
+      const operations: JsonRecord[] = [];
+      let total = 0;
+      let lastPage = 1;
+
+      for (let page = 1; page <= MAX_OPERATION_PAGES; page += 1) {
+        const pageUrl = new URL(url);
+        pageUrl.search = "";
+        pageUrl.searchParams.set("my", "1");
+        pageUrl.searchParams.set("take", String(MAX_PAGE_SIZE));
+        pageUrl.searchParams.set("page", String(page));
+        pageUrl.searchParams.set("sortByStatus", "true");
+        const upstream = await qvapay(env, "/p2p?" + pageUrl.searchParams);
+        const payload = await readPayload(upstream);
+        if (!upstream.ok) {
+          return json({ error: "QvaPay API error", detail: payload }, upstream.status);
+        }
+        operations.push(...records(payload));
+        const meta = pagination(payload, operations.length);
+        total = meta.total;
+        lastPage = Math.max(1, Math.ceil(meta.total / meta.perPage));
+        if (page >= lastPage || !records(payload).length) break;
+      }
+
+      return json({
+        operations: {
+          data: operations,
+          total,
+          per_page: MAX_PAGE_SIZE,
+          page: 1,
+          pages_fetched: Math.min(lastPage, MAX_OPERATION_PAGES),
+          truncated: lastPage > MAX_OPERATION_PAGES,
+        },
+        source: {
+          remoteTotal: total,
+          fetched: operations.length,
+          pagesFetched: Math.min(lastPage, MAX_OPERATION_PAGES),
+          truncated: lastPage > MAX_OPERATION_PAGES,
+        },
+        persistence: {
+          persisted: operations.length,
+          reconciled: true,
+        },
+        reconciliation: {
+          remoteCount: operations.length,
+          ledgerCount: operations.length,
+          missingInLedger: [],
+          staleLocal: [],
+        },
+      });
+    } catch (error) {
+      return json({ error: String(error) }, errorStatus(error));
+    }
+  }
+
+  const offerMatch = url.pathname.match(/^\/api\/p2p\/([^/]+)$/);
+  if (request.method === "GET" && offerMatch?.[1]) {
+    const uuid = safeUuid(offerMatch[1]);
+    if (!uuid) return json({ error: "Identificador de oferta inválido." }, 400);
+    try {
+      const upstream = await qvapay(env, "/p2p/" + encodeURIComponent(uuid));
+      const payload = await readPayload(upstream);
+      return json(
+        upstream.ok
+          ? { offer_uuid: uuid, qvapay: payload }
+          : { error: "No se pudo consultar la oferta", detail: payload },
+        upstream.status,
+      );
+    } catch (error) {
+      return json({ error: String(error) }, errorStatus(error));
+    }
+  }
+
+  const operationMatch = url.pathname.match(
+    /^\/api\/operations\/([^/]+)\/(paid|received|cancel|chat|rate)$/,
+  );
+  if (request.method === "POST" && operationMatch?.[1] && operationMatch[2]) {
+    const uuid = safeUuid(operationMatch[1]);
+    if (!uuid) return json({ error: "Identificador de operación inválido." }, 400);
+
+    try {
+      const action = operationMatch[2];
+      const body =
+        action === "paid" || action === "chat" || action === "rate"
+          ? await readJson(request)
+          : undefined;
+
+      if (action === "paid") {
+        const txId =
+          body && typeof body === "object"
+            ? String((body as JsonRecord).tx_id ?? "").trim()
+            : "";
+        if (!txId || txId.length > 500) {
+          return json({ error: "tx_id es obligatorio y debe tener como máximo 500 caracteres." }, 400);
+        }
+      }
+
+      if (action === "chat") {
+        const message =
+          body && typeof body === "object"
+            ? String((body as JsonRecord).message ?? "").trim()
+            : "";
+        if (!message || message.length > 599) {
+          return json({ error: "El mensaje debe tener entre 1 y 599 caracteres." }, 400);
+        }
+      }
+
+      if (action === "rate") {
+        const rating =
+          body && typeof body === "object"
+            ? numberValue((body as JsonRecord).rating)
+            : NaN;
+        if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+          return json({ error: "La calificación debe estar entre 1 y 5." }, 400);
+        }
+        const comment =
+          body && typeof body === "object"
+            ? String((body as JsonRecord).comment ?? "")
+            : "";
+        if (comment.length > 120) {
+          return json({ error: "El comentario no puede superar 120 caracteres." }, 400);
+        }
+      }
+
+      const headers: Record<string, string> = {};
+      if (body !== undefined) headers["Content-Type"] = "application/json";
+      const upstream = await qvapay(
+        env,
+        "/p2p/" + encodeURIComponent(uuid) + "/" + action,
+        {
+          method: "POST",
+          headers,
+          body: body === undefined ? undefined : JSON.stringify(body),
+        },
+      );
+      const payload = await readPayload(upstream);
+      return json(
+        upstream.ok
+          ? { ok: true, action, offer_uuid: uuid, qvapay: payload }
+          : { error: "QvaPay API error", detail: payload },
+        upstream.status,
+      );
+    } catch (error) {
+      return json({ error: String(error) }, errorStatus(error));
+    }
+  }
+
+  const chatMatch = url.pathname.match(/^\/api\/operations\/([^/]+)\/chat$/);
+  if (request.method === "GET" && chatMatch?.[1]) {
+    const uuid = safeUuid(chatMatch[1]);
+    if (!uuid) return json({ error: "Identificador de operación inválido." }, 400);
+    try {
+      const upstream = await qvapay(
+        env,
+        "/p2p/" + encodeURIComponent(uuid) + "/chat",
+        { method: "GET" },
+      );
+      const payload = await readPayload(upstream);
+      return json(
+        upstream.ok
+          ? { qvapay: payload }
+          : { error: "QvaPay API error", detail: payload },
+        upstream.status,
+      );
+    } catch (error) {
+      return json({ error: String(error) }, errorStatus(error));
+    }
+  }
+
+  if (request.method === "POST" && /^\/api\/p2p\/[^/]+\/apply$/.test(url.pathname)) {
+    const match = url.pathname.match(/^\/api\/p2p\/([^/]+)\/apply$/);
+    const uuid = safeUuid(match?.[1]);
+    if (!uuid) return json({ error: "Identificador de oferta inválido." }, 400);
+    try {
+      const upstream = await qvapay(
+        env,
+        "/p2p/" + encodeURIComponent(uuid) + "/apply",
+        { method: "POST" },
+      );
+      const payload = await readPayload(upstream);
+      return json(
+        upstream.ok
+          ? { applied: true, offer_uuid: uuid, qvapay: payload }
+          : { error: "No se pudo aplicar a la oferta", detail: payload },
+        upstream.status,
+      );
+    } catch (error) {
+      return json({ error: String(error) }, errorStatus(error));
+    }
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/auto-apply/config") {
+    return json({
+      config: {
+        enabled: false,
+        type: "sell",
+        coin: "",
+        rateMin: null,
+        rateMax: null,
+        amountMin: null,
+        amountMax: null,
+        dailyMaxQusd: null,
+        maxConcurrent: 1,
+      },
+    });
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/auto-apply/status") {
+    return json({
+      status: {
+        running: false,
+        lastScanAt: null,
+        lastActionAt: null,
+        lastMessage:
+          "Auto-Apply permanece desactivado en Cloudflare hasta añadir almacenamiento persistente y un scheduler.",
+        dailyDate: new Date().toISOString().slice(0, 10),
+        dailyAppliedQusd: 0,
+        recentApplyAttempts: [],
+        appliedOfferIds: [],
+      },
+    });
+  }
+
+  if (
+    (request.method === "PUT" || request.method === "PATCH") &&
+    url.pathname === "/api/auto-apply/config"
+  ) {
+    return json(
+      {
+        error:
+          "Auto-Apply no puede persistir configuración ni ejecutar scans periódicos en esta fase de migración Cloudflare.",
+      },
+      501,
+    );
+  }
+
+  return null;
+}
+
+export default {
+  async fetch(request: Request, env: WorkerEnv): Promise<Response> {
+    if (new URL(request.url).pathname.startsWith("/api/")) {
+      try {
+        const response = await handleApi(request, env);
+        if (response) return response;
+      } catch (error) {
+        return json({ error: String(error) }, errorStatus(error));
+      }
+    }
+
+    return env.ASSETS.fetch(request);
+  },
+};
