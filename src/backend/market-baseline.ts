@@ -1,7 +1,7 @@
 /**
  * @file market-baseline.ts
  * @path src/backend/market-baseline.ts
- * @description Implements market baseline for QvaPay AI Scanner.
+ * @description Implementa la línea base de mercado de QvaPay AI Scanner.
  * @module backend
  * @status active
  */
@@ -15,7 +15,7 @@ export interface BaselinePoint {
 
 /**
 
- * Public interface MarketBaseline used by the module.
+ * interface MarketBaseline público utilizado por el módulo.
 
  */
 
@@ -32,10 +32,10 @@ export interface MarketBaseline {
 }
 
 /**
- * Implements the calculateBaseline operation for this module.
- * @param points Input used by the operation.
- * @param lookback Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación calculateBaseline de este módulo.
+ * @param points Entrada utilizada por la operation.
+ * @param lookback Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 export function calculateBaseline(
   points: BaselinePoint[],
@@ -100,10 +100,10 @@ export function calculateBaseline(
 }
 
 /**
- * Implements the calculateBaselines operation for this module.
- * @param points Input used by the operation.
- * @param lookback Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación calculateBaselines de este módulo.
+ * @param points Entrada utilizada por la operation.
+ * @param lookback Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 export function calculateBaselines(
   points: BaselinePoint[],
