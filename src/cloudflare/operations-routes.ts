@@ -73,7 +73,10 @@ export async function handleOperationsRoutes(
         }
         operations.push(...collection.data);
         total = collection.total;
-        lastPage = Math.max(1, Math.ceil(collection.total / collection.perPage));
+        lastPage = Math.max(
+          1,
+          Math.ceil(collection.total / collection.perPage),
+        );
         if (page >= lastPage || collection.data.length === 0) break;
       }
 
@@ -113,11 +116,14 @@ export async function handleOperationsRoutes(
         },
       });
     } catch (error) {
-      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
+      return json(
+        { error: "No se pudo completar la solicitud." },
+        errorStatus(error),
+      );
     }
   }
 
-  const offerMatch = url.pathname.match(/^\/api\/p2p\/([^/]+)$/);
+  const offerMatch = url.pathname.match(/^\\/api\\/p2p\\/([^/]+)$/);
   if (request.method === "GET" && offerMatch?.[1]) {
     const uuid = safeUuid(offerMatch[1]);
     if (!uuid) return json({ error: "Identificador de oferta inválido." }, 400);
@@ -131,12 +137,15 @@ export async function handleOperationsRoutes(
       if (!contract) return json({ error: "QvaPay API contract error." }, 502);
       return json({ offer_uuid: uuid, qvapay: contract.payload });
     } catch (error) {
-      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
+      return json(
+        { error: "No se pudo completar la solicitud." },
+        errorStatus(error),
+      );
     }
   }
 
   const operationMatch = url.pathname.match(
-    /^\/api\/operations\/([^/]+)\/(paid|received|cancel|chat|rate)$/,
+    /^\\/api\\/operations\\/([^/]+)\\/(paid|received|cancel|chat|rate)$/,
   );
   if (request.method === "POST" && operationMatch?.[1] && operationMatch[2]) {
     const uuid = safeUuid(operationMatch[1]);
@@ -166,7 +175,10 @@ export async function handleOperationsRoutes(
             ? String((body as JsonRecord).message ?? "").trim()
             : "";
         if (!message || message.length > 599) {
-          return json({ error: "El mensaje debe tener entre 1 y 599 caracteres." }, 400);
+          return json(
+            { error: "El mensaje debe tener entre 1 y 599 caracteres." },
+            400,
+          );
         }
       }
       if (action === "rate") {
@@ -182,7 +194,10 @@ export async function handleOperationsRoutes(
             ? String((body as JsonRecord).comment ?? "")
             : "";
         if (comment.length > 120) {
-          return json({ error: "El comentario no puede superar 120 caracteres." }, 400);
+          return json(
+            { error: "El comentario no puede superar 120 caracteres." },
+            400,
+          );
         }
       }
 
@@ -219,11 +234,14 @@ export async function handleOperationsRoutes(
         qvapay: contract.payload,
       });
     } catch (error) {
-      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
+      return json(
+        { error: "No se pudo completar la solicitud." },
+        errorStatus(error),
+      );
     }
   }
 
-  const chatMatch = url.pathname.match(/^\/api\/operations\/([^/]+)\/chat$/);
+  const chatMatch = url.pathname.match(/^\\/api\\/operations\\/([^/]+)\\/chat$/);
   if (request.method === "GET" && chatMatch?.[1]) {
     const uuid = safeUuid(chatMatch[1]);
     if (!uuid) return json({ error: "Identificador de operación inválido." }, 400);
@@ -239,12 +257,15 @@ export async function handleOperationsRoutes(
       if (!contract) return json({ error: "QvaPay API contract error." }, 502);
       return json({ qvapay: contract.payload });
     } catch (error) {
-      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
+      return json(
+        { error: "No se pudo completar la solicitud." },
+        errorStatus(error),
+      );
     }
   }
 
-  if (request.method === "POST" && /^\/api\/p2p\/[^/]+\/apply$/.test(url.pathname)) {
-    const match = url.pathname.match(/^\/api\/p2p\/([^/]+)\/apply$/);
+  if (request.method === "POST" && /^\\/api\\/p2p\\/[^/]+\\/apply$/.test(url.pathname)) {
+    const match = url.pathname.match(/^\\/api\\/p2p\\/([^/]+)\\/apply$/);
     const uuid = safeUuid(match?.[1]);
     if (!uuid) return json({ error: "Identificador de oferta inválido." }, 400);
     try {
@@ -254,12 +275,17 @@ export async function handleOperationsRoutes(
         { method: "POST" },
       );
       const payload = await readQvaPayPayload(upstream);
-      if (!upstream.ok) return json({ error: "No se pudo aplicar a la oferta." }, upstream.status);
+      if (!upstream.ok) {
+        return json({ error: "No se pudo aplicar a la oferta." }, upstream.status);
+      }
       const contract = parseQvaPayActionResponse(payload);
       if (!contract) return json({ error: "QvaPay API contract error." }, 502);
       return json({ applied: true, offer_uuid: uuid, qvapay: contract.payload });
     } catch (error) {
-      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
+      return json(
+        { error: "No se pudo completar la solicitud." },
+        errorStatus(error),
+      );
     }
   }
 
