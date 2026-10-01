@@ -70,12 +70,10 @@ export async function handleFinanceRoutes(
       }
 
       for (const offer of collection.data as QvaPayRecord[]) {
-        const status = typeof offer.status === "string"
-          ? offer.status.toLowerCase()
-          : "";
-        const type = typeof offer.type === "string"
-          ? offer.type.toLowerCase()
-          : "";
+        const status =
+          typeof offer.status === "string" ? offer.status.toLowerCase() : "";
+        const type =
+          typeof offer.type === "string" ? offer.type.toLowerCase() : "";
         const amount = finiteNumber(offer.amount);
         const receive = finiteNumber(offer.receive);
         const uuid =
