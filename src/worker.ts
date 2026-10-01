@@ -833,8 +833,12 @@ async function handleApi(
               info: {
                 uuid: typeof record?.uuid === "string" ? record.uuid : null,
                 name: typeof record?.name === "string" ? record.name : null,
-                active: typeof record?.active === "boolean" ? record.active : null,
-                enabled: typeof record?.enabled === "boolean" ? record.enabled : null,
+                active:
+                  typeof record?.active === "boolean" ? record.active : null,
+                enabled:
+                  typeof record?.enabled === "boolean"
+                    ? record.enabled
+                    : null,
               },
               httpStatus: upstream.status,
               ok: upstream.ok,
