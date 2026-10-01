@@ -101,7 +101,8 @@ function safeUuid(value: string | undefined): string | null {
 
 async function readJson(request: Request): Promise<unknown> {
   const length = Number(request.headers.get("content-length") ?? "0");
-  if (length > 1_000_000) throw new Error("Cuerpo de solicitud demasiado grande.");
+  if (length > 1_000_000)
+    throw new Error("Cuerpo de solicitud demasiado grande.");
   const text = await request.text();
   if (!text) return {};
   try {
@@ -175,7 +176,10 @@ function records(payload: unknown): JsonRecord[] {
     : [];
 }
 
-function pagination(payload: unknown, fallback: number): {
+function pagination(
+  payload: unknown,
+  fallback: number,
+): {
   total: number;
   perPage: number;
 } {
@@ -187,8 +191,7 @@ function pagination(payload: unknown, fallback: number): {
   const perPage = Number(record.per_page ?? MAX_PAGE_SIZE);
   return {
     total: Number.isFinite(total) ? total : fallback,
-    perPage:
-      Number.isFinite(perPage) && perPage > 0 ? perPage : MAX_PAGE_SIZE,
+    perPage: Number.isFinite(perPage) && perPage > 0 ? perPage : MAX_PAGE_SIZE,
   };
 }
 
@@ -213,7 +216,10 @@ function intelligence(offers: JsonRecord[]): JsonRecord {
   const groups = new Map<string, JsonRecord[]>();
 
   for (const offer of offers) {
-    const coin = String(offer.coin ?? "").trim().toUpperCase() || "SIN_MONEDA";
+    const coin =
+      String(offer.coin ?? "")
+        .trim()
+        .toUpperCase() || "SIN_MONEDA";
     const group = groups.get(coin) ?? [];
     group.push(offer);
     groups.set(coin, group);
@@ -318,7 +324,9 @@ function intelligence(offers: JsonRecord[]): JsonRecord {
     medianRate: median(allValid),
     minRate: allValid.length ? Math.min(...allValid) : null,
     maxRate: allValid.length ? Math.max(...allValid) : null,
-    spread: allValid.length ? Math.max(...allValid) - Math.min(...allValid) : null,
+    spread: allValid.length
+      ? Math.max(...allValid) - Math.min(...allValid)
+      : null,
     sellCount: offers.filter(
       (offer) => String(offer.type).toLowerCase() === "sell",
     ).length,
@@ -421,10 +429,15 @@ async function handleApi(
       const openPayload = await readPayload(open);
       const ownPayload = await readPayload(own);
 
-      const firstProfile = (payload: unknown, preferred: string): JsonRecord | null => {
+      const firstProfile = (
+        payload: unknown,
+        preferred: string,
+      ): JsonRecord | null => {
         for (const item of records(payload)) {
-          const candidate = item[preferred] ?? item[preferred === "User" ? "Peer" : "User"];
-          if (candidate && typeof candidate === "object") return candidate as JsonRecord;
+          const candidate =
+            item[preferred] ?? item[preferred === "User" ? "Peer" : "User"];
+          if (candidate && typeof candidate === "object")
+            return candidate as JsonRecord;
         }
         return null;
       };
@@ -466,7 +479,10 @@ async function handleApi(
         const upstream = await qvapay(env, "/p2p?" + pageUrl.searchParams);
         const payload = await readPayload(upstream);
         if (!upstream.ok) {
-          return json({ error: "QvaPay API error", detail: payload }, upstream.status);
+          return json(
+            { error: "QvaPay API error", detail: payload },
+            upstream.status,
+          );
         }
         operations.push(...records(payload));
         const meta = pagination(payload, operations.length);
@@ -529,7 +545,8 @@ async function handleApi(
   );
   if (request.method === "POST" && operationMatch?.[1] && operationMatch[2]) {
     const uuid = safeUuid(operationMatch[1]);
-    if (!uuid) return json({ error: "Identificador de operación inválido." }, 400);
+    if (!uuid)
+      return json({ error: "Identificador de operación inválido." }, 400);
 
     try {
       const action = operationMatch[2];
@@ -544,7 +561,13 @@ async function handleApi(
             ? String((body as JsonRecord).tx_id ?? "").trim()
             : "";
         if (!txId || txId.length > 500) {
-          return json({ error: "tx_id es obligatorio y debe tener como máximo 500 caracteres." }, 400);
+          return json(
+            {
+              error:
+                "tx_id es obligatorio y debe tener como máximo 500 caracteres.",
+            },
+            400,
+          );
         }
       }
 
@@ -554,7 +577,10 @@ async function handleApi(
             ? String((body as JsonRecord).message ?? "").trim()
             : "";
         if (!message || message.length > 599) {
-          return json({ error: "El mensaje debe tener entre 1 y 599 caracteres." }, 400);
+          return json(
+            { error: "El mensaje debe tener entre 1 y 599 caracteres." },
+            400,
+          );
         }
       }
 
@@ -564,14 +590,20 @@ async function handleApi(
             ? numberValue((body as JsonRecord).rating)
             : NaN;
         if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
-          return json({ error: "La calificación debe estar entre 1 y 5." }, 400);
+          return json(
+            { error: "La calificación debe estar entre 1 y 5." },
+            400,
+          );
         }
         const comment =
           body && typeof body === "object"
             ? String((body as JsonRecord).comment ?? "")
             : "";
         if (comment.length > 120) {
-          return json({ error: "El comentario no puede superar 120 caracteres." }, 400);
+          return json(
+            { error: "El comentario no puede superar 120 caracteres." },
+            400,
+          );
         }
       }
 
@@ -601,7 +633,8 @@ async function handleApi(
   const chatMatch = url.pathname.match(/^\/api\/operations\/([^/]+)\/chat$/);
   if (request.method === "GET" && chatMatch?.[1]) {
     const uuid = safeUuid(chatMatch[1]);
-    if (!uuid) return json({ error: "Identificador de operación inválido." }, 400);
+    if (!uuid)
+      return json({ error: "Identificador de operación inválido." }, 400);
     try {
       const upstream = await qvapay(
         env,
@@ -620,7 +653,10 @@ async function handleApi(
     }
   }
 
-  if (request.method === "POST" && /^\/api\/p2p\/[^/]+\/apply$/.test(url.pathname)) {
+  if (
+    request.method === "POST" &&
+    /^\/api\/p2p\/[^/]+\/apply$/.test(url.pathname)
+  ) {
     const match = url.pathname.match(/^\/api\/p2p\/([^/]+)\/apply$/);
     const uuid = safeUuid(match?.[1]);
     if (!uuid) return json({ error: "Identificador de oferta inválido." }, 400);
