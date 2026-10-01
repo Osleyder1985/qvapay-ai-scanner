@@ -1,7 +1,7 @@
 /**
  * @file finance-ledger.ts
  * @path src/backend/finance-ledger.ts
- * @description Implements finance ledger for QvaPay AI Scanner.
+ * @description Implementa el ledger financiero de QvaPay AI Scanner.
  * @module backend
  * @status active
  */
@@ -10,7 +10,7 @@ import { dirname, resolve } from "node:path";
 
 /**
 
- * Public interface FinanceLedgerEntry used by the module.
+ * interface FinanceLedgerEntry público utilizado por el módulo.
 
  */
 
@@ -33,9 +33,9 @@ export interface FinanceLedgerEntry {
 const defaultPath = resolve(process.cwd(), "data/finance-ledger.json");
 
 /**
- * Implements the pathFromEnv operation for this module.
+ * Implementa la operación pathFromEnv de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 function pathFromEnv(): string {
   return process.env.FINANCE_LEDGER_PATH
@@ -45,7 +45,7 @@ function pathFromEnv(): string {
 
 /**
 
- * Public class FinanceLedgerStore used by the module.
+ * class FinanceLedgerStore público utilizado por el módulo.
 
  */
 
@@ -54,9 +54,9 @@ export class FinanceLedgerStore {
   private initialized = false;
 
   /**
-   * Executes the initialize method and preserves the module's documented invariants.
+   * Ejecuta el método initialize y preserva las invariantes documentadas del módulo.
 
-   * @returns Promise<void> returned by the method.
+   * @returns Promise<void> devuelto por el método.
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -80,9 +80,9 @@ export class FinanceLedgerStore {
   }
 
   /**
-   * Executes the upsert method and preserves the module's documented invariants.
-   * @param offers Input used by the method.
-   * @returns Promise<number> returned by the method.
+   * Ejecuta el método upsert y preserva las invariantes documentadas del módulo.
+   * @param offers Entrada utilizada por la method.
+   * @returns Promise<number> devuelto por el método.
    */
   async upsert(offers: unknown[]): Promise<number> {
     await this.initialize();
@@ -110,10 +110,10 @@ export class FinanceLedgerStore {
   }
 
   /**
-   * Executes the recordSettlement method and preserves the module's documented invariants.
-   * @param uuid Input used by the method.
-   * @param settlement Input used by the method.
-   * @returns Promise<boolean> returned by the method.
+   * Ejecuta el método recordSettlement y preserva las invariantes documentadas del módulo.
+   * @param uuid Entrada utilizada por la method.
+   * @param settlement Entrada utilizada por la method.
+   * @returns Promise<boolean> devuelto por el método.
    */
   async recordSettlement(uuid: string, settlement: unknown): Promise<boolean> {
     await this.initialize();
@@ -146,9 +146,9 @@ export class FinanceLedgerStore {
   }
 
   /**
-   * Executes the list method and preserves the module's documented invariants.
+   * Ejecuta el método list y preserva las invariantes documentadas del módulo.
 
-   * @returns FinanceLedgerEntry[] returned by the method.
+   * @returns FinanceLedgerEntry[] devuelto por el método.
    */
   list(): FinanceLedgerEntry[] {
     return [...this.entries.values()].sort(
