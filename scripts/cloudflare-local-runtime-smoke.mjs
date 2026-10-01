@@ -1,11 +1,14 @@
 import { spawn } from "node:child_process";
+import { createServer } from "node:http";
 import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 
 const baseUrl = "http://127.0.0.1:8787";
+const qvapayMockUrl = "http://127.0.0.1:8788";
 const username = "ci-smoke-user";
 const password = `ci-smoke-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const devVarsPath = ".dev.vars";
 let server;
+let qvapayMockServer;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -72,6 +75,7 @@ async function waitForServer() {
 
 function cleanup() {
   if (server && !server.killed) server.kill();
+  if (qvapayMockServer) qvapayMockServer.close();
   if (existsSync(devVarsPath)) unlinkSync(devVarsPath);
 }
 
@@ -154,10 +158,16 @@ assertSecurityHeaders(dashboard, "dashboard");
 
 const market = await request("/api/p2p?page=1&take=1", {}, cookie);
 assert(
-  [200, 502, 503].includes(market.status),
+  market.status === 200,
   `/api/p2p autenticado devolvió HTTP inesperado ${market.status}`,
 );
 assertSecurityHeaders(market, "/api/p2p autenticado");
+const marketPayload = await market.json();
+assert(
+  Array.isArray(marketPayload.data) &&
+    marketPayload.data[0]?.uuid === "ci-smoke-offer",
+  "La ruta autenticada /api/p2p no propagó correctamente la respuesta del adaptador QvaPay de prueba",
+);
 
 const logout = await request(
   "/api/auth/logout",
