@@ -27,7 +27,6 @@ export async function handleDiagnosticsRoutes(
         {
           ok: false,
           error: "D1 no está disponible o no tiene el esquema aplicado.",
-          detail: String(error),
         },
         503,
       );
