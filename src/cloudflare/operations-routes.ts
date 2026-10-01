@@ -142,7 +142,7 @@ export async function handleOperationsRoutes(
         },
       });
     } catch (error) {
-      return json({ error: String(error) }, errorStatus(error));
+      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
     }
   }
 
@@ -160,7 +160,7 @@ export async function handleOperationsRoutes(
         upstream.status,
       );
     } catch (error) {
-      return json({ error: String(error) }, errorStatus(error));
+      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
     }
   }
 
@@ -254,7 +254,7 @@ export async function handleOperationsRoutes(
         upstream.status,
       );
     } catch (error) {
-      return json({ error: String(error) }, errorStatus(error));
+      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
     }
   }
 
@@ -277,7 +277,7 @@ export async function handleOperationsRoutes(
         upstream.status,
       );
     } catch (error) {
-      return json({ error: String(error) }, errorStatus(error));
+      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
     }
   }
 
@@ -305,7 +305,7 @@ export async function handleOperationsRoutes(
         upstream.status,
       );
     } catch (error) {
-      return json({ error: String(error) }, errorStatus(error));
+      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
     }
   }
 
