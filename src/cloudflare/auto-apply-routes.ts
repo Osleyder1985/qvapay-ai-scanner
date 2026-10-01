@@ -57,6 +57,5 @@ export function handleAutoApplyRoutes(
     );
   }
 
-
   return null;
 }
