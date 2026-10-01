@@ -761,6 +761,7 @@ async function handleApi(
             : null,
           balanceDiagnostics,
           integrationOk: contract.ok,
+          integrationStatus: contract.integrationStatus,
           fetchedAt: new Date().toISOString(),
         },
       });
