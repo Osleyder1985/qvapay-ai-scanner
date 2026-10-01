@@ -70,7 +70,9 @@ function median(values: number[]): number | null {
   if (sorted.length % 2) return sorted[middle] ?? null;
   const lower = sorted[middle - 1];
   const upper = sorted[middle];
-  return lower !== undefined && upper !== undefined ? (lower + upper) / 2 : null;
+  return lower !== undefined && upper !== undefined
+    ? (lower + upper) / 2
+    : null;
 }
 
 function sanitizeMarketParams(url: URL): URLSearchParams {
@@ -123,8 +125,12 @@ function summarizeMarketOffers(
     const amount = numberValue(offer.amount);
     const receive = numberValue(offer.receive);
     if (!(amount > 0) || !(receive >= 0)) continue;
-    const coin = String(offer.coin ?? "").trim().toUpperCase();
-    const type = String(offer.type ?? "").trim().toLowerCase();
+    const coin = String(offer.coin ?? "")
+      .trim()
+      .toUpperCase();
+    const type = String(offer.type ?? "")
+      .trim()
+      .toLowerCase();
     if (!coin || !type) continue;
     const key = type + "|" + coin;
     const group = groups.get(key) ?? { rates: [], coin, type };
@@ -148,7 +154,10 @@ function summarizeMarketOffers(
 function intelligence(offers: JsonRecord[]): JsonRecord {
   const groups = new Map<string, JsonRecord[]>();
   for (const offer of offers) {
-    const coin = String(offer.coin ?? "").trim().toUpperCase() || "SIN_MONEDA";
+    const coin =
+      String(offer.coin ?? "")
+        .trim()
+        .toUpperCase() || "SIN_MONEDA";
     const group = groups.get(coin) ?? [];
     group.push(offer);
     groups.set(coin, group);
@@ -217,9 +226,7 @@ function intelligence(offers: JsonRecord[]): JsonRecord {
       medianRate: med,
       minRate: rates.length ? Math.min(...rates) : null,
       maxRate: rates.length ? Math.max(...rates) : null,
-      spread: rates.length
-        ? Math.max(...rates) - Math.min(...rates)
-        : null,
+      spread: rates.length ? Math.max(...rates) - Math.min(...rates) : null,
       sellCount: items.filter(
         (item) => String(item.type).toLowerCase() === "sell",
       ).length,
@@ -277,7 +284,10 @@ async function market(
   const payload = await readQvaPayPayload(upstream);
   if (upstream.ok && params.get("page") === "1") {
     try {
-      await appendMarketHistory(env.DB, summarizeMarketOffers(records(payload)));
+      await appendMarketHistory(
+        env.DB,
+        summarizeMarketOffers(records(payload)),
+      );
     } catch (error) {
       console.error("D1 market history persistence:", error);
     }
@@ -305,7 +315,10 @@ export async function handleMarketRoutes(
       });
     } catch (error) {
       return json(
-        { error: "No se pudo consultar el estado de D1", detail: String(error) },
+        {
+          error: "No se pudo consultar el estado de D1",
+          detail: String(error),
+        },
         503,
       );
     }
@@ -343,7 +356,10 @@ export async function handleMarketRoutes(
       return json({ trends: summarizeTrends(points) });
     } catch (error) {
       return json(
-        { error: "No se pudieron calcular las tendencias", detail: String(error) },
+        {
+          error: "No se pudieron calcular las tendencias",
+          detail: String(error),
+        },
         503,
       );
     }
@@ -431,5 +447,7 @@ export async function handleMarketRoutes(
 }
 
 function errorStatus(error: unknown): number {
-  return error instanceof Error && error.message.includes("QVAPAY_") ? 500 : 502;
+  return error instanceof Error && error.message.includes("QVAPAY_")
+    ? 500
+    : 502;
 }
