@@ -1,7 +1,7 @@
 /**
  * @file auto-apply-lease.test.ts
  * @path src/tests/auto-apply-lease.test.ts
- * @description Tests the durable Auto-Apply execution lease boundary.
+ * @description Prueba la frontera de lease de ejecución durable de Auto-Apply.
  * @module tests
  * @status migration
  */
