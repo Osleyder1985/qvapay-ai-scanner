@@ -9,21 +9,30 @@
 import { requireSession, type SessionDatabase } from "./cloudflare/access.js";
 import {
   routeRequest,
+  securityHeaders,
   type WorkerEnv,
 } from "./cloudflare/cloudflare-router.js";
+
+function withSecurityHeaders(response: Response): Response {
+  const headers = new Headers(response.headers);
+  Object.entries(securityHeaders()).forEach(([key, value]) => headers.set(key, value));
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
 
 export default {
   async fetch(request: Request, env: WorkerEnv): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/login") {
-      return env.ASSETS.fetch(
-        new Request(new URL("/login.html", request.url), request),
+      return withSecurityHeaders(
+        await env.ASSETS.fetch(
+          new Request(new URL("/login.html", request.url), request),
+        ),
       );
     }
 
     const apiResponse = await routeRequest(request, env);
-    if (apiResponse) return apiResponse;
+    if (apiResponse) return withSecurityHeaders(apiResponse);
 
     if (url.pathname === "/" || url.pathname.endsWith(".html")) {
       const session = await requireSession(
@@ -31,10 +40,12 @@ export default {
         env.DB as unknown as SessionDatabase,
       );
       if (!session.ok) {
-        return Response.redirect(new URL("/login", request.url), 302);
+        return withSecurityHeaders(
+          Response.redirect(new URL("/login", request.url), 302),
+        );
       }
     }
 
-    return env.ASSETS.fetch(request);
+    return withSecurityHeaders(await env.ASSETS.fetch(request));
   },
 };
