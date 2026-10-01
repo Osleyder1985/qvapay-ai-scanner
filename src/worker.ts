@@ -708,10 +708,19 @@ async function handleApi(
         return null;
       };
 
-      const balanceValue =
+      const balanceRecord =
         balancePayload && typeof balancePayload === "object"
-          ? numberValue((balancePayload as JsonRecord).balance)
-          : NaN;
+          ? (balancePayload as JsonRecord)
+          : null;
+      const balanceData =
+        balanceRecord?.data && typeof balanceRecord.data === "object"
+          ? (balanceRecord.data as JsonRecord)
+          : null;
+      const directBalance = numberValue(balanceRecord?.balance);
+      const wrappedBalance = numberValue(balanceData?.balance);
+      const balanceValue = Number.isFinite(directBalance)
+        ? directBalance
+        : wrappedBalance;
 
       const user =
         firstProfile(openPayload, "User") ?? firstProfile(ownPayload, "User");
@@ -721,6 +730,9 @@ async function handleApi(
           balanceUsd: Number.isFinite(balanceValue) ? balanceValue : null,
           user,
           identitySource: user ? "own_open_offer" : "unavailable",
+          balanceSource: Number.isFinite(balanceValue)
+            ? "qvapay_v2_balance"
+            : "unavailable",
           fetchedAt: new Date().toISOString(),
         },
       });
