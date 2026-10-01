@@ -1,7 +1,7 @@
 /**
  * @file qvapay-client.ts
  * @path src/backend/cloudflare/qvapay-client.ts
- * @description Fetch-only QvaPay HTTP client shared by Cloudflare Worker and tests.
+ * @description Cliente HTTP de QvaPay basado sólo en fetch, compartido por el Worker de Cloudflare y las pruebas.
  * @module backend/cloudflare
  * @status migration
  */
