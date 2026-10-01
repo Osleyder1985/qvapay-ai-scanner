@@ -98,8 +98,24 @@ Las ramas no productivas sólo deben utilizar previews si están explícitamente
 
 - Los secretos QvaPay no se almacenan en `wrangler.jsonc`, GitHub, el frontend ni los assets estáticos.
 - `secrets.required` declara los nombres sin valores.
+- El Worker de producción debe estar protegido mediante Cloudflare Access; la política de Access define quién puede acceder al dashboard.
+- El Worker aplica además una frontera fail-closed con `ctx.access` y exige `same-origin` para mutaciones.
+- `/api/health` es el único endpoint API definido como público; si se necesita que siga accesible sin login, debe existir un bypass de Access limitado exactamente a esa ruta.
 - Auto-Apply permanece deshabilitado hasta completar su aceptación funcional y sus controles de concurrencia, límites y reconciliación.
 - La configuración de Workers Builds y los secrets son recursos de cuenta Cloudflare; su estado debe verificarse desde Cloudflare antes de declarar automatización CI/CD completamente aceptada.
+
+## Seguridad de acceso
+
+La autenticación pública del dashboard se implementa mediante Cloudflare Access y no mediante un token estático enviado por el frontend.
+
+Configuración requerida en Cloudflare:
+
+- Access → `qvapay-ai-scanner` → **Protect this Worker behind Access**.
+- Traffic scope: **All traffic**.
+- Política **Allow** limitada al usuario o grupo autorizado.
+- Bypass opcional y estrecho para `/api/health`.
+
+El detalle del modelo se documenta en `docs/cloudflare/access-boundary.md`.
 
 ## Fuentes oficiales
 
