@@ -1,7 +1,7 @@
 /**
  * @file auto-apply-scheduler.ts
  * @path src/backend/cloudflare/auto-apply-scheduler.ts
- * @description Cloudflare scheduled-event boundary for one-shot Auto-Apply.
+ * @description Frontera de eventos programados de Cloudflare para una ejecución única de Auto-Apply.
  * @module backend/cloudflare
  * @status migration
  */
