@@ -13,7 +13,11 @@ import {
   type D1Database,
 } from "./d1.js";
 import { calculateFinanceSummary } from "../backend/finance.js";
-import { qvapay, readQvaPayPayload, type QvaPayHttpEnv } from "./qvapay-http.js";
+import {
+  qvapay,
+  readQvaPayPayload,
+  type QvaPayHttpEnv,
+} from "./qvapay-http.js";
 
 type JsonRecord = Record<string, unknown>;
 type JsonResponse = (payload: unknown, status?: number) => Response;
@@ -32,7 +36,10 @@ function records(payload: unknown): JsonRecord[] {
     : [];
 }
 
-function pagination(payload: unknown, fallback: number): { total: number; perPage: number } {
+function pagination(
+  payload: unknown,
+  fallback: number,
+): { total: number; perPage: number } {
   if (!payload || typeof payload !== "object") {
     return { total: fallback, perPage: MAX_PAGE_SIZE };
   }
@@ -80,7 +87,10 @@ export async function handleFinanceRoutes(
       const payload = await readQvaPayPayload(upstream);
 
       if (!upstream.ok) {
-        return json({ error: "QvaPay API error", detail: payload }, upstream.status);
+        return json(
+          { error: "QvaPay API error", detail: payload },
+          upstream.status,
+        );
       }
 
       const pageRecords = records(payload);
