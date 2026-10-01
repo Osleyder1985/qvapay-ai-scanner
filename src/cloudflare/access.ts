@@ -50,10 +50,12 @@ function cookieSecureAttribute(request: Request): string {
 function parseCookie(request: Request, name: string): string | null {
   const header = request.headers.get("Cookie");
   if (!header) return null;
+
   for (const item of header.split(";")) {
     const [key, ...parts] = item.trim().split("=");
     if (key === name) return parts.join("=") || null;
   }
+
   return null;
 }
 
@@ -97,7 +99,13 @@ export async function createSession(
     .prepare(
       "INSERT INTO auth_sessions (token_hash, username, created_at, expires_at, last_seen_at) VALUES (?, ?, ?, ?, ?)",
     )
-    .bind(tokenHash, username, now.toISOString(), expiresAt, now.toISOString())
+    .bind(
+      tokenHash,
+      username,
+      now.toISOString(),
+      expiresAt,
+      now.toISOString(),
+    )
     .run();
 
   return new Response(JSON.stringify({ ok: true }), {
@@ -138,7 +146,12 @@ export async function requireSession(
   db: SessionDatabase,
 ): Promise<AuthCheck> {
   const token = parseCookie(request, COOKIE_NAME);
-  if (!token) return { ok: false, response: jsonError("Autenticación requerida.", 401) };
+  if (!token) {
+    return {
+      ok: false,
+      response: jsonError("Autenticación requerida.", 401),
+    };
+  }
 
   const tokenHash = await sha256Hex(token);
   const row = await db
@@ -153,7 +166,11 @@ export async function requireSession(
       .prepare("DELETE FROM auth_sessions WHERE token_hash = ?")
       .bind(tokenHash)
       .run();
-    return { ok: false, response: jsonError("Sesión inválida o expirada.", 401) };
+
+    return {
+      ok: false,
+      response: jsonError("Sesión inválida o expirada.", 401),
+    };
   }
 
   await db
