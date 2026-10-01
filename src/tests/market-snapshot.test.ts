@@ -1,7 +1,7 @@
 /**
  * @file market-snapshot.test.ts
  * @path src/tests/market-snapshot.test.ts
- * @description Test coverage for market-snapshot.test.ts in QvaPay AI Scanner.
+ * @description Cobertura de pruebas para market-snapshot.test.ts en QvaPay AI Scanner.
  * @module tests
  * @status test
  */
