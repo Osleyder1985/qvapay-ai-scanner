@@ -10,7 +10,13 @@ test("account endpoint reads the documented QvaPay balance field", () => {
   assert.match(source, /balanceSource: Number\.isFinite\(balanceValue\)/);
 });
 
-test("account endpoint also accepts a standard wrapped data.balance response", () => {
-  assert.match(source, /numberValue\(balanceData\?\.balance\)/);
-  assert.match(source, /const wrappedBalance = numberValue\(balanceData\?\.balance\)/);
-});
+test(
+  "account endpoint also accepts a standard wrapped data.balance response",
+  () => {
+    assert.match(source, /numberValue\(balanceData\?\.balance\)/);
+    assert.match(
+      source,
+      /const wrappedBalance = numberValue\(balanceData\?\.balance\)/,
+    );
+  },
+);
