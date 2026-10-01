@@ -1,57 +1,71 @@
 # Autenticación y frontera pública de Cloudflare
 
 ## Objetivo
+La migración a Cloudflare Workers eliminó el límite de red local-only que protegía al servidor Node histórico. El Worker de producción no puede confiar en que una petición pública sea legítima.
 
-El dashboard de QvaPay AI Scanner dejó de ejecutarse detrás del límite local-only del servidor Node al migrar a Cloudflare Workers. La exposición pública del Worker no debe sustituir ese límite por confianza implícita.
-
-La arquitectura productiva utiliza Cloudflare Access como frontera de autenticación y autorización de acceso al Worker, y el propio Worker aplica controles adicionales sobre su API.
+La solución productiva de este proyecto no depende de Cloudflare Zero Trust/Access. Utiliza autenticación propia del Worker con una sesión HTTP-only persistida en D1.
 
 ## Modelo de confianza
+Internet → Worker → sesión HTTP-only → D1 / QvaPay API
 
-Internet → Cloudflare Access → Worker → D1 / QvaPay API
+Las credenciales de autenticación se mantienen como secrets del Worker. La sesión del navegador se representa mediante una cookie HttpOnly, Secure en HTTPS y SameSite=Strict.
 
-Cloudflare Access debe proteger All traffic del Worker de producción. La política Allow debe limitar el acceso a la identidad o grupo autorizado para este dashboard.
+## Secrets requeridos
+Configurar fuera de Git:
+- QVAPAY_APP_ID
+- QVAPAY_APP_SECRET
+- AUTH_USERNAME
+- AUTH_PASSWORD
+
+Ejemplo:
+```text
+npx wrangler secret put QVAPAY_APP_ID
+npx wrangler secret put QVAPAY_APP_SECRET
+npx wrangler secret put AUTH_USERNAME
+npx wrangler secret put AUTH_PASSWORD
+```
+
+Los valores reales no deben aparecer en el repositorio, frontend, logs ni capturas.
+
+## Persistencia de sesiones
+La migración 0004_auth_sessions.sql crea auth_sessions.
+
+Se almacena únicamente un SHA-256 del token aleatorio de sesión, nunca el token de sesión en texto plano.
+
+La sesión:
+- dura 7 días;
+- se invalida al cerrar sesión;
+- se reemplaza cuando el mismo usuario vuelve a iniciar sesión;
+- se rechaza si está expirada;
+- actualiza last_seen_at en cada autenticación.
+
+La cookie no es accesible desde JavaScript.
 
 ## Endpoints
-
 ### Público
-
 | Método | Endpoint | Motivo |
 |---|---|---|
 | GET | /api/health | Health check no sensible |
+| GET | /login | Formulario de autenticación |
 
-### Autenticado
+### Autenticación
+| Método | Endpoint | Control |
+|---|---|---|
+| POST | /api/auth/login | Credenciales + same-origin |
+| POST | /api/auth/logout | Sesión + same-origin |
+| GET | /api/auth/session | Sesión válida |
 
-Todos los demás endpoints /api/* requieren una identidad válida de Cloudflare Access.
+### Privado
+Todos los demás endpoints /api/* requieren una sesión válida.
 
-Esto incluye:
+También se protege el dashboard HTML servido en /.
 
-- /api/cloudflare/d1/health
-- /api/market/snapshot
-- /api/history
-- /api/trends
-- /api/baselines
-- /api/p2p
-- /api/p2p/:uuid
-- /api/intelligence
-- /api/account
-- /api/operations
-- /api/finance
-- /api/auto-apply/config
-- /api/auto-apply/status
+## Mutaciones y CSRF
+Las mutaciones requieren sesión válida, solicitud same-origin y validación de payload existente.
 
-### Mutaciones
+Las solicitudes mutantes sin Origin se rechazan. Las solicitudes cross-origin se rechazan.
 
-Las mutaciones requieren:
-
-1. autenticación mediante Cloudflare Access;
-2. autorización mediante la política de Access que controla quién puede entrar al dashboard;
-3. solicitud same-origin;
-4. validación de payload y parámetros existente;
-5. respuesta fail-closed ante ausencia de identidad.
-
-Actualmente las mutaciones son:
-
+Las mutaciones actuales incluyen:
 - POST /api/p2p/:uuid/apply
 - POST /api/operations/:uuid/paid
 - POST /api/operations/:uuid/received
@@ -59,104 +73,33 @@ Actualmente las mutaciones son:
 - POST /api/operations/:uuid/chat
 - POST /api/operations/:uuid/rate
 
-No se introduce un token estático del dashboard ni un secreto en el frontend.
-
-## Same-origin y CSRF
-
-El frontend y la API se sirven desde el mismo Worker. Por ello no se necesita una política CORS para el flujo normal del dashboard.
-
-Las solicitudes mutantes verifican el header Origin y exigen que su origen coincida exactamente con el origen de la petición.
-
-Una petición mutante sin Origin se rechaza. Esto evita utilizar la ausencia de un header como mecanismo de bypass para acciones que cambian estado.
-
-Las solicitudes cross-origin no forman parte del contrato actual de la API.
-
-Cloudflare Access también dispone de controles de cookies y protección CSRF propios; la aplicación no debe asumir que CORS equivale a autenticación.
-
 ## Fail-closed
-
-El Worker comprueba ctx.access para toda la API excepto /api/health.
-
-Si Access no autenticó la invocación: 403 Access authentication is required for this resource.
-
-Si Access está presente pero no devuelve identidad: 403 Authenticated Access identity is unavailable.
+Si no existe cookie de sesión, el Worker devuelve HTTP 401.
+Si la sesión no existe en D1 o está expirada, devuelve HTTP 401 y elimina la sesión inválida.
 
 No se acepta como sustituto:
-
-- Authorization arbitrario enviado por el navegador;
-- Bearer almacenado en JavaScript;
+- Bearer arbitrario enviado por el navegador;
+- token estático en JavaScript;
 - DASHBOARD_API_TOKEN;
-- un email enviado por el cliente;
-- un header de identidad que el cliente pueda controlar.
-
-La identidad utilizada por el Worker procede de ctx.access.
-
-## Configuración de Cloudflare Access
-
-En Cloudflare:
-
-1. Abrir Workers & Pages.
-2. Seleccionar qvapay-ai-scanner.
-3. Abrir Access.
-4. Seleccionar Protect this Worker behind Access.
-5. Elegir All traffic.
-6. Configurar una política Allow limitada al usuario o grupo autorizado.
-7. Mantener protegidos producción y previews salvo que exista una razón documentada para una excepción.
-8. Crear un bypass exclusivamente para /api/health si se necesita un health check público.
-
-El bypass de health debe ser lo más estrecho posible. Un bypass de Access desactiva los controles de Access para el tráfico que coincide con él, por lo que no debe utilizarse como mecanismo general de acceso.
-
-## Identidad
-
-El Worker obtiene la identidad mediante ctx.access.getIdentity().
-
-No se parsea manualmente el JWT de Access.
+- email enviado por el cliente;
+- headers de identidad controlables por el cliente;
+- Cloudflare Access.
 
 ## Frontend
+El frontend no contiene QVAPAY_APP_ID, QVAPAY_APP_SECRET, AUTH_PASSWORD, token de sesión ni credenciales QvaPay.
+La cookie de sesión es HttpOnly.
 
-El frontend no contiene:
+## Auto-Apply
+Auto-Apply continúa deshabilitado. No se habilita Cron ni ejecución headless como parte de esta remediación.
 
-- QVAPAY_APP_ID;
-- QVAPAY_APP_SECRET;
-- Access Client Secret;
-- API token estático;
-- credenciales QvaPay.
-
-Las llamadas del dashboard son same-origin.
-
-## Automatización futura
-
-Un scheduler o agente no debe reutilizar credenciales de un usuario humano ni exponerlas al frontend.
-
-Cuando se implemente ejecución headless, deberá utilizarse una política Service Auth de Cloudflare Access con un Service Token almacenado como secret, y deberán definirse sus permisos y ciclo de rotación por separado.
-
-Auto-Apply permanece deshabilitado.
+## Limitación actual
+Esta autenticación proporciona una frontera de usuario única: AUTH_USERNAME + AUTH_PASSWORD.
+No constituye todavía un sistema multiusuario/RBAC. Si el dashboard pasa a tener varios operadores, deberá evolucionar a identidades individuales, roles explícitos, rotación y auditoría por sujeto.
 
 ## Pruebas
+Los tests cubren credenciales no configuradas, ausencia de cookie, atributos seguros de la cookie, same-origin, cross-origin y ausencia de Origin en mutaciones.
 
-Se cubren automáticamente:
+La validación de producción debe comprobar el login real, el acceso al dashboard y la protección de API sin ejecutar mutaciones QvaPay destructivas.
 
-- ausencia de ctx.access → rechazo;
-- identidad autenticada → aceptación;
-- origen igual → aceptación;
-- origen diferente → rechazo;
-- ausencia de Origin en una mutación → rechazo;
-- solicitudes GET → no requieren control same-origin.
-
-La validación de producción debe comprobar además:
-
-1. acceso sin sesión → bloqueado por Access;
-2. login autorizado → dashboard disponible;
-3. /api/health → disponible según la política pública configurada;
-4. API autenticada → funciona;
-5. mutación cross-origin → rechazada;
-6. ninguna credencial aparece en el frontend;
-7. no se ejecutan mutaciones QvaPay destructivas durante el smoke test.
-
-## Referencias oficiales
-
-- https://developers.cloudflare.com/workers/configuration/cloudflare-access/
-- https://developers.cloudflare.com/workers/configuration/routing/workers-dev/
-- https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/application-token/
-- https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/cors/
-- https://developers.cloudflare.com/cloudflare-one/access-controls/policies/
+## Referencias
+La implementación utiliza las primitivas Web Crypto y cookies HTTP del runtime de Cloudflare Workers y D1 para persistencia. No requiere habilitar Cloudflare Zero Trust para esta arquitectura.
