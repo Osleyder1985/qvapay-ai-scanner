@@ -10,11 +10,12 @@ import {
 function statement(result: unknown): D1PreparedStatement {
   return {
     bind: () => statement(result),
-    run: async () => ({ success: true }),
-    all: async () => ({
-      success: true,
-      results: result as Record<string, unknown>[],
-    }),
+    run: async <T>() => ({ success: true }) as { success: boolean } & T,
+    all: async <T>() =>
+      ({
+        success: true,
+        results: result as T[],
+      }) as { success: boolean; results: T[] },
     first: async () => null,
   };
 }
