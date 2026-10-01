@@ -16,6 +16,7 @@ import { summarizeTrends } from "./backend/trend-engine.js";
 import { calculateBaselines } from "./backend/market-baseline.js";
 import { parseQvaPayApplicationIdentity } from "./cloudflare/qvapay-identity.js";
 import { evaluateQvaPayAccountContract } from "./cloudflare/qvapay-account-contract.js";
+import { qvapay, readQvaPayPayload } from "./cloudflare/qvapay-http.js";
 import {
   credentialsMatch,
   createSession,
@@ -50,7 +51,6 @@ interface WorkerEnv {
   AUTH_PASSWORD?: string;
 }
 
-const DEFAULT_API_BASE = "https://api.qvapay.com";
 const MAX_PAGE_SIZE = 100;
 const MAX_MARKET_PAGES = 10;
 const MAX_OPERATION_PAGES = 100;
@@ -69,56 +69,6 @@ function json(
       "Cache-Control": "no-store",
       ...headers,
     },
-  });
-}
-
-function apiBase(env: WorkerEnv): string {
-  return (env.QVAPAY_API_BASE_URL ?? DEFAULT_API_BASE).replace(/\/$/, "");
-}
-
-function qvapayHeaders(env: WorkerEnv): Record<string, string> {
-  if (!env.QVAPAY_APP_ID || !env.QVAPAY_APP_SECRET) {
-    throw new Error(
-      "Faltan QVAPAY_APP_ID y QVAPAY_APP_SECRET en los secrets del Worker.",
-    );
-  }
-
-  return {
-    Accept: "application/json",
-    "app-id": env.QVAPAY_APP_ID,
-    "app-secret": env.QVAPAY_APP_SECRET,
-    "User-Agent": "qvapay-ai-scanner-cloudflare-worker/1.0",
-  };
-}
-
-async function readPayload(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (!text) return {};
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { message: text };
-  }
-}
-
-async function qvapay(
-  env: WorkerEnv,
-  path: string,
-  init: RequestInit = {},
-): Promise<Response> {
-  const headers = new Headers(qvapayHeaders(env));
-  if (init.headers) {
-    new Headers(init.headers).forEach((value, key) => headers.set(key, value));
-  }
-
-  if (init.method?.toUpperCase() === "POST" && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
-
-  return fetch(new URL(path, apiBase(env)), {
-    ...init,
-    headers,
-    signal: AbortSignal.timeout(20_000),
   });
 }
 
@@ -198,7 +148,7 @@ async function market(
   const params = sanitizeMarketParams(url);
   Object.entries(overrides).forEach(([key, value]) => params.set(key, value));
   const upstream = await qvapay(env, "/p2p?" + params.toString());
-  const payload = await readPayload(upstream);
+  const payload = await readQvaPayPayload(upstream);
   if (upstream.ok && params.get("page") === "1") {
     try {
       await appendMarketHistory(
@@ -705,8 +655,8 @@ async function handleApi(
         qvapay(env, "/v2/balance", { method: "POST" }),
         qvapay(env, "/v2/info", { method: "POST" }),
       ]);
-      const balancePayload = await readPayload(balance);
-      const infoPayload = await readPayload(info);
+      const balancePayload = await readQvaPayPayload(balance);
+      const infoPayload = await readQvaPayPayload(info);
       const contract = evaluateQvaPayAccountContract({
         identityStatus: info.status,
         identityPayload: infoPayload,
@@ -773,7 +723,7 @@ async function handleApi(
   if (url.pathname === "/api/qvapay/info" && request.method === "GET") {
     try {
       const upstream = await qvapay(env, "/v2/info", { method: "POST" });
-      const payload = await readPayload(upstream);
+      const payload = await readQvaPayPayload(upstream);
       const record =
         payload && typeof payload === "object" && !Array.isArray(payload)
           ? (payload as JsonRecord)
@@ -820,7 +770,7 @@ async function handleApi(
         pageUrl.searchParams.set("page", String(page));
         pageUrl.searchParams.set("sortByStatus", "true");
         const upstream = await qvapay(env, "/p2p?" + pageUrl.searchParams);
-        const payload = await readPayload(upstream);
+        const payload = await readQvaPayPayload(upstream);
         if (!upstream.ok) {
           return json(
             { error: "QvaPay API error", detail: payload },
@@ -881,7 +831,7 @@ async function handleApi(
     if (!uuid) return json({ error: "Identificador de oferta inválido." }, 400);
     try {
       const upstream = await qvapay(env, "/p2p/" + encodeURIComponent(uuid));
-      const payload = await readPayload(upstream);
+      const payload = await readQvaPayPayload(upstream);
       return json(
         upstream.ok
           ? { offer_uuid: uuid, qvapay: payload }
@@ -971,7 +921,7 @@ async function handleApi(
           ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         },
       );
-      const payload = await readPayload(upstream);
+      const payload = await readQvaPayPayload(upstream);
       if (upstream.ok && action === "received") {
         try {
           await recordFinanceSettlement(env.DB, uuid, payload);
@@ -1001,7 +951,7 @@ async function handleApi(
         "/p2p/" + encodeURIComponent(uuid) + "/chat",
         { method: "GET" },
       );
-      const payload = await readPayload(upstream);
+      const payload = await readQvaPayPayload(upstream);
       return json(
         upstream.ok
           ? { qvapay: payload }
@@ -1026,7 +976,7 @@ async function handleApi(
         "/p2p/" + encodeURIComponent(uuid) + "/apply",
         { method: "POST" },
       );
-      const payload = await readPayload(upstream);
+      const payload = await readQvaPayPayload(upstream);
       return json(
         upstream.ok
           ? { applied: true, offer_uuid: uuid, qvapay: payload }
@@ -1051,7 +1001,7 @@ async function handleApi(
         pageUrl.searchParams.set("orderBy", "updated_at");
         pageUrl.searchParams.set("orderType", "asc");
         const upstream = await qvapay(env, "/p2p?" + pageUrl.searchParams);
-        const payload = await readPayload(upstream);
+        const payload = await readQvaPayPayload(upstream);
         if (!upstream.ok) {
           return json(
             { error: "QvaPay API error", detail: payload },
