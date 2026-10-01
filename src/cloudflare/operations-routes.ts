@@ -12,7 +12,11 @@ import {
   upsertOperations,
   type D1Database,
 } from "./d1.js";
-import { qvapay, readQvaPayPayload, type QvaPayHttpEnv } from "./qvapay-http.js";
+import {
+  qvapay,
+  readQvaPayPayload,
+  type QvaPayHttpEnv,
+} from "./qvapay-http.js";
 
 type JsonRecord = Record<string, unknown>;
 type JsonResponse = (payload: unknown, status?: number) => Response;
@@ -25,12 +29,20 @@ function records(payload: unknown): JsonRecord[] {
   if (!payload || typeof payload !== "object") return [];
   const data = (payload as JsonRecord).data;
   return Array.isArray(data)
-    ? data.filter((value): value is JsonRecord => Boolean(value) && typeof value === "object")
+    ? data.filter(
+        (value): value is JsonRecord =>
+          Boolean(value) && typeof value === "object",
+      )
     : [];
 }
 
-function pagination(payload: unknown, fallback: number): { total: number; perPage: number } {
-  if (!payload || typeof payload !== "object") return { total: fallback, perPage: MAX_PAGE_SIZE };
+function pagination(
+  payload: unknown,
+  fallback: number,
+): { total: number; perPage: number } {
+  if (!payload || typeof payload !== "object") {
+    return { total: fallback, perPage: MAX_PAGE_SIZE };
+  }
   const record = payload as JsonRecord;
   const total = Number(record.total ?? fallback);
   const perPage = Number(record.per_page ?? MAX_PAGE_SIZE);
@@ -42,7 +54,11 @@ function pagination(payload: unknown, fallback: number): { total: number; perPag
 
 function safeUuid(value: string | undefined): string | null {
   if (!value || value.length > 200) return null;
-  try { return decodeURIComponent(value); } catch { return null; }
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
 }
 
 function numberValue(value: unknown): number {
@@ -75,7 +91,9 @@ export async function handleOperationsRoutes(
         pageUrl.searchParams.set("sortByStatus", "true");
         const upstream = await qvapay(env, "/p2p?" + pageUrl.searchParams);
         const payload = await readQvaPayPayload(upstream);
-        if (!upstream.ok) return json({ error: "QvaPay API error", detail: payload }, upstream.status);
+        if (!upstream.ok) {
+          return json({ error: "QvaPay API error", detail: payload }, upstream.status);
+        }
         operations.push(...records(payload));
         const meta = pagination(payload, operations.length);
         total = meta.total;
@@ -86,18 +104,24 @@ export async function handleOperationsRoutes(
       await upsertOperations(env.DB, operations);
       const ledgerIds = await listOperationIds(env.DB);
       const remoteIds = new Set(
-        operations.map((operation) => String(operation.uuid ?? operation.id ?? "").trim()).filter(Boolean),
+        operations
+          .map((operation) => String(operation.uuid ?? operation.id ?? "").trim())
+          .filter(Boolean),
       );
       const localIds = new Set(ledgerIds);
 
       return json({
         operations: {
-          data: operations, total, per_page: MAX_PAGE_SIZE, page: 1,
+          data: operations,
+          total,
+          per_page: MAX_PAGE_SIZE,
+          page: 1,
           pages_fetched: Math.min(lastPage, MAX_OPERATION_PAGES),
           truncated: lastPage > MAX_OPERATION_PAGES,
         },
         source: {
-          remoteTotal: total, fetched: operations.length,
+          remoteTotal: total,
+          fetched: operations.length,
           pagesFetched: Math.min(lastPage, MAX_OPERATION_PAGES),
           truncated: lastPage > MAX_OPERATION_PAGES,
         },
@@ -117,79 +141,159 @@ export async function handleOperationsRoutes(
     }
   }
 
-  const offerMatch = url.pathname.match(/^\/api\/p2p\/([^/]+)$/);
+  const offerMatch = url.pathname.match(/^\\/api\\/p2p\\/([^/]+)$/);
   if (request.method === "GET" && offerMatch?.[1]) {
     const uuid = safeUuid(offerMatch[1]);
     if (!uuid) return json({ error: "Identificador de oferta inválido." }, 400);
     try {
       const upstream = await qvapay(env, "/p2p/" + encodeURIComponent(uuid));
       const payload = await readQvaPayPayload(upstream);
-      return json(upstream.ok ? { offer_uuid: uuid, qvapay: payload } : { error: "No se pudo consultar la oferta", detail: payload }, upstream.status);
+      return json(
+        upstream.ok
+          ? { offer_uuid: uuid, qvapay: payload }
+          : { error: "No se pudo consultar la oferta", detail: payload },
+        upstream.status,
+      );
     } catch (error) {
       return json({ error: String(error) }, errorStatus(error));
     }
   }
 
-  const operationMatch = url.pathname.match(/^\/api\/operations\/([^/]+)\/(paid|received|cancel|chat|rate)$/);
+  const operationMatch = url.pathname.match(
+    /^\\/api\\/operations\\/([^/]+)\\/(paid|received|cancel|chat|rate)$/,
+  );
   if (request.method === "POST" && operationMatch?.[1] && operationMatch[2]) {
     const uuid = safeUuid(operationMatch[1]);
     if (!uuid) return json({ error: "Identificador de operación inválido." }, 400);
     try {
       const action = operationMatch[2];
-      const body = action === "paid" || action === "chat" || action === "rate" ? await readJson(request) : undefined;
+      const body =
+        action === "paid" || action === "chat" || action === "rate"
+          ? await readJson(request)
+          : undefined;
 
       if (action === "paid") {
-        const txId = body && typeof body === "object" ? String((body as JsonRecord).tx_id ?? "").trim() : "";
-        if (!txId || txId.length > 500) return json({ error: "tx_id es obligatorio y debe tener como máximo 500 caracteres." }, 400);
+        const txId =
+          body && typeof body === "object"
+            ? String((body as JsonRecord).tx_id ?? "").trim()
+            : "";
+        if (!txId || txId.length > 500) {
+          return json(
+            { error: "tx_id es obligatorio y debe tener como máximo 500 caracteres." },
+            400,
+          );
+        }
       }
       if (action === "chat") {
-        const message = body && typeof body === "object" ? String((body as JsonRecord).message ?? "").trim() : "";
-        if (!message || message.length > 599) return json({ error: "El mensaje debe tener entre 1 y 599 caracteres." }, 400);
+        const message =
+          body && typeof body === "object"
+            ? String((body as JsonRecord).message ?? "").trim()
+            : "";
+        if (!message || message.length > 599) {
+          return json(
+            { error: "El mensaje debe tener entre 1 y 599 caracteres." },
+            400,
+          );
+        }
       }
       if (action === "rate") {
-        const rating = body && typeof body === "object" ? numberValue((body as JsonRecord).rating) : NaN;
-        if (!Number.isFinite(rating) || rating < 1 || rating > 5) return json({ error: "La calificación debe estar entre 1 y 5." }, 400);
-        const comment = body && typeof body === "object" ? String((body as JsonRecord).comment ?? "") : "";
-        if (comment.length > 120) return json({ error: "El comentario no puede superar 120 caracteres." }, 400);
+        const rating =
+          body && typeof body === "object"
+            ? numberValue((body as JsonRecord).rating)
+            : NaN;
+        if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+          return json(
+            { error: "La calificación debe estar entre 1 y 5." },
+            400,
+          );
+        }
+        const comment =
+          body && typeof body === "object"
+            ? String((body as JsonRecord).comment ?? "")
+            : "";
+        if (comment.length > 120) {
+          return json(
+            { error: "El comentario no puede superar 120 caracteres." },
+            400,
+          );
+        }
       }
 
       const headers: Record<string, string> = {};
       if (body !== undefined) headers["Content-Type"] = "application/json";
-      const upstream = await qvapay(env, "/p2p/" + encodeURIComponent(uuid) + "/" + action, {
-        method: "POST", headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      });
+      const upstream = await qvapay(
+        env,
+        "/p2p/" + encodeURIComponent(uuid) + "/" + action,
+        {
+          method: "POST",
+          headers,
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        },
+      );
       const payload = await readQvaPayPayload(upstream);
       if (upstream.ok && action === "received") {
-        try { await recordFinanceSettlement(env.DB, uuid, payload); }
-        catch (error) { console.error("D1 finance settlement persistence:", error); }
+        try {
+          await recordFinanceSettlement(env.DB, uuid, payload);
+        } catch (error) {
+          console.error("D1 finance settlement persistence:", error);
+        }
       }
-      return json(upstream.ok ? { ok: true, action, offer_uuid: uuid, qvapay: payload } : { error: "QvaPay API error", detail: payload }, upstream.status);
+      return json(
+        upstream.ok
+          ? { ok: true, action, offer_uuid: uuid, qvapay: payload }
+          : { error: "QvaPay API error", detail: payload },
+        upstream.status,
+      );
     } catch (error) {
       return json({ error: String(error) }, errorStatus(error));
     }
   }
 
-  const chatMatch = url.pathname.match(/^\/api\/operations\/([^/]+)\/chat$/);
+  const chatMatch = url.pathname.match(/^\\/api\\/operations\\/([^/]+)\\/chat$/);
   if (request.method === "GET" && chatMatch?.[1]) {
     const uuid = safeUuid(chatMatch[1]);
     if (!uuid) return json({ error: "Identificador de operación inválido." }, 400);
     try {
-      const upstream = await qvapay(env, "/p2p/" + encodeURIComponent(uuid) + "/chat", { method: "GET" });
+      const upstream = await qvapay(
+        env,
+        "/p2p/" + encodeURIComponent(uuid) + "/chat",
+        { method: "GET" },
+      );
       const payload = await readQvaPayPayload(upstream);
-      return json(upstream.ok ? { qvapay: payload } : { error: "QvaPay API error", detail: payload }, upstream.status);
+      return json(
+        upstream.ok
+          ? { qvapay: payload }
+          : { error: "QvaPay API error", detail: payload },
+        upstream.status,
+      );
     } catch (error) {
       return json({ error: String(error) }, errorStatus(error));
     }
   }
 
-  if (request.method === "POST" && /^\/api\/p2p\/[^/]+\/apply$/.test(url.pathname)) {
-    const match = url.pathname.match(/^\/api\/p2p\/([^/]+)\/apply$/);
+  if (
+    request.method === "POST" &&
+    /^\\/api\\/p2p\\/[^/]+\\/apply$/.test(url.pathname)
+  ) {
+    const match = url.pathname.match(/^\\/api\\/p2p\\/([^/]+)\\/apply$/);
     const uuid = safeUuid(match?.[1]);
     if (!uuid) return json({ error: "Identificador de oferta inválido." }, 400);
     try {
-      const upstream = await qvapay(env, "/p2p/" + encodeURIComponent(uuid) + "/apply", { method: "POST" });
+      const upstream = await qvapay(
+        env,
+        "/p2p/" + encodeURIComponent(uuid) + "/apply",
+        { method: "POST" },
+      );
       const payload = await readQvaPayPayload(upstream);
-      return json(upstream.ok ? { applied: true, offer_uuid: uuid, qvapay: payload } : { error: "No se pudo aplicar a la oferta", detail: payload }, upstream.status);
+      return json(
+        upstream.ok
+          ? { applied: true, offer_uuid: uuid, qvapay: payload }
+          : {
+              error: "No se pudo aplicar a la oferta",
+              detail: payload,
+            },
+        upstream.status,
+      );
     } catch (error) {
       return json({ error: String(error) }, errorStatus(error));
     }
