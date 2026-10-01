@@ -23,9 +23,7 @@ export interface QvaPayBalanceParseResult {
  * El campo representa el balance actual en USD. No se aceptan strings,
  * booleanos, valores no finitos, valores negativos ni envelopes anidados.
  */
-export function parseQvaPayBalance(
-  payload: unknown,
-): QvaPayBalanceParseResult {
+export function parseQvaPayBalance(payload: unknown): QvaPayBalanceParseResult {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return {
       ok: false,
