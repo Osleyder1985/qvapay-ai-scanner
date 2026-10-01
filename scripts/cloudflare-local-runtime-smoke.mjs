@@ -113,17 +113,27 @@ qvapayMockServer = createServer((request, response) => {
   response.writeHead(404, { "Content-Type": "application/json" });
   response.end(JSON.stringify({ error: "not_found" }));
 });
-qvapayMockServer.listen(8788, "127.0.0.1");
+await new Promise((resolve, reject) => {
+  qvapayMockServer.once("error", reject);
+  qvapayMockServer.listen(8788, "127.0.0.1", resolve);
+});
 
-writeFileSync(devVarsPath, "", "utf8");
+writeFileSync(
+  devVarsPath,
+  [
+    `AUTH_USERNAME=${username}`,
+    `AUTH_PASSWORD=${password}`,
+    `QVAPAY_API_BASE_URL=${qvapayMockUrl}`,
+    "QVAPAY_APP_ID=ci-smoke-app",
+    "QVAPAY_APP_SECRET=ci-smoke-secret",
+    "",
+  ].join("\\n"),
+  "utf8",
+);
 
 const wranglerEnv = {
   ...process.env,
-  AUTH_USERNAME: username,
-  AUTH_PASSWORD: password,
-  QVAPAY_API_BASE_URL: qvapayMockUrl,
-  QVAPAY_APP_ID: "ci-smoke-app",
-  QVAPAY_APP_SECRET: "ci-smoke-secret",
+  CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "true",
 };
 
 server = spawn(
