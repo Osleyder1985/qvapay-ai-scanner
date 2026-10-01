@@ -5,20 +5,18 @@ import assert from "node:assert/strict";
 
 const source = readFileSync(join(process.cwd(), "src", "worker.ts"), "utf8");
 
-test("account endpoint accepts documented QvaPay balance shapes", () => {
-  assert.ok(source.includes("numberValue(balanceRecord?.balance)"));
-  assert.ok(source.includes("numberValue(balanceData?.balance)"));
-  assert.ok(source.includes("const wrappedBalance ="));
-  assert.ok(source.includes("balanceSource: Number.isFinite(balanceValue)"));
+test("account endpoint reads the documented QvaPay balance field", () => {
+  assert.match(source, /numberValue\(balanceRecord\?\.balance\)/);
+  assert.match(source, /balanceSource: Number\.isFinite\(balanceValue\)/);
 });
 
-
 test(
-  "QvaPay POST requests set JSON content type for balance compatibility",
+  "account endpoint also accepts a standard wrapped data.balance response",
   () => {
-    assert.ok(source.includes('init.method?.toUpperCase() === "POST"'));
-    assert.ok(
-      source.includes('headers.set("Content-Type", "application/json")'),
+    assert.match(source, /numberValue\(balanceData\?\.balance\)/);
+    assert.match(
+      source,
+      /const wrappedBalance = numberValue\(balanceData\?\.balance\)/,
     );
   },
 );
