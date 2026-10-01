@@ -108,6 +108,10 @@ async function qvapay(
     new Headers(init.headers).forEach((value, key) => headers.set(key, value));
   }
 
+  if (init.method?.toUpperCase() === "POST" && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
   return fetch(new URL(path, apiBase(env)), {
     ...init,
     headers,
