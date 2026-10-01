@@ -332,7 +332,10 @@ export async function handleMarketRoutes(
         ),
       });
     } catch (error) {
-      return json({ error: "No se pudo consultar el histórico de mercado." }, 503);
+      return json(
+        { error: "No se pudo consultar el histórico de mercado." },
+        503,
+      );
     }
   }
 
@@ -368,9 +371,7 @@ export async function handleMarketRoutes(
     try {
       const result = await market(env, url);
       return json(
-        result.response.ok
-          ? result.payload
-          : { error: "QvaPay API error." },
+        result.response.ok ? result.payload : { error: "QvaPay API error." },
         result.response.status,
       );
     } catch (error) {
