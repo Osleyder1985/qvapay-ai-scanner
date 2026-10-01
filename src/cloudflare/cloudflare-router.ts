@@ -76,13 +76,15 @@ export async function handleApi(
     return json({ ok: true, service: "qvapay-ai-scanner-worker" });
   }
 
+  const authEnv: Parameters<typeof handleAuthRoutes>[1] = {
+    DB: env.DB as unknown as SessionDatabase,
+  };
+  if (env.AUTH_USERNAME !== undefined) authEnv.AUTH_USERNAME = env.AUTH_USERNAME;
+  if (env.AUTH_PASSWORD !== undefined) authEnv.AUTH_PASSWORD = env.AUTH_PASSWORD;
+
   const authResponse = await handleAuthRoutes(
     request,
-    {
-      DB: env.DB as unknown as SessionDatabase,
-      AUTH_USERNAME: env.AUTH_USERNAME,
-      AUTH_PASSWORD: env.AUTH_PASSWORD,
-    },
+    authEnv,
     url,
     json,
     readJson,
