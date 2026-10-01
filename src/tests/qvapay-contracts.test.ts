@@ -61,14 +61,12 @@ test("accepts object action responses and rejects ambiguous payloads", () => {
   assert.equal(parseQvaPayP2PActionResponse("ok"), null);
 });
 
-
 test("names the P2P offer, action and chat contracts explicitly", () => {
   const payload = { success: true };
   assert.deepEqual(parseQvaPayP2POfferResponse(payload), { payload });
   assert.deepEqual(parseQvaPayP2PActionResponse(payload), { payload });
   assert.deepEqual(parseQvaPayP2PChatResponse(payload), { payload });
 });
-
 
 test("validates the sanitized P2P fixture at the integration boundary", () => {
   const fixture = JSON.parse(
