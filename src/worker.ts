@@ -7,7 +7,10 @@
  */
 
 import { requireSession, type SessionDatabase } from "./cloudflare/access.js";
-import { routeRequest, type WorkerEnv } from "./cloudflare/cloudflare-router.js";
+import {
+  routeRequest,
+  type WorkerEnv,
+} from "./cloudflare/cloudflare-router.js";
 
 export default {
   async fetch(request: Request, env: WorkerEnv): Promise<Response> {
