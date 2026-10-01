@@ -13,7 +13,12 @@ test("account endpoint accepts documented QvaPay balance shapes", () => {
 });
 
 
-test("QvaPay POST requests set JSON content type for balance compatibility", () => {
-  assert.ok(source.includes('init.method?.toUpperCase() === "POST"'));
-  assert.ok(source.includes('headers.set("Content-Type", "application/json")'));
-});
+test(
+  "QvaPay POST requests set JSON content type for balance compatibility",
+  () => {
+    assert.ok(source.includes('init.method?.toUpperCase() === "POST"'));
+    assert.ok(
+      source.includes('headers.set("Content-Type", "application/json")'),
+    );
+  },
+);
