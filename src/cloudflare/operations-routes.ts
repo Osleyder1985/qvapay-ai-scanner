@@ -231,7 +231,7 @@ export async function handleOperationsRoutes(
       if (!upstream.ok) {
         return json({ error: "QvaPay API error." }, upstream.status);
       }
-      const contract = parseQvaPayActionResponse(payload);
+      const contract = parseQvaPayP2PActionResponse(payload);
       if (!contract) return json({ error: "QvaPay API contract error." }, 502);
 
       if (action === "received") {
@@ -272,7 +272,7 @@ export async function handleOperationsRoutes(
       if (!upstream.ok) {
         return json({ error: "QvaPay API error." }, upstream.status);
       }
-      const contract = parseQvaPayActionResponse(payload);
+      const contract = parseQvaPayP2PActionResponse(payload);
       if (!contract) return json({ error: "QvaPay API contract error." }, 502);
       return json({ qvapay: contract.payload });
     } catch (error) {
@@ -305,7 +305,7 @@ export async function handleOperationsRoutes(
           upstream.status,
         );
       }
-      const contract = parseQvaPayActionResponse(payload);
+      const contract = parseQvaPayP2PActionResponse(payload);
       if (!contract) return json({ error: "QvaPay API contract error." }, 502);
       return json({
         applied: true,
