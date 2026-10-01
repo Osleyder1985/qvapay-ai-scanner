@@ -1,7 +1,7 @@
 /**
  * @file finance-reconciliation.ts
  * @path src/backend/finance-reconciliation.ts
- * @description Implements finance reconciliation for QvaPay AI Scanner.
+ * @description Implementa la conciliación financiera de QvaPay AI Scanner.
  * @module backend
  * @status active
  */
@@ -13,7 +13,7 @@ export interface P2PPage {
 
 /**
 
- * Public interface ReconciliationResult used by the module.
+ * interface ReconciliationResult público utilizado por el módulo.
 
  */
 
@@ -26,7 +26,7 @@ export interface ReconciliationResult {
 
 /**
 
- * Public type FetchCompletedPage used by the module.
+ * type FetchCompletedPage público utilizado por el módulo.
 
  */
 
@@ -35,9 +35,9 @@ export type FetchCompletedPage = (page: number) => Promise<P2PPage>;
 const MAX_PAGES = 1000;
 
 /**
- * Implements the fetchAllCompletedP2P operation for this module.
+ * Implementa la operación fetchAllCompletedP2P de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 export async function fetchAllCompletedP2P(
   fetchPage: FetchCompletedPage,
@@ -73,9 +73,9 @@ export async function fetchAllCompletedP2P(
 }
 
 /**
- * Implements the reconcileCompletedIds operation for this module.
+ * Implementa la operación reconcileCompletedIds de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 export function reconcileCompletedIds(
   remoteOffers: Record<string, unknown>[],
