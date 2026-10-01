@@ -1,3 +1,20 @@
+import {
+  appendMarketHistory,
+  d1Health,
+  listFinanceEntries,
+  listOperationIds,
+  queryMarketHistory,
+  recordFinanceSettlement,
+  upsertFinanceEntries,
+  upsertOperations,
+  type D1Database,
+  type FinanceLedgerEntry,
+  type MarketHistoryPoint,
+} from "./cloudflare/d1.js";
+import { calculateFinanceSummary } from "./backend/finance.js";
+import { summarizeTrends } from "./backend/trend-engine.js";
+import { calculateBaselines } from "./backend/market-baseline.js";
+
 /**
  * @file worker.ts
  * @path src/worker.ts
@@ -12,6 +29,7 @@
  */
 
 interface WorkerEnv {
+  DB: D1Database;
   ASSETS: { fetch(request: Request): Promise<Response> };
   QVAPAY_API_BASE_URL?: string;
   QVAPAY_APP_ID?: string;
@@ -162,7 +180,18 @@ async function market(
   const params = sanitizeMarketParams(url);
   Object.entries(overrides).forEach(([key, value]) => params.set(key, value));
   const upstream = await qvapay(env, "/p2p?" + params.toString());
-  return { response: upstream, payload: await readPayload(upstream) };
+  const payload = await readPayload(upstream);
+  if (upstream.ok && params.get("page") === "1") {
+    try {
+      await appendMarketHistory(
+        env.DB,
+        summarizeMarketOffers(records(payload)),
+      );
+    } catch (error) {
+      console.error("D1 market history persistence:", error);
+    }
+  }
+  return { response: upstream, payload };
 }
 
 function records(payload: unknown): JsonRecord[] {
@@ -198,6 +227,44 @@ function pagination(
 function numberValue(value: unknown): number {
   const number = Number(value);
   return Number.isFinite(number) ? number : NaN;
+}
+
+function summarizeMarketOffers(
+  offers: JsonRecord[],
+  timestamp = new Date().toISOString(),
+): MarketHistoryPoint[] {
+  const groups = new Map<
+    string,
+    { rates: number[]; coin: string; type: string }
+  >();
+  for (const offer of offers) {
+    const amount = numberValue(offer.amount);
+    const receive = numberValue(offer.receive);
+    if (!(amount > 0) || !(receive >= 0)) continue;
+    const coin = String(offer.coin ?? "")
+      .trim()
+      .toUpperCase();
+    const type = String(offer.type ?? "")
+      .trim()
+      .toLowerCase();
+    if (!coin || !type) continue;
+    const key = type + "|" + coin;
+    const group = groups.get(key) ?? { rates: [], coin, type };
+    group.rates.push(receive / amount);
+    groups.set(key, group);
+  }
+  return [...groups.values()].map((group) => ({
+    timestamp,
+    coin: group.coin,
+    type: group.type,
+    samples: group.rates.length,
+    minRate: group.rates.length ? Math.min(...group.rates) : null,
+    medianRate: median(group.rates),
+    maxRate: group.rates.length ? Math.max(...group.rates) : null,
+    spread: group.rates.length
+      ? Math.max(...group.rates) - Math.min(...group.rates)
+      : null,
+  }));
 }
 
 function median(values: number[]): number | null {
@@ -358,6 +425,108 @@ async function handleApi(
     return json({ ok: true, service: "qvapay-ai-scanner-worker" });
   }
 
+  if (
+    request.method === "GET" &&
+    url.pathname === "/api/cloudflare/d1/health"
+  ) {
+    try {
+      return json(await d1Health(env.DB));
+    } catch (error) {
+      return json(
+        {
+          ok: false,
+          error: "D1 no está disponible o no tiene el esquema aplicado.",
+          detail: String(error),
+        },
+        503,
+      );
+    }
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/market/snapshot") {
+    try {
+      const health = await d1Health(env.DB);
+      return json({
+        marketSnapshot: {
+          persistence: health.ok ? "d1" : "unavailable",
+          tables: health.tables,
+        },
+      });
+    } catch (error) {
+      return json(
+        {
+          error: "No se pudo consultar el estado de D1",
+          detail: String(error),
+        },
+        503,
+      );
+    }
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/history") {
+    try {
+      const coin = url.searchParams.get("coin") ?? undefined;
+      const type = url.searchParams.get("type") ?? undefined;
+      const limit = Number(url.searchParams.get("limit") ?? "200");
+      return json({
+        history: await queryMarketHistory(
+          env.DB,
+          coin,
+          type,
+          Number.isFinite(limit) ? limit : 200,
+        ),
+      });
+    } catch (error) {
+      return json(
+        {
+          error: "No se pudo consultar el histórico de mercado",
+          detail: String(error),
+        },
+        503,
+      );
+    }
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/trends") {
+    try {
+      const coin = url.searchParams.get("coin") ?? undefined;
+      const type = url.searchParams.get("type") ?? undefined;
+      const points = await queryMarketHistory(env.DB, coin, type, 1000);
+      return json({ trends: summarizeTrends(points) });
+    } catch (error) {
+      return json(
+        {
+          error: "No se pudieron calcular las tendencias",
+          detail: String(error),
+        },
+        503,
+      );
+    }
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/baselines") {
+    try {
+      const coin = url.searchParams.get("coin") ?? undefined;
+      const type = url.searchParams.get("type") ?? undefined;
+      const lookback = Number(url.searchParams.get("lookback") ?? "24");
+      const points = await queryMarketHistory(env.DB, coin, type, 1000);
+      return json({
+        baselines: calculateBaselines(
+          points,
+          Number.isFinite(lookback) ? lookback : 24,
+        ),
+      });
+    } catch (error) {
+      return json(
+        {
+          error: "No se pudieron calcular las líneas base",
+          detail: String(error),
+        },
+        503,
+      );
+    }
+  }
+
   if (url.pathname === "/api/p2p" && request.method === "GET") {
     try {
       const result = await market(env, url);
@@ -491,6 +660,16 @@ async function handleApi(
         if (page >= lastPage || !records(payload).length) break;
       }
 
+      await upsertOperations(env.DB, operations);
+      const ledgerIds = await listOperationIds(env.DB);
+      const remoteIds = new Set(
+        operations
+          .map((operation) =>
+            String(operation.uuid ?? operation.id ?? "").trim(),
+          )
+          .filter(Boolean),
+      );
+      const localIds = new Set(ledgerIds);
       return json({
         operations: {
           data: operations,
@@ -507,14 +686,14 @@ async function handleApi(
           truncated: lastPage > MAX_OPERATION_PAGES,
         },
         persistence: {
-          persisted: operations.length,
-          reconciled: true,
+          persisted: ledgerIds.length,
+          reconciled: [...remoteIds].every((id) => localIds.has(id)),
         },
         reconciliation: {
-          remoteCount: operations.length,
-          ledgerCount: operations.length,
-          missingInLedger: [],
-          staleLocal: [],
+          remoteCount: remoteIds.size,
+          ledgerCount: localIds.size,
+          missingInLedger: [...remoteIds].filter((id) => !localIds.has(id)),
+          staleLocal: [...localIds].filter((id) => !remoteIds.has(id)),
         },
       });
     } catch (error) {
@@ -619,6 +798,13 @@ async function handleApi(
         },
       );
       const payload = await readPayload(upstream);
+      if (upstream.ok && action === "received") {
+        try {
+          await recordFinanceSettlement(env.DB, uuid, payload);
+        } catch (error) {
+          console.error("D1 finance settlement persistence:", error);
+        }
+      }
       return json(
         upstream.ok
           ? { ok: true, action, offer_uuid: uuid, qvapay: payload }
@@ -675,6 +861,105 @@ async function handleApi(
       );
     } catch (error) {
       return json({ error: String(error) }, errorStatus(error));
+    }
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/finance") {
+    try {
+      const remoteEntries: FinanceLedgerEntry[] = [];
+      for (let page = 1; page <= MAX_OPERATION_PAGES; page += 1) {
+        const pageUrl = new URL(url);
+        pageUrl.search = "";
+        pageUrl.searchParams.set("my", "1");
+        pageUrl.searchParams.set("status", "completed");
+        pageUrl.searchParams.set("take", String(MAX_PAGE_SIZE));
+        pageUrl.searchParams.set("page", String(page));
+        pageUrl.searchParams.set("orderBy", "updated_at");
+        pageUrl.searchParams.set("orderType", "asc");
+        const upstream = await qvapay(env, "/p2p?" + pageUrl.searchParams);
+        const payload = await readPayload(upstream);
+        if (!upstream.ok) {
+          return json(
+            { error: "QvaPay API error", detail: payload },
+            upstream.status,
+          );
+        }
+        const pageRecords = records(payload);
+        for (const offer of pageRecords) {
+          const status = String(offer.status ?? "").toLowerCase();
+          const type = String(offer.type ?? "").toLowerCase();
+          const amount = numberValue(offer.amount);
+          const receive = numberValue(offer.receive);
+          const uuid = String(offer.uuid ?? offer.id ?? "").trim();
+          if (
+            uuid &&
+            status === "completed" &&
+            (type === "buy" || type === "sell") &&
+            Number.isFinite(amount) &&
+            amount > 0 &&
+            Number.isFinite(receive) &&
+            receive >= 0
+          ) {
+            const createdAt = String(
+              offer.created_at ??
+                offer.createdAt ??
+                offer.updated_at ??
+                new Date(0).toISOString(),
+            );
+            remoteEntries.push({
+              uuid,
+              status: "completed",
+              type: type as "buy" | "sell",
+              coin: String(offer.coin ?? "QUSD"),
+              amount,
+              receive,
+              createdAt,
+              updatedAt: String(
+                offer.updated_at ?? offer.updatedAt ?? createdAt,
+              ),
+              recordedAt: new Date().toISOString(),
+              grossAmountQusd: amount,
+              feeQusd: null,
+              netAmountQusd: null,
+              feeSource: "unknown",
+            });
+          }
+        }
+        const meta = pagination(payload, remoteEntries.length);
+        const lastPage = Math.max(1, Math.ceil(meta.total / meta.perPage));
+        if (page >= lastPage || !pageRecords.length) break;
+      }
+
+      await upsertFinanceEntries(env.DB, remoteEntries);
+      const ledger = await listFinanceEntries(env.DB);
+      const knownFees = ledger.filter(
+        (entry) => entry.feeSource === "qvapay_received",
+      );
+      const feeQusd = knownFees.reduce(
+        (sum, entry) => sum + (entry.feeQusd ?? 0),
+        0,
+      );
+      return json({
+        finance: calculateFinanceSummary(ledger),
+        fees: {
+          knownQusd: feeQusd,
+          knownOperations: knownFees.length,
+          unknownOperations: ledger.length - knownFees.length,
+        },
+        source: {
+          status: "completed",
+          fetched: remoteEntries.length,
+          persisted: ledger.length,
+        },
+      });
+    } catch (error) {
+      return json(
+        {
+          error: "No se pudo sincronizar el ledger financiero",
+          detail: String(error),
+        },
+        503,
+      );
     }
   }
 
