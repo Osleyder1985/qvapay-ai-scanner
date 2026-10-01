@@ -31,7 +31,7 @@ export default {
 
     if (url.pathname === "/login") {
       const assetResponse = await env.ASSETS.fetch(
-        new Request(new URL("/login.html", request.url), request),
+        new URL("/login.html", request.url),
       );
       return withSecurityHeaders(assetResponse);
     }
