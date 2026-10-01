@@ -332,10 +332,7 @@ export async function handleMarketRoutes(
         ),
       });
     } catch (error) {
-      return json(
-        { error: "No se pudo consultar el histórico de mercado." },
-        503,
-      );
+      return json({ error: "No se pudo consultar el histórico de mercado." }, 503);
     }
   }
 
@@ -346,10 +343,7 @@ export async function handleMarketRoutes(
       const points = await queryMarketHistory(env.DB, coin, type, 1000);
       return json({ trends: summarizeTrends(points) });
     } catch (error) {
-      return json(
-        { error: "No se pudieron calcular las tendencias." },
-        503,
-      );
+      return json({ error: "No se pudieron calcular las tendencias." }, 503);
     }
   }
 
@@ -366,10 +360,7 @@ export async function handleMarketRoutes(
         ),
       });
     } catch (error) {
-      return json(
-        { error: "No se pudieron calcular las líneas base." },
-        503,
-      );
+      return json({ error: "No se pudieron calcular las líneas base." }, 503);
     }
   }
 
@@ -404,10 +395,7 @@ export async function handleMarketRoutes(
         pageUrl.searchParams.set("page", String(page));
         const result = await market(env, pageUrl);
         if (!result.response.ok) {
-          return json(
-            { error: "QvaPay API error." },
-            result.response.status,
-          );
+          return json({ error: "QvaPay API error." }, result.response.status);
         }
         offers.push(...records(result.payload));
         const meta = pagination(result.payload, offers.length);
