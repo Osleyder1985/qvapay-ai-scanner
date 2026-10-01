@@ -36,7 +36,7 @@ interface WorkerEnv {
   AUTH_PASSWORD?: string;
 }
 
-/function json(
+function json(
   payload: unknown,
   status = 200,
   headers: Record<string, string> = {},
