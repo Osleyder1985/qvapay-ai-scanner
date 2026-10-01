@@ -465,15 +465,24 @@ async function handleApi(
         return json({ error: "Credenciales inválidas." }, 401);
       }
 
+      if (!env.AUTH_USERNAME || !env.AUTH_PASSWORD) {
+        console.error("Authentication secrets are not configured.");
+        return json(
+          { error: "El servicio de autenticación no está configurado." },
+          503,
+        );
+      }
+
       return await createSession(
         request,
         env.DB as unknown as SessionDatabase,
         username,
       );
     } catch (error) {
+      console.error("Authentication session creation failed:", error);
       return json(
-        { error: "No se pudo iniciar sesión.", detail: String(error) },
-        500,
+        { error: "El servicio de autenticación no pudo crear la sesión." },
+        503,
       );
     }
   }
