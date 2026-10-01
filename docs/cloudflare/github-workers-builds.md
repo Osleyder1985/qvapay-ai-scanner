@@ -87,12 +87,12 @@ Las ramas no productivas sólo deben utilizar previews si están explícitamente
 
 ### Pendiente de verificación en Cloudflare
 
-- [ ] Workers Builds conectado al repositorio correcto.
-- [ ] Rama de producción de Workers Builds = `production/cloudflare`.
-- [ ] Build command = `npm run build`.
-- [ ] Deploy command = `npx wrangler deploy`.
-- [ ] Un build automático exitoso después de un push/merge a producción.
-- [ ] El deployment automático corresponde al commit de `production/cloudflare`.
+- [x] Workers Builds conectado al repositorio correcto.
+- [x] Rama de producción de Workers Builds = `production/cloudflare`.
+- [x] Build command = `npm run build`.
+- [x] Deploy command = `npx wrangler deploy`.
+- [x] Un build automático exitoso después de un push/merge a producción.
+- [x] El deployment automático corresponde al commit de `production/cloudflare`.
 
 ## Seguridad
 
