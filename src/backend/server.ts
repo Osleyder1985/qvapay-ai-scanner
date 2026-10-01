@@ -1,7 +1,7 @@
 /**
  * @file server.ts
  * @path src/backend/server.ts
- * @description Implements server for QvaPay AI Scanner.
+ * @description Implementa el servidor de QvaPay AI Scanner.
  * @module backend
  * @status active
  */
@@ -41,7 +41,7 @@ const marketSnapshot = new MarketSnapshotService();
 const operationsLedger = new OperationsLedgerStore();
 const MAX_OPERATION_PAGES = 100;
 
-// The dashboard exposes QvaPay operations. Keep the current trust boundary local-only.
+// El dashboard expone operaciones de QvaPay. Mantiene la frontera de confianza limitada al entorno local.
 assertDashboardHostIsSafe(HOST);
 
 const allowedQueryParameters = new Set([
@@ -61,11 +61,11 @@ const allowedQueryParameters = new Set([
 ]);
 
 /**
- * Implements the sendJson operation for this module.
- * @param response Input used by the operation.
- * @param status Input used by the operation.
- * @param payload Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación sendJson de este módulo.
+ * @param response Entrada utilizada por la operation.
+ * @param status Entrada utilizada por la operation.
+ * @param payload Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 function sendJson(
   response: ServerResponse,
@@ -82,9 +82,9 @@ function sendJson(
 }
 
 /**
- * Implements the contentType operation for this module.
- * @param path Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación contentType de este módulo.
+ * @param path Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 function contentType(path: string): string {
   switch (extname(path)) {
@@ -100,10 +100,10 @@ function contentType(path: string): string {
 }
 
 /**
- * Implements the sendFile operation for this module.
- * @param response Input used by the operation.
- * @param path Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación sendFile de este módulo.
+ * @param response Entrada utilizada por la operation.
+ * @param path Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function sendFile(response: ServerResponse, path: string): Promise<void> {
   try {
@@ -120,9 +120,9 @@ async function sendFile(response: ServerResponse, path: string): Promise<void> {
 }
 
 /**
- * Implements the qvapayHeaders operation for this module.
+ * Implementa la operación qvapayHeaders de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 function qvapayHeaders(): Record<string, string> {
   const appId = process.env.QVAPAY_APP_ID;
@@ -143,9 +143,9 @@ function qvapayHeaders(): Record<string, string> {
 }
 
 /**
- * Implements the sanitizeQuery operation for this module.
- * @param url Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación sanitizeQuery de este módulo.
+ * @param url Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 function sanitizeQuery(url: URL): URLSearchParams {
   const params = new URLSearchParams();
@@ -174,9 +174,9 @@ function sanitizeQuery(url: URL): URLSearchParams {
 }
 
 /**
- * Implements the fetchP2P operation for this module.
- * @param url Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación fetchP2P de este módulo.
+ * @param url Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function fetchP2P(url: URL): Promise<Response> {
   const params = sanitizeQuery(url);
@@ -193,9 +193,9 @@ async function fetchP2P(url: URL): Promise<Response> {
 }
 
 /**
- * Implements the fetchBalance operation for this module.
+ * Implementa la operación fetchBalance de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 async function fetchBalance(): Promise<Response> {
   const endpoint = new URL("/v2/balance", QVAPAY_API_BASE_URL);
@@ -207,11 +207,11 @@ async function fetchBalance(): Promise<Response> {
 }
 
 /**
- * Implements the fetchP2PAction operation for this module.
- * @param uuid Input used by the operation.
- * @param action Input used by the operation.
- * @param method Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación fetchP2PAction de este módulo.
+ * @param uuid Entrada utilizada por la operation.
+ * @param action Entrada utilizada por la operation.
+ * @param method Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function fetchP2PAction(
   uuid: string,
@@ -234,9 +234,9 @@ async function fetchP2PAction(
 }
 
 /**
- * Reconstructs the complete available own-operation history from QvaPay.
- * The local ledger is only updated after all pages are fetched successfully.
- * @returns Remote operations, pagination metadata and reconciliation data.
+ * Reconstruye el historial completo disponible de operaciones propias desde QvaPay.
+ * El ledger local sólo se actualiza después de obtener correctamente todas las páginas.
+ * @returns Operaciones remotas, metadatos de paginación y datos de conciliación.
  */
 async function fetchAllOperations(): Promise<{
   operations: Record<string, unknown>[];
@@ -301,9 +301,9 @@ async function fetchAllOperations(): Promise<{
 }
 
 /**
- * Implements the fetchP2POffer operation for this module.
- * @param uuid Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación fetchP2POffer de este módulo.
+ * @param uuid Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function fetchP2POffer(uuid: string): Promise<Response> {
   const endpoint = new URL(
@@ -319,9 +319,9 @@ async function fetchP2POffer(uuid: string): Promise<Response> {
 }
 
 /**
- * Implements the applyP2POffer operation for this module.
- * @param uuid Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación applyP2POffer de este módulo.
+ * @param uuid Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function applyP2POffer(uuid: string): Promise<Response> {
   const endpoint = new URL(
@@ -337,9 +337,9 @@ async function applyP2POffer(uuid: string): Promise<Response> {
 }
 
 /**
- * Implements the readUpstreamPayload operation for this module.
- * @param upstream Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación readUpstreamPayload de este módulo.
+ * @param upstream Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function readUpstreamPayload(upstream: Response): Promise<unknown> {
   const text = await upstream.text();
@@ -352,9 +352,9 @@ async function readUpstreamPayload(upstream: Response): Promise<unknown> {
 }
 
 /**
- * Implements the readJsonBody operation for this module.
- * @param request Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación readJsonBody de este módulo.
+ * @param request Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function readJsonBody(request: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
@@ -380,10 +380,10 @@ async function readJsonBody(request: IncomingMessage): Promise<unknown> {
 }
 
 /**
- * Implements the handleApiP2P operation for this module.
- * @param response Input used by the operation.
- * @param url Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación handleApiP2P de este módulo.
+ * @param response Entrada utilizada por la operation.
+ * @param url Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function handleApiP2P(response: ServerResponse, url: URL): Promise<void> {
   try {
@@ -411,9 +411,9 @@ async function handleApiP2P(response: ServerResponse, url: URL): Promise<void> {
 const MAX_INTELLIGENCE_PAGES = 10;
 
 /**
- * Implements the fetchAllMarketPages operation for this module.
- * @param url Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación fetchAllMarketPages de este módulo.
+ * @param url Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function fetchAllMarketPages(url: URL): Promise<{
   offers: Record<string, unknown>[];
@@ -472,10 +472,10 @@ async function fetchAllMarketPages(url: URL): Promise<{
 }
 
 /**
- * Implements the handleApiIntelligence operation for this module.
- * @param response Input used by the operation.
- * @param url Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación handleApiIntelligence de este módulo.
+ * @param response Entrada utilizada por la operation.
+ * @param url Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function handleApiIntelligence(
   response: ServerResponse,
@@ -502,10 +502,10 @@ async function handleApiIntelligence(
 }
 
 /**
- * Implements the handleApiP2POffer operation for this module.
- * @param response Input used by the operation.
- * @param uuid Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación handleApiP2POffer de este módulo.
+ * @param response Entrada utilizada por la operation.
+ * @param uuid Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function handleApiP2POffer(
   response: ServerResponse,
@@ -541,9 +541,9 @@ async function handleApiP2POffer(
 }
 
 /**
- * Implements the handleApiOperations operation for this module.
- * @param response Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación handleApiOperations de este módulo.
+ * @param response Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function handleApiOperations(response: ServerResponse): Promise<void> {
   try {
@@ -590,13 +590,13 @@ async function handleApiOperations(response: ServerResponse): Promise<void> {
 }
 
 /**
- * Implements the handleApiOperationAction operation for this module.
- * @param response Input used by the operation.
- * @param uuid Input used by the operation.
- * @param action Input used by the operation.
- * @param method Input used by the operation.
- * @param request Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación handleApiOperationAction de este módulo.
+ * @param response Entrada utilizada por la operation.
+ * @param uuid Entrada utilizada por la operation.
+ * @param action Entrada utilizada por la operation.
+ * @param method Entrada utilizada por la operation.
+ * @param request Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function handleApiOperationAction(
   response: ServerResponse,
@@ -704,10 +704,10 @@ async function handleApiOperationAction(
 }
 
 /**
- * Implements the handleApiApplyP2P operation for this module.
- * @param response Input used by the operation.
- * @param uuid Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación handleApiApplyP2P de este módulo.
+ * @param response Entrada utilizada por la operation.
+ * @param uuid Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function handleApiApplyP2P(
   response: ServerResponse,
@@ -743,9 +743,9 @@ async function handleApiApplyP2P(
 }
 
 /**
- * Implements the fetchOwnP2P operation for this module.
+ * Implementa la operación fetchOwnP2P de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 async function fetchOwnP2P(status?: string): Promise<Response> {
   const query = new URLSearchParams({
@@ -759,9 +759,9 @@ async function fetchOwnP2P(status?: string): Promise<Response> {
 }
 
 /**
- * Implements the fetchCompletedPage operation for this module.
- * @param page Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación fetchCompletedPage de este módulo.
+ * @param page Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function fetchCompletedPage(page: number): Promise<{
   data: Record<string, unknown>[];
@@ -802,9 +802,9 @@ const marketHistory = new MarketHistoryStore();
 const financeLedger = new FinanceLedgerStore();
 
 /**
- * Implements the collectMarketHistory operation for this module.
+ * Implementa la operación collectMarketHistory de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 async function collectMarketHistory(): Promise<void> {
   try {
@@ -843,11 +843,11 @@ const autoApplyEngine = new AutoApplyEngine({
 });
 
 /**
- * Implements the handleAutoApplyConfig operation for this module.
- * @param response Input used by the operation.
- * @param method Input used by the operation.
- * @param request Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación handleAutoApplyConfig de este módulo.
+ * @param response Entrada utilizada por la operation.
+ * @param method Entrada utilizada por la operation.
+ * @param request Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function handleAutoApplyConfig(
   response: ServerResponse,
@@ -870,10 +870,10 @@ async function handleAutoApplyConfig(
 }
 
 /**
- * Implements the handleRequest operation for this module.
- * @param request Input used by the operation.
- * @param response Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación handleRequest de este módulo.
+ * @param request Entrada utilizada por la operation.
+ * @param response Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 async function handleRequest(
   request: IncomingMessage,
