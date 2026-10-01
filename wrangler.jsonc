@@ -16,9 +16,7 @@
       "migrations_dir": "migrations"
     }
   ],
-  "secrets": {
-    "required": ["QVAPAY_APP_ID", "QVAPAY_APP_SECRET", "AUTH_USERNAME", "AUTH_PASSWORD"]
-  },
+  "previews": {},
   "observability": {
     "enabled": true
   }
