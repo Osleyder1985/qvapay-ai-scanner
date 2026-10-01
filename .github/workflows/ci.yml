@@ -26,10 +26,5 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
-      - name: Diagnose Prettier output
-        run: |
-          npx prettier --write src/cloudflare/access.ts
-          git diff -- src/cloudflare/access.ts
-
       - name: Quality gates
         run: npm run quality
