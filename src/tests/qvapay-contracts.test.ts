@@ -71,7 +71,7 @@ test("names the P2P offer, action and chat contracts explicitly", () => {
 test("validates the sanitized P2P fixture at the integration boundary", () => {
   const fixture = JSON.parse(
     readFileSync(
-      new URL("../../src/tests/fixtures/qvapay-p2p-response.json", import.meta.url),
+      new URL(\n        "../../src/tests/fixtures/qvapay-p2p-response.json",\n        import.meta.url,\n      ),
       "utf8",
     ),
   );
