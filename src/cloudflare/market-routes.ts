@@ -427,7 +427,10 @@ export async function handleMarketRoutes(
         },
       });
     } catch (error) {
-      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
+      return json(
+        { error: "No se pudo completar la solicitud." },
+        errorStatus(error),
+      );
     }
   }
 
