@@ -25,9 +25,7 @@ export function apiBase(env: QvaPayHttpEnv): string {
  * Construye exclusivamente las cabeceras necesarias para autenticarse
  * contra la API de QvaPay. El secreto nunca forma parte de una respuesta.
  */
-export function qvapayHeaders(
-  env: QvaPayHttpEnv,
-): Record<string, string> {
+export function qvapayHeaders(env: QvaPayHttpEnv): Record<string, string> {
   if (!env.QVAPAY_APP_ID || !env.QVAPAY_APP_SECRET) {
     throw new Error(
       "Faltan QVAPAY_APP_ID y QVAPAY_APP_SECRET en los secrets del Worker.",
@@ -45,9 +43,7 @@ export function qvapayHeaders(
 /**
  * Lee JSON de una respuesta QvaPay sin propagar errores de parseo.
  */
-export async function readQvaPayPayload(
-  response: Response,
-): Promise<unknown> {
+export async function readQvaPayPayload(response: Response): Promise<unknown> {
   const text = await response.text();
   if (!text) return {};
   try {
