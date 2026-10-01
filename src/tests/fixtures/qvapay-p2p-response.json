@@ -1,0 +1,14 @@
+{
+  "data": [
+    {
+      "uuid": "fixture-offer-001",
+      "type": "sell",
+      "coin": "USDT",
+      "amount": 100,
+      "receive": 37000,
+      "status": "open"
+    }
+  ],
+  "total": 1,
+  "per_page": 100
+}
