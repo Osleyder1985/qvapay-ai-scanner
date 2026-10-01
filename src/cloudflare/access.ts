@@ -48,10 +48,12 @@ CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires_at
 `;
 
 async function ensureAuthSessionSchema(db: SessionDatabase): Promise<void> {
-  for (const statement of AUTH_SESSION_SCHEMA
+  const statements = AUTH_SESSION_SCHEMA
     .split(";")
     .map((item) => item.trim())
-    .filter(Boolean)) {
+    .filter(Boolean);
+
+  for (const statement of statements) {
     await db.prepare(statement).bind().run();
   }
 }
