@@ -52,7 +52,9 @@ function requestUrl(request: Request): URL {
 
 export async function readJson(request: Request): Promise<unknown> {
   const length = Number(request.headers.get("content-length") ?? "0");
-  if (length > 1_000_000) throw new Error("Cuerpo de solicitud demasiado grande.");
+  if (length > 1_000_000) {
+    throw new Error("Cuerpo de solicitud demasiado grande.");
+  }
   const text = await request.text();
   if (!text) return {};
   try {
@@ -91,13 +93,24 @@ export async function handleApi(
   );
   if (authResponse) return authResponse;
 
-  const diagnosticsResponse = await handleDiagnosticsRoutes(request, env, url, json);
+  const diagnosticsResponse = await handleDiagnosticsRoutes(
+    request,
+    env,
+    url,
+    json,
+  );
   if (diagnosticsResponse) return diagnosticsResponse;
 
   const marketResponse = await handleMarketRoutes(request, env, url, json);
   if (marketResponse) return marketResponse;
 
-  const operationsResponse = await handleOperationsRoutes(request, env, url, json, readJson);
+  const operationsResponse = await handleOperationsRoutes(
+    request,
+    env,
+    url,
+    json,
+    readJson,
+  );
   if (operationsResponse) return operationsResponse;
 
   const financeResponse = await handleFinanceRoutes(request, env, url, json);
@@ -112,12 +125,21 @@ export async function handleApi(
   return null;
 }
 
-export async function routeRequest(request: Request, env: WorkerEnv): Promise<Response | null> {
+export async function routeRequest(
+  request: Request,
+  env: WorkerEnv,
+): Promise<Response | null> {
   const url = requestUrl(request);
 
   if (url.pathname.startsWith("/api/")) {
-    if (url.pathname !== "/api/health" && !url.pathname.startsWith("/api/auth/")) {
-      const session = await requireSession(request, env.DB as unknown as SessionDatabase);
+    if (
+      url.pathname !== "/api/health" &&
+      !url.pathname.startsWith("/api/auth/")
+    ) {
+      const session = await requireSession(
+        request,
+        env.DB as unknown as SessionDatabase,
+      );
       if (!session.ok) return session.response;
     }
 
@@ -126,14 +148,20 @@ export async function routeRequest(request: Request, env: WorkerEnv): Promise<Re
       requiresSameOrigin(request) &&
       !isSameOrigin(request)
     ) {
-      return json({ error: "Las mutaciones sólo aceptan solicitudes same-origin." }, 403);
+      return json(
+        { error: "Las mutaciones sólo aceptan solicitudes same-origin." },
+        403,
+      );
     }
 
     try {
       const response = await handleApi(request, env);
       if (response) return response;
     } catch (error) {
-      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
+      return json(
+        { error: "No se pudo completar la solicitud." },
+        errorStatus(error),
+      );
     }
   }
 
