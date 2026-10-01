@@ -14,6 +14,15 @@ import {
 import { calculateFinanceSummary } from "./backend/finance.js";
 import { summarizeTrends } from "./backend/trend-engine.js";
 import { calculateBaselines } from "./backend/market-baseline.js";
+import {
+  credentialsMatch,
+  createSession,
+  destroySession,
+  isSameOrigin,
+  requireSession,
+  requiresSameOrigin,
+  type SessionDatabase,
+} from "./cloudflare/access.js";
 
 /**
  * @file worker.ts
@@ -34,6 +43,8 @@ interface WorkerEnv {
   QVAPAY_API_BASE_URL?: string;
   QVAPAY_APP_ID?: string;
   QVAPAY_APP_SECRET?: string;
+  AUTH_USERNAME?: string;
+  AUTH_PASSWORD?: string;
 }
 
 const DEFAULT_API_BASE = "https://api.qvapay.com";
@@ -423,6 +434,83 @@ async function handleApi(
 
   if (request.method === "GET" && url.pathname === "/api/health") {
     return json({ ok: true, service: "qvapay-ai-scanner-worker" });
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/auth/login") {
+    if (!isSameOrigin(request)) {
+      return json(
+        { error: "El inicio de sesión sólo acepta solicitudes same-origin." },
+        403,
+      );
+    }
+
+    try {
+      const body = await readJson(request);
+      const username =
+        body && typeof body === "object"
+          ? String((body as JsonRecord).username ?? "").trim()
+          : "";
+      const password =
+        body && typeof body === "object"
+          ? String((body as JsonRecord).password ?? "")
+          : "";
+
+      if (
+        !username ||
+        !password ||
+        username.length > 200 ||
+        password.length > 500 ||
+        !credentialsMatch(env, username, password)
+      ) {
+        return json({ error: "Credenciales inválidas." }, 401);
+      }
+
+      return await createSession(
+        request,
+        env.DB as unknown as SessionDatabase,
+        username,
+      );
+    } catch (error) {
+      return json(
+        { error: "No se pudo iniciar sesión.", detail: String(error) },
+        500,
+      );
+    }
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/auth/logout") {
+    if (!isSameOrigin(request)) {
+      return json(
+        { error: "El cierre de sesión sólo acepta solicitudes same-origin." },
+        403,
+      );
+    }
+
+    try {
+      return await destroySession(
+        request,
+        env.DB as unknown as SessionDatabase,
+      );
+    } catch (error) {
+      return json(
+        { error: "No se pudo cerrar la sesión.", detail: String(error) },
+        500,
+      );
+    }
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/auth/session") {
+    const session = await requireSession(
+      request,
+      env.DB as unknown as SessionDatabase,
+    );
+    if (!session.ok) return session.response;
+
+    return json({
+      authenticated: true,
+      username: session.session.username,
+      expiresAt: session.session.expiresAt,
+    });
   }
 
   if (
@@ -1013,12 +1101,52 @@ async function handleApi(
 
 export default {
   async fetch(request: Request, env: WorkerEnv): Promise<Response> {
-    if (new URL(request.url).pathname.startsWith("/api/")) {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/login") {
+      return env.ASSETS.fetch(
+        new Request(new URL("/login.html", request.url), request),
+      );
+    }
+
+    if (url.pathname.startsWith("/api/")) {
+      if (
+        url.pathname !== "/api/health" &&
+        !url.pathname.startsWith("/api/auth/")
+      ) {
+        const session = await requireSession(
+          request,
+          env.DB as unknown as SessionDatabase,
+        );
+        if (!session.ok) return session.response;
+      }
+
+      if (
+        url.pathname !== "/api/health" &&
+        requiresSameOrigin(request) &&
+        !isSameOrigin(request)
+      ) {
+        return json(
+          { error: "Las mutaciones sólo aceptan solicitudes same-origin." },
+          403,
+        );
+      }
+
       try {
         const response = await handleApi(request, env);
         if (response) return response;
       } catch (error) {
         return json({ error: String(error) }, errorStatus(error));
+      }
+    }
+
+    if (url.pathname === "/" || url.pathname.endsWith(".html")) {
+      const session = await requireSession(
+        request,
+        env.DB as unknown as SessionDatabase,
+      );
+      if (!session.ok) {
+        return Response.redirect(new URL("/login", request.url), 302);
       }
     }
 

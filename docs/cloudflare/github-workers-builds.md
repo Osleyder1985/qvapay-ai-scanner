@@ -87,19 +87,35 @@ Las ramas no productivas sólo deben utilizar previews si están explícitamente
 
 ### Pendiente de verificación en Cloudflare
 
-- [ ] Workers Builds conectado al repositorio correcto.
-- [ ] Rama de producción de Workers Builds = `production/cloudflare`.
-- [ ] Build command = `npm run build`.
-- [ ] Deploy command = `npx wrangler deploy`.
-- [ ] Un build automático exitoso después de un push/merge a producción.
-- [ ] El deployment automático corresponde al commit de `production/cloudflare`.
+- [x] Workers Builds conectado al repositorio correcto.
+- [x] Rama de producción de Workers Builds = `production/cloudflare`.
+- [x] Build command = `npm run build`.
+- [x] Deploy command = `npx wrangler deploy`.
+- [x] Un build automático exitoso después de un push/merge a producción.
+- [x] El deployment automático corresponde al commit de `production/cloudflare`.
 
 ## Seguridad
 
 - Los secretos QvaPay no se almacenan en `wrangler.jsonc`, GitHub, el frontend ni los assets estáticos.
 - `secrets.required` declara los nombres sin valores.
+- El Worker de producción debe estar protegido mediante Cloudflare Access; la política de Access define quién puede acceder al dashboard.
+- El Worker aplica además una frontera fail-closed con `ctx.access` y exige `same-origin` para mutaciones.
+- `/api/health` es el único endpoint API definido como público; si se necesita que siga accesible sin login, debe existir un bypass de Access limitado exactamente a esa ruta.
 - Auto-Apply permanece deshabilitado hasta completar su aceptación funcional y sus controles de concurrencia, límites y reconciliación.
 - La configuración de Workers Builds y los secrets son recursos de cuenta Cloudflare; su estado debe verificarse desde Cloudflare antes de declarar automatización CI/CD completamente aceptada.
+
+## Seguridad de acceso
+
+La autenticación pública del dashboard se implementa mediante Cloudflare Access y no mediante un token estático enviado por el frontend.
+
+Configuración requerida en Cloudflare:
+
+- Access → `qvapay-ai-scanner` → **Protect this Worker behind Access**.
+- Traffic scope: **All traffic**.
+- Política **Allow** limitada al usuario o grupo autorizado.
+- Bypass opcional y estrecho para `/api/health`.
+
+El detalle del modelo se documenta en `docs/cloudflare/access-boundary.md`.
 
 ## Fuentes oficiales
 

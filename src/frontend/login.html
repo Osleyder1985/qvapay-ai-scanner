@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QvaPay AI Scanner — Login</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 420px; margin: 12vh auto; padding: 24px; }
+    form { display: grid; gap: 12px; }
+    input, button { font: inherit; padding: 10px; }
+    button { cursor: pointer; }
+    .error { color: #b00020; min-height: 1.5em; }
+  </style>
+</head>
+<body>
+  <h1>QvaPay AI Scanner</h1>
+  <p>Inicia sesión para acceder al dashboard.</p>
+  <form id="login">
+    <label>
+      Usuario
+      <input name="username" autocomplete="username" required>
+    </label>
+    <label>
+      Contraseña
+      <input name="password" type="password" autocomplete="current-password" required>
+    </label>
+    <button>Iniciar sesión</button>
+    <div class="error" id="error"></div>
+  </form>
+  <script>
+    document.getElementById("login").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          username: form.username.value,
+          password: form.password.value
+        })
+      });
+
+      if (response.ok) {
+        location.replace("/");
+        return;
+      }
+
+      const payload = await response.json();
+      document.getElementById("error").textContent =
+        payload.error || "No se pudo iniciar sesión";
+    });
+  </script>
+</body>
+</html>

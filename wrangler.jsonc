@@ -17,7 +17,7 @@
     }
   ],
   "secrets": {
-    "required": ["QVAPAY_APP_ID", "QVAPAY_APP_SECRET"]
+    "required": ["QVAPAY_APP_ID", "QVAPAY_APP_SECRET", "AUTH_USERNAME", "AUTH_PASSWORD"]
   },
   "observability": {
     "enabled": true
