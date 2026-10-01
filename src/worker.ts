@@ -217,6 +217,37 @@ function numberValue(value: unknown): number {
   return Number.isFinite(number) ? number : NaN;
 }
 
+function summarizeMarketOffers(
+  offers: JsonRecord[],
+  timestamp = new Date().toISOString(),
+): MarketHistoryPoint[] {
+  const groups = new Map<string, { rates: number[]; coin: string; type: string }>();
+  for (const offer of offers) {
+    const amount = numberValue(offer.amount);
+    const receive = numberValue(offer.receive);
+    if (!(amount > 0) || !(receive >= 0)) continue;
+    const coin = String(offer.coin ?? "").trim().toUpperCase();
+    const type = String(offer.type ?? "").trim().toLowerCase();
+    if (!coin || !type) continue;
+    const key = type + "|" + coin;
+    const group = groups.get(key) ?? { rates: [], coin, type };
+    group.rates.push(receive / amount);
+    groups.set(key, group);
+  }
+  return [...groups.values()].map((group) => ({
+    timestamp,
+    coin: group.coin,
+    type: group.type,
+    samples: group.rates.length,
+    minRate: group.rates.length ? Math.min(...group.rates) : null,
+    medianRate: median(group.rates),
+    maxRate: group.rates.length ? Math.max(...group.rates) : null,
+    spread: group.rates.length
+      ? Math.max(...group.rates) - Math.min(...group.rates)
+      : null,
+  }));
+}
+
 function median(values: number[]): number | null {
   if (!values.length) return null;
   const sorted = [...values].sort((a, b) => a - b);
