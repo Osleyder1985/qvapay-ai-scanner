@@ -41,7 +41,7 @@ function json(
 }
 
 function apiBase(env: WorkerEnv): string {
-  return (env.QVAPAY_API_BASE_URL ?? DEFAULT_API_BASE).replace(/\\/$/, "");
+  return (env.QVAPAY_API_BASE_URL ?? DEFAULT_API_BASE).replace(/\/$/, "");
 }
 
 function qvapayHeaders(env: WorkerEnv): Record<string, string> {
