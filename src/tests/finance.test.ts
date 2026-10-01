@@ -1,7 +1,7 @@
 /**
  * @file finance.test.ts
  * @path src/tests/finance.test.ts
- * @description finance.test.ts source for QvaPay AI Scanner.
+ * @description Pruebas financieras de QvaPay AI Scanner.
  * @module tests
  * @status test
  */
