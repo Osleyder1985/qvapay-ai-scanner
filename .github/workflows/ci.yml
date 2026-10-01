@@ -26,5 +26,8 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
+      - name: Temporary Prettier diff
+        run: npx prettier --write src/worker.ts && git diff -- src/worker.ts
+
       - name: Quality gates
         run: npm run quality
