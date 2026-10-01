@@ -1,7 +1,7 @@
 /**
  * @file backend-integration.test.ts
  * @path src/tests/backend-integration.test.ts
- * @description backend-integration.test.ts source for QvaPay AI Scanner.
+ * @description Pruebas de integración del backend de QvaPay AI Scanner.
  * @module tests
  * @status test
  */
@@ -19,9 +19,9 @@ interface MockState {
 }
 
 /**
- * Implements the listen operation for this module.
- * @param server Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación listen de este módulo.
+ * @param server Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 function listen(server: Server): Promise<number> {
   return new Promise((resolvePromise, reject) => {
@@ -38,9 +38,9 @@ function listen(server: Server): Promise<number> {
 }
 
 /**
- * Implements the close operation for this module.
- * @param server Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación close de este módulo.
+ * @param server Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 async function close(server: Server): Promise<void> {
   await new Promise<void>((resolvePromise) =>
@@ -49,9 +49,9 @@ async function close(server: Server): Promise<void> {
 }
 
 /**
- * Implements the startDashboard operation for this module.
- * @param env Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación startDashboard de este módulo.
+ * @param env Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 async function startDashboard(env: NodeJS.ProcessEnv): Promise<ChildProcess> {
   const child = spawn(
@@ -93,9 +93,9 @@ async function startDashboard(env: NodeJS.ProcessEnv): Promise<ChildProcess> {
 }
 
 /**
- * Implements the stopDashboard operation for this module.
- * @param child Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación stopDashboard de este módulo.
+ * @param child Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 async function stopDashboard(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null) return;
@@ -110,10 +110,10 @@ async function stopDashboard(child: ChildProcess): Promise<void> {
 }
 
 /**
- * Implements the request operation for this module.
- * @param port Input used by the operation.
- * @param path Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación request de este módulo.
+ * @param port Entrada utilizada por la operación.
+ * @param path Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 async function request(
   port: number,
@@ -124,9 +124,9 @@ async function request(
 }
 
 /**
- * Implements the createMockQvaPay operation for this module.
- * @param state Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación createMockQvaPay de este módulo.
+ * @param state Entrada utilizada por la operación.
+ * @returns Resultado de la operación.
  */
 async function createMockQvaPay(
   state: MockState,
@@ -456,8 +456,8 @@ test(
 
     assert.equal(response.status, 502);
     assert.ok(elapsed >= 19_000, `timeout demasiado corto: ${elapsed}ms`);
-    // The market collector/rate-control queue may add up to one scheduling interval
-    // before the upstream 20s timeout starts. Validate the end-to-end bound accordingly.
+    // La cola del recolector de mercado/control de tasa puede añadir como máximo un intervalo de planificación
+    // antes de iniciar el timeout upstream de 20 s. Valida el límite extremo a extremo en consecuencia.
     assert.ok(elapsed < 25_000, `timeout demasiado largo: ${elapsed}ms`);
     const payload = (await response.json()) as { error: string };
     assert.equal(payload.error, "No se pudo contactar con QvaPay");
