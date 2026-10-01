@@ -668,7 +668,6 @@ async function handleApi(
           staleLocal: [...localIds].filter((id) => !remoteIds.has(id)),
         },
       });
-      });
     } catch (error) {
       return json({ error: String(error) }, errorStatus(error));
     }
