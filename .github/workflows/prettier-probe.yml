@@ -1,0 +1,31 @@
+name: Prettier Probe
+
+on:
+  pull_request:
+    branches: ["production/cloudflare"]
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: tmp/prettier-d1-probe
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prettier --write src/cloudflare/d1.ts src/worker.ts
+      - name: Commit formatting
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/cloudflare/d1.ts src/worker.ts
+          git commit -m "style: format Cloudflare D1 runtime files"
+          git push origin HEAD:tmp/prettier-d1-probe
