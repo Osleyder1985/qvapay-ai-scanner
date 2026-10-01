@@ -163,9 +163,6 @@ export async function handleFinanceRoutes(
       },
     });
   } catch {
-    return json(
-      { error: "No se pudo sincronizar el ledger financiero" },
-      503,
-    );
+    return json({ error: "No se pudo sincronizar el ledger financiero" }, 503);
   }
 }
