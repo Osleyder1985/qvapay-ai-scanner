@@ -133,7 +133,11 @@ export async function handleAccountRoutes(
               httpStatus: upstream.status,
               ok: upstream.ok && identity !== null,
             }
-          : { error: "QvaPay API error.", httpStatus: upstream.status, ok: false },
+          : {
+              error: "QvaPay API error.",
+              httpStatus: upstream.status,
+              ok: false,
+            },
         upstream.status,
       );
     } catch (error) {
