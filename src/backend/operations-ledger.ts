@@ -1,7 +1,7 @@
 /**
  * @file operations-ledger.ts
  * @path src/backend/operations-ledger.ts
- * @description Persists the locally reconstructed QvaPay operation history.
+ * @description Persiste el historial de operaciones de QvaPay reconstruido localmente.
  * @module backend/operations
  * @status active
  */
@@ -51,8 +51,8 @@ export class OperationsLedgerStore {
   private initialized = false;
 
   /**
-   * Loads the persisted operation ledger.
-   * @returns Resolves after legacy/malformed records have been ignored.
+   * Carga el ledger de operaciones persistido.
+   * @returns Se resuelve después de ignorar registros heredados o malformados.
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -85,8 +85,8 @@ export class OperationsLedgerStore {
 
   /**
    * Upserts remote operation snapshots by UUID.
-   * @param operations Remote operations returned by QvaPay.
-   * @returns Resolves after the ledger is atomically persisted.
+   * @param operations Operaciones remotas devueltas por QvaPay.
+   * @returns Se resuelve después de persistir atómicamente el ledger.
    */
   async upsert(operations: P2POperation[]): Promise<void> {
     const now = new Date().toISOString();
@@ -105,8 +105,8 @@ export class OperationsLedgerStore {
   }
 
   /**
-   * Returns locally persisted operations sorted by most recently seen.
-   * @returns A defensive copy of the ledger.
+   * Devuelve las operaciones persistidas localmente ordenadas por última observación.
+   * @returns Una copia defensiva del ledger.
    */
   list(): OperationLedgerEntry[] {
     return [...this.entries.values()]
@@ -115,9 +115,9 @@ export class OperationsLedgerStore {
   }
 
   /**
-   * Reconciles remote operation IDs with the local ledger.
-   * @param remoteOperations Operations from the completed remote synchronization.
-   * @returns Differences between remote and local identifiers.
+   * Concilia los identificadores de operaciones remotas con el ledger local.
+   * @param remoteOperations Operaciones de la sincronización remota completada.
+   * @returns Diferencias entre identificadores remotos y locales.
    */
   reconcile(remoteOperations: P2POperation[]): OperationReconciliation {
     const remoteIds = new Set(
@@ -135,8 +135,8 @@ export class OperationsLedgerStore {
   }
 
   /**
-   * Returns whether the store has been initialized.
-   * @returns True after the first successful initialization.
+   * Devuelve si el almacén fue inicializado.
+   * @returns True después de la primera inicialización correcta.
    */
   isInitialized(): boolean {
     return this.initialized;
