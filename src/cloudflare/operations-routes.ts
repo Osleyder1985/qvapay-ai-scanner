@@ -84,7 +84,9 @@ export async function handleOperationsRoutes(
       const ledgerIds = await listOperationIds(env.DB);
       const remoteIds = new Set(
         operations
-          .map((operation) => String(operation.uuid ?? operation.id ?? "").trim())
+          .map((operation) =>
+          String(operation.uuid ?? operation.id ?? "").trim(),
+        )
           .filter(Boolean),
       );
       const localIds = new Set(ledgerIds);
@@ -126,7 +128,9 @@ export async function handleOperationsRoutes(
   const offerMatch = url.pathname.match(/^\/api\/p2p\/([^/]+)$/);
   if (request.method === "GET" && offerMatch?.[1]) {
     const uuid = safeUuid(offerMatch[1]);
-    if (!uuid) return json({ error: "Identificador de oferta inválido." }, 400);
+    if (!uuid) {
+      return json({ error: "Identificador de oferta inválido." }, 400);
+    }
     try {
       const upstream = await qvapay(env, "/p2p/" + encodeURIComponent(uuid));
       const payload = await readQvaPayPayload(upstream);
@@ -149,7 +153,9 @@ export async function handleOperationsRoutes(
   );
   if (request.method === "POST" && operationMatch?.[1] && operationMatch[2]) {
     const uuid = safeUuid(operationMatch[1]);
-    if (!uuid) return json({ error: "Identificador de operación inválido." }, 400);
+    if (!uuid) {
+      return json({ error: "Identificador de operación inválido." }, 400);
+    }
     try {
       const action = operationMatch[2];
       const body =
@@ -164,7 +170,9 @@ export async function handleOperationsRoutes(
             : "";
         if (!txId || txId.length > 500) {
           return json(
-            { error: "tx_id es obligatorio y debe tener como máximo 500 caracteres." },
+            {
+              error: "tx_id es obligatorio y debe tener como máximo 500 caracteres.",
+            },
             400,
           );
         }
@@ -252,7 +260,9 @@ export async function handleOperationsRoutes(
         { method: "GET" },
       );
       const payload = await readQvaPayPayload(upstream);
-      if (!upstream.ok) return json({ error: "QvaPay API error." }, upstream.status);
+      if (!upstream.ok) {
+        return json({ error: "QvaPay API error." }, upstream.status);
+      }
       const contract = parseQvaPayActionResponse(payload);
       if (!contract) return json({ error: "QvaPay API contract error." }, 502);
       return json({ qvapay: contract.payload });
@@ -264,7 +274,10 @@ export async function handleOperationsRoutes(
     }
   }
 
-  if (request.method === "POST" && /^\/api\/p2p\/[^/]+\/apply$/.test(url.pathname)) {
+  if (
+    request.method === "POST" &&
+    /^\/api\/p2p\/[^/]+\/apply$/.test(url.pathname)
+  ) {
     const match = url.pathname.match(/^\/api\/p2p\/([^/]+)\/apply$/);
     const uuid = safeUuid(match?.[1]);
     if (!uuid) return json({ error: "Identificador de oferta inválido." }, 400);
@@ -280,7 +293,11 @@ export async function handleOperationsRoutes(
       }
       const contract = parseQvaPayActionResponse(payload);
       if (!contract) return json({ error: "QvaPay API contract error." }, 502);
-      return json({ applied: true, offer_uuid: uuid, qvapay: contract.payload });
+      return json({
+        applied: true,
+        offer_uuid: uuid,
+        qvapay: contract.payload,
+      });
     } catch (error) {
       return json(
         { error: "No se pudo completar la solicitud." },
