@@ -1,7 +1,7 @@
 /**
  * @file qvapay-client.test.ts
  * @path src/tests/qvapay-client.test.ts
- * @description Tests the Worker-compatible QvaPay HTTP client.
+ * @description Prueba el cliente HTTP de QvaPay compatible con Worker.
  * @module tests
  * @status active
  */
