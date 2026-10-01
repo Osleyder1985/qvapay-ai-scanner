@@ -108,6 +108,7 @@ assertSecurityHeaders(health, "/api/health");
 
 const loginPage = await request("/login");
 assert(loginPage.status === 200, `/login devolvió HTTP ${loginPage.status}`);
+console.log("Login response headers:", Object.fromEntries(loginPage.headers.entries()));
 assertSecurityHeaders(loginPage, "/login");
 
 const redirect = await request("/");
