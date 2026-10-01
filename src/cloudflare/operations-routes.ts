@@ -85,8 +85,8 @@ export async function handleOperationsRoutes(
       const remoteIds = new Set(
         operations
           .map((operation) =>
-          String(operation.uuid ?? operation.id ?? "").trim(),
-        )
+            String(operation.uuid ?? operation.id ?? "").trim(),
+          )
           .filter(Boolean),
       );
       const localIds = new Set(ledgerIds);
