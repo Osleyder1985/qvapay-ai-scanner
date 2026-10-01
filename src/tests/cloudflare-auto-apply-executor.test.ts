@@ -1,7 +1,7 @@
 /**
  * @file cloudflare-auto-apply-executor.test.ts
  * @path src/tests/cloudflare-auto-apply-executor.test.ts
- * @description Tests lease, idempotency and mutation policy of the Cloudflare executor.
+ * @description Prueba lease, idempotencia y política de mutaciones del executor de Cloudflare.
  * @module tests
  * @status active
  */
