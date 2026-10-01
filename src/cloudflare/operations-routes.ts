@@ -19,8 +19,8 @@ import {
 } from "./qvapay-http.js";
 import {
   finiteNumber,
-  parseQvaPayActionResponse,
-  parseQvaPayCollection,
+  parseQvaPayP2PActionResponse,
+  parseQvaPayP2PCollection,
   type QvaPayRecord,
 } from "./qvapay-contracts.js";
 
@@ -63,7 +63,7 @@ export async function handleOperationsRoutes(
         if (!upstream.ok) {
           return json({ error: "QvaPay API error." }, upstream.status);
         }
-        const collection = parseQvaPayCollection(
+        const collection = parseQvaPayP2PCollection(
           payload,
           operations.length,
           MAX_PAGE_SIZE,
@@ -140,7 +140,7 @@ export async function handleOperationsRoutes(
           upstream.status,
         );
       }
-      const contract = parseQvaPayActionResponse(payload);
+      const contract = parseQvaPayP2PActionResponse(payload);
       if (!contract) return json({ error: "QvaPay API contract error." }, 502);
       return json({ offer_uuid: uuid, qvapay: contract.payload });
     } catch (error) {
