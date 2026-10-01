@@ -18,6 +18,7 @@ import { parseQvaPayApplicationIdentity } from "./cloudflare/qvapay-identity.js"
 import { evaluateQvaPayAccountContract } from "./cloudflare/qvapay-account-contract.js";
 import { qvapay, readQvaPayPayload } from "./cloudflare/qvapay-http.js";
 import { handleAuthRoutes } from "./cloudflare/auth-routes.js";
+import type { SessionDatabase } from "./cloudflare/access.js";
 
 
 /**
@@ -400,7 +401,7 @@ async function handleApi(
   const authResponse = await handleAuthRoutes(
     request,
     {
-      DB: env.DB as never,
+      DB: env.DB as unknown as SessionDatabase,
       AUTH_USERNAME: env.AUTH_USERNAME,
       AUTH_PASSWORD: env.AUTH_PASSWORD,
     },
