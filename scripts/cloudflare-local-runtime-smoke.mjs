@@ -24,7 +24,7 @@ function assertSecurityHeaders(response, label) {
   for (const [name, value] of Object.entries(expected)) {
     assert(
       response.headers.get(name) === value,
-      `${label} no devolvió ${name}=${value}`,
+      label + " no devolvió " + name + "=" + value + "; recibido: " + (response.headers.get(name) ?? "<ausente>") + "; headers: " + JSON.stringify(Object.fromEntries(response.headers.entries())),
     );
   }
 
