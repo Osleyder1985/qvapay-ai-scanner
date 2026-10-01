@@ -1,0 +1,19 @@
+name: Prettier probe
+
+on:
+  push:
+    branches:
+      - tmp/prettier-probe
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prettier --write src/worker.ts
+      - run: git diff -- src/worker.ts
