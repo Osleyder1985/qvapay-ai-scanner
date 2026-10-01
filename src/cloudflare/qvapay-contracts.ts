@@ -18,6 +18,37 @@ export interface QvaPayActionResponse {
   payload: QvaPayRecord;
 }
 
+export type QvaPayP2PCollection = QvaPayCollection;
+export type QvaPayP2POfferResponse = QvaPayActionResponse;
+export type QvaPayP2PActionResponse = QvaPayActionResponse;
+export type QvaPayP2PChatResponse = QvaPayActionResponse;
+
+export function parseQvaPayP2PCollection(
+  payload: unknown,
+  fallbackTotal = 0,
+  fallbackPerPage = 100,
+): QvaPayP2PCollection | null {
+  return parseQvaPayCollection(payload, fallbackTotal, fallbackPerPage);
+}
+
+export function parseQvaPayP2POfferResponse(
+  payload: unknown,
+): QvaPayP2POfferResponse | null {
+  return parseQvaPayActionResponse(payload);
+}
+
+export function parseQvaPayP2PActionResponse(
+  payload: unknown,
+): QvaPayP2PActionResponse | null {
+  return parseQvaPayActionResponse(payload);
+}
+
+export function parseQvaPayP2PChatResponse(
+  payload: unknown,
+): QvaPayP2PChatResponse | null {
+  return parseQvaPayActionResponse(payload);
+}
+
 /**
  * Valida la envoltura paginada utilizada por las respuestas P2P.
  * Los campos numéricos deben llegar como números; no se realizan coerciones.
