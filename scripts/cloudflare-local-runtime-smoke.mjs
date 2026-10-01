@@ -127,7 +127,7 @@ writeFileSync(
     "QVAPAY_APP_ID=ci-smoke-app",
     "QVAPAY_APP_SECRET=ci-smoke-secret",
     "",
-  ].join("\\n"),
+  ].join("\n"),
   "utf8",
 );
 
