@@ -1,7 +1,7 @@
 /**
  * @file market-intelligence.ts
  * @path src/backend/market-intelligence.ts
- * @description Implements market intelligence for QvaPay AI Scanner.
+ * @description Implementa la inteligencia de mercado de QvaPay AI Scanner.
  * @module backend
  * @status active
  */
@@ -18,7 +18,7 @@ export interface MarketOffer {
 
 /**
 
- * Public interface OpportunitySignal used by the module.
+ * interface OpportunitySignal público utilizado por el módulo.
 
  */
 
@@ -35,7 +35,7 @@ export interface OpportunitySignal {
 
 /**
 
- * Public interface MarketCoinIntelligence used by the module.
+ * interface MarketCoinIntelligence público utilizado por el módulo.
 
  */
 
@@ -56,7 +56,7 @@ export interface MarketCoinIntelligence {
 
 /**
 
- * Public interface MarketIntelligence used by the module.
+ * interface MarketIntelligence público utilizado por el módulo.
 
  */
 
@@ -78,9 +78,9 @@ export interface MarketIntelligence {
 const n = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : NaN);
 
 /**
- * Implements the median operation for this module.
- * @param a Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación median de este módulo.
+ * @param a Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 function median(a: number[]): number | null {
   if (!a.length) return null;
@@ -96,10 +96,10 @@ function median(a: number[]): number | null {
 }
 
 /**
- * Implements the calculateGroup operation for this module.
- * @param coin Input used by the operation.
- * @param offers Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación calculateGroup de este módulo.
+ * @param coin Entrada utilizada por la operation.
+ * @param offers Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 function calculateGroup(
   coin: string,
@@ -164,9 +164,9 @@ function calculateGroup(
 }
 
 /**
- * Implements the calculateMarketIntelligence operation for this module.
- * @param offers Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación calculateMarketIntelligence de este módulo.
+ * @param offers Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 export function calculateMarketIntelligence(
   offers: MarketOffer[],
