@@ -17,7 +17,7 @@ concurrency:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 16
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,11 +28,5 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Run lint
-        run: npm run lint
-      - name: Format diagnostics
-        run: |
-          npx prettier --write "src/cloudflare/operations-routes.ts"
-          git diff -- src/cloudflare/operations-routes.ts
-      - name: Run tests
-        run: npm test
+      - name: Run quality gates
+        run: npm run quality
