@@ -1,7 +1,7 @@
 /**
  * @file auto-apply-executor.ts
  * @path src/backend/auto-apply-executor.ts
- * @description Defines the runtime-independent Auto-Apply execution boundary.
+ * @description Define la frontera de ejecución de Auto-Apply independiente del runtime.
  * @module backend
  * @status active
  */
@@ -14,9 +14,9 @@ export interface AutoApplyExecutionResult {
 }
 
 /**
- * Contract for one durable Auto-Apply execution.
+ * Contrato para una ejecución durable de Auto-Apply.
  *
- * Implementations must perform at most one scan/action cycle and must not
+ * Las implementaciones deben realizar como máximo un ciclo de escaneo/acción y no deben
  * create timers or depend on process-local scheduling state.
  */
 export interface AutoApplyExecutor {
@@ -24,9 +24,9 @@ export interface AutoApplyExecutor {
 }
 
 /**
- * Creates an executor from a single-cycle function.
+ * Crea un executor a partir de una función de ciclo único.
  *
- * The returned object contains no timer and can therefore be invoked by
+ * El objeto devuelto no contiene temporizador y, por tanto, puede ser invocado por
  * Node, Cron, Workflows, or another external scheduler.
  */
 export function createAutoApplyExecutor(
