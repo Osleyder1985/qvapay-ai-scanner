@@ -1,7 +1,7 @@
 /**
  * @file pages.js
  * @path src/frontend/pages.js
- * @description Route-specific HTML page templates for the QvaPay AI Scanner dashboard.
+ * @description Plantillas HTML específicas por ruta para el dashboard de QvaPay AI Scanner.
  * @module frontend/pages
  * @status active
  */
