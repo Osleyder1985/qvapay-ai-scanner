@@ -1,7 +1,7 @@
 /**
  * @file account.ts
  * @path src/backend/account.ts
- * @description Implements account for QvaPay AI Scanner.
+ * @description Implementa la gestión de cuenta de QvaPay AI Scanner.
  * @module backend
  * @status active
  */
@@ -13,9 +13,9 @@ export interface AccountSnapshot {
 }
 
 /**
- * Implements the firstProfile operation for this module.
+ * Implementa la operación firstProfile de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 async function firstProfile(
   response: Response,
@@ -48,9 +48,9 @@ async function firstProfile(
 }
 
 /**
- * Implements the fetchAccountSnapshot operation for this module.
+ * Implementa la operación fetchAccountSnapshot de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 export async function fetchAccountSnapshot(
   fetchBalance: () => Promise<Response>,
