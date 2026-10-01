@@ -15,7 +15,7 @@ La política se aplica en la frontera única de ejecución de Cloudflare Worker 
 |---|---|---|
 | `X-Content-Type-Options` | `nosniff` | Evita MIME sniffing. |
 | `X-Frame-Options` | `DENY` | Impide que la aplicación sea embebida en frames. |
-| `Content-Security-Policy` | `default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.qvapay.com` | Restringe orígenes de contenido y conexiones del navegador. |
+| `Content-Security-Policy` | `default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'` | Restringe orígenes de contenido y conexiones del navegador. |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Limita información de referencia entre orígenes. |
 | `Permissions-Policy` | `camera=(), microphone=(), geolocation=(), payment=()` | Deshabilita capacidades del navegador que la aplicación no necesita. |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | Fuerza HTTPS en clientes compatibles. |
@@ -29,7 +29,7 @@ Google Fonts requiere:
 - `https://fonts.googleapis.com` para hojas de estilo;
 - `https://fonts.gstatic.com` para fuentes.
 
-La aplicación necesita `https://api.qvapay.com` en `connect-src` porque el navegador realiza conexiones API mediante el mismo frontend/Worker y la política conserva explícitamente ese origen como dependencia permitida.
+El navegador no necesita conectar directamente con `https://api.qvapay.com`: las llamadas a QvaPay se realizan desde el Worker. Por ello, `connect-src` queda limitado a `'self'` y no concede un origen externo innecesario.
 
 No se permiten objetos embebidos ni framing de terceros.
 
