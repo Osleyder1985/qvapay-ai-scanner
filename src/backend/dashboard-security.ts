@@ -1,29 +1,29 @@
 /**
  * @file dashboard-security.ts
  * @path src/backend/dashboard-security.ts
- * @description Implements dashboard security for QvaPay AI Scanner.
+ * @description Implementa la seguridad del dashboard de QvaPay AI Scanner.
  * @module backend
  * @status active
  */
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "::1", "localhost"]);
 
 /**
- * Implements the isLoopbackHost operation for this module.
+ * Implementa la operación isLoopbackHost de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 export function isLoopbackHost(host: string): boolean {
   return LOOPBACK_HOSTS.has(host.trim().toLowerCase());
 }
 
 /**
- * Prevents the dashboard from being exposed to a network before application
- * authentication/authorization exists.
+ * Evita que el dashboard quede expuesto a una red antes de que la
+ * autenticación/autorización de la aplicación exista.
  */
 /**
- * Implements the assertDashboardHostIsSafe operation for this module.
+ * Implementa la operación assertDashboardHostIsSafe de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 export function assertDashboardHostIsSafe(host: string): void {
   if (!isLoopbackHost(host)) {
