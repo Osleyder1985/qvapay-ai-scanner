@@ -1,13 +1,13 @@
 /**
  * @file app.js
  * @path src/frontend/app.js
- * @description Frontend composition entrypoint. Feature modules are loaded by index.html before initialization.
+ * @description Entrypoint de composición del frontend. Los módulos de funcionalidad son cargados por index.html antes de la inicialización.
  * @module frontend/entrypoint
  * @status active
  */
 
 /**
- * Starts the QvaPay AI Scanner frontend after its feature modules are loaded.
- * @returns {Promise<void>} Resolves when initial frontend data loading completes.
+ * Inicia el frontend de QvaPay AI Scanner después de cargar sus módulos de funcionalidad.
+ * @returns {Promise<void>} Se resuelve cuando termina la carga inicial de datos del frontend.
  */
 init();
