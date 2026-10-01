@@ -23,3 +23,13 @@ test("frontend validates the dashboard session before rendering and loading data
   assert.match(source, /api\('\/api\/auth\/session'\)/);
   assert.match(source, /if\(\!\(await ensureAuthenticated\(\)\)\)return/);
 });
+
+test("login page provides an accessible professional authentication experience", () => {
+  const source = readFileSync(join(root, "login.html"), "utf8");
+  assert.match(source, /autocomplete="username"/);
+  assert.match(source, /autocomplete="current-password"/);
+  assert.match(source, /role="alert"/);
+  assert.match(source, /credentials:"same-origin"/);
+  assert.match(source, /aria-label="Mostrar contraseña"/);
+  assert.match(source, /Entrar al dashboard/);
+});
