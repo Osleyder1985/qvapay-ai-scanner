@@ -291,3 +291,37 @@ export async function listFinanceEntries(
           : "unknown",
     }));
 }
+
+export async function recordFinanceSettlement(
+  db: D1Database,
+  uuid: string,
+  settlement: unknown,
+): Promise<boolean> {
+  if (!settlement || typeof settlement !== "object") return false;
+  const value = settlement as Record<string, unknown>;
+  const fee = Number(value.fee);
+  const gross = Number(value.gross_amount);
+  const net = Number(value.amount);
+  if (
+    !Number.isFinite(fee) ||
+    fee < 0 ||
+    !Number.isFinite(gross) ||
+    gross < 0 ||
+    !Number.isFinite(net) ||
+    net < 0
+  ) {
+    return false;
+  }
+  const result = await db
+    .prepare(
+      `UPDATE finance_ledger
+       SET gross_amount_qusd = ?,
+           fee_qusd = ?,
+           net_amount_qusd = ?,
+           fee_source = 'qvapay_received'
+       WHERE uuid = ?`,
+    )
+    .bind(gross, fee, net, uuid)
+    .run();
+  return Number(result.meta?.changes ?? 0) > 0;
+}
