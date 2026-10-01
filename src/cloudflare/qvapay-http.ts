@@ -27,9 +27,7 @@ export function apiBase(env: QvaPayHttpEnv): string {
  */
 export function qvapayHeaders(env: QvaPayHttpEnv): Record<string, string> {
   if (!env.QVAPAY_APP_ID || !env.QVAPAY_APP_SECRET) {
-    throw new Error(
-      "Faltan QVAPAY_APP_ID y QVAPAY_APP_SECRET en los secrets del Worker.",
-    );
+    throw new Error("QVAPAY_CONFIG_MISSING");
   }
 
   return {
