@@ -27,12 +27,15 @@ test("security headers define the baseline browser protections", () => {
     headers["Strict-Transport-Security"],
     "max-age=31536000; includeSubDomains",
   );
-});
+  },
+);
 
-test("content security policy blocks object embedding and cross-origin framing", () => {
-  const policy = securityHeaders()["Content-Security-Policy"] ?? "";
+test(
+  "content security policy blocks object embedding and cross-origin framing",
+  () => {
+    const policy = securityHeaders()["Content-Security-Policy"] ?? "";
 
-  assert.match(policy, /default-src 'self'/);
+            assert.match(policy, /default-src 'self'/);
   assert.match(policy, /object-src 'none'/);
   assert.match(policy, /frame-ancestors 'none'/);
   assert.match(policy, /form-action 'self'/);
