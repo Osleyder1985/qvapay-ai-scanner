@@ -62,3 +62,24 @@ El siguiente paso es conectar este cliente con un executor Cloudflare que:
 8. libere el lease.
 
 La activación mediante Cron/Workflows y el deployment real quedan fuera de este cambio.
+
+
+## Contratos de integración QvaPay
+
+Las respuestas externas se validan antes de entrar en lógica de dominio:
+
+| Endpoint QvaPay | Contrato | Campos obligatorios | Campos opcionales |
+|---|---|---|---|
+| `POST /v2/info` | identidad de aplicación | `uuid`, `name` | `active`, `enabled` |
+| `POST /v2/balance` | balance | `balance` numérico finito no negativo | ninguno |
+| `GET /p2p` | colección P2P paginada | `data` array de objetos | `total`, `per_page` con fallback explícito |
+| `GET /p2p/:uuid` | respuesta de oferta | objeto JSON | campos de negocio variables |
+| `POST /p2p/:uuid/{paid,received,cancel,rate}` | respuesta de acción | objeto JSON | campos de negocio variables |
+| `GET /p2p/:uuid/chat` | respuesta de chat | objeto JSON | campos de negocio variables |
+| `POST /p2p/:uuid/apply` | respuesta de aplicación | objeto JSON | campos de negocio variables |
+
+Los contratos P2P tienen adaptadores con nombres específicos por frontera aunque compartan un envelope estructural. No se aceptan strings numéricos ni coerciones financieras.
+
+### Fixtures y evolución
+
+Las pruebas usan fixtures sanitizados sin credenciales, cookies, tokens ni datos personales. Un cambio incompatible de forma debe provocar fallo de validación antes de alcanzar la lógica financiera o de mercado.
