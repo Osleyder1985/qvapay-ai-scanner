@@ -404,7 +404,10 @@ export async function handleMarketRoutes(
         pageUrl.searchParams.set("page", String(page));
         const result = await market(env, pageUrl);
         if (!result.response.ok) {
-          return json({ error: "QvaPay API error." }, result.response.status);
+          return json(
+            { error: "QvaPay API error." },
+            result.response.status,
+          );
         }
         offers.push(...records(result.payload));
         const meta = pagination(result.payload, offers.length);
