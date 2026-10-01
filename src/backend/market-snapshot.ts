@@ -1,7 +1,7 @@
 /**
  * @file market-snapshot.ts
  * @path src/backend/market-snapshot.ts
- * @description Implements market snapshot for QvaPay AI Scanner.
+ * @description Implementa el snapshot de mercado de QvaPay AI Scanner.
  * @module backend
  * @status active
  */
@@ -12,7 +12,7 @@ interface CacheEntry {
 
 /**
 
- * Public interface MarketSnapshotStats used by the module.
+ * interface MarketSnapshotStats público utilizado por el módulo.
 
  */
 
@@ -27,7 +27,7 @@ export interface MarketSnapshotStats {
 
 /**
 
- * Public interface MarketSnapshotOptions used by the module.
+ * interface MarketSnapshotOptions público utilizado por el módulo.
 
  */
 
@@ -42,7 +42,7 @@ const DEFAULT_MIN_INTERVAL_MS = 2600;
 
 /**
 
- * Public class MarketSnapshotService used by the module.
+ * class MarketSnapshotService público utilizado por el módulo.
 
  */
 
@@ -73,10 +73,10 @@ export class MarketSnapshotService {
   }
 
   /**
-   * Executes the fetch method and preserves the module's documented invariants.
-   * @param url Input used by the method.
-   * @param upstream Input used by the method.
-   * @returns Promise<Response> returned by the method.
+   * Ejecuta el método fetch y preserva las invariantes documentadas del módulo.
+   * @param url Entrada utilizada por la method.
+   * @param upstream Entrada utilizada por la method.
+   * @returns Promise<Response> devuelto por el método.
    */
   async fetch(url: URL, upstream: UpstreamFetcher): Promise<Response> {
     const key = url.toString();
@@ -125,17 +125,17 @@ export class MarketSnapshotService {
   }
 
   /**
-   * Executes the getStats method and preserves the module's documented invariants.
+   * Ejecuta el método getStats y preserva las invariantes documentadas del módulo.
 
-   * @returns MarketSnapshotStats returned by the method.
+   * @returns MarketSnapshotStats devuelto por el método.
    */
   getStats(): MarketSnapshotStats {
     return { ...this.stats };
   }
   /**
-   * Executes the clear method and preserves the module's documented invariants.
+   * Ejecuta el método clear y preserva las invariantes documentadas del módulo.
 
-   * @returns void returned by the method.
+   * @returns void devuelto por el método.
    */
   clear(): void {
     this.cache.clear();
