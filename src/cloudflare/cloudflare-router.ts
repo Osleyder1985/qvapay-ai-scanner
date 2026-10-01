@@ -6,7 +6,7 @@
  * @status active
  */
 
-import { d1Health, type D1Database } from "./d1.js";
+import { type D1Database } from "./d1.js";
 import { handleAuthRoutes } from "./auth-routes.js";
 import {
   isSameOrigin,
@@ -18,6 +18,8 @@ import { handleFinanceRoutes } from "./finance-routes.js";
 import { handleOperationsRoutes } from "./operations-routes.js";
 import { handleMarketRoutes } from "./market-routes.js";
 import { handleAccountRoutes } from "./account-routes.js";
+import { handleDiagnosticsRoutes } from "./diagnostics-routes.js";
+import { handleAutoApplyRoutes } from "./auto-apply-routes.js";
 
 export interface WorkerEnv {
   DB: D1Database;
@@ -104,6 +106,50 @@ export async function handleApi(
       );
     }
   }
+
+  const marketResponse = await handleMarketRoutes(request, env, url, json);
+  if (marketResponse) return marketResponse;
+
+  const operationsResponse = await handleOperationsRoutes(request, env, url, json, readJson);
+  if (operationsResponse) return operationsResponse;
+
+  const financeResponse = await handleFinanceRoutes(request, env, url, json);
+  if (financeResponse) return financeResponse;
+
+  const autoApplyResponse = handleAutoApplyRoutes(request, url, json);
+  if (autoApplyResponse) return autoApplyResponse;
+
+  return null;
+}
+
+export async function routeRequest(request: Request, env: WorkerEnv): Promise<Response | null> {
+  const url = requestUrl(request);
+
+  if (url.pathname.startsWith("/api/")) {
+    if (url.pathname !== "/api/health" && !url.pathname.startsWith("/api/auth/")) {
+      const session = await requireSession(request, env.DB as unknown as SessionDatabase);
+      if (!session.ok) return session.response;
+    }
+
+    if (
+      url.pathname !== "/api/health" &&
+      requiresSameOrigin(request) &&
+      !isSameOrigin(request)
+    ) {
+      return json({ error: "Las mutaciones sólo aceptan solicitudes same-origin." }, 403);
+    }
+
+    try {
+      const response = await handleApi(request, env);
+      if (response) return response;
+    } catch (error) {
+      return json({ error: String(error) }, errorStatus(error));
+    }
+  }
+
+  return null;
+}  const diagnosticsResponse = await handleDiagnosticsRoutes(request, env, url, json);
+  if (diagnosticsResponse) return diagnosticsResponse;
 
   const marketResponse = await handleMarketRoutes(request, env, url, json);
   if (marketResponse) return marketResponse;
