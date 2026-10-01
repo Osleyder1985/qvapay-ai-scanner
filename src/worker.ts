@@ -283,11 +283,7 @@ function findNumericBalance(
 
   for (const [key, value] of Object.entries(record)) {
     if (!value || typeof value !== "object") continue;
-    const found = findNumericBalance(
-      value,
-      `${path}.${key}`,
-      depth + 1,
-    );
+    const found = findNumericBalance(value, `${path}.${key}`, depth + 1);
     if (found) return found;
   }
 
