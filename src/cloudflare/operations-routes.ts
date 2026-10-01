@@ -93,7 +93,7 @@ export async function handleOperationsRoutes(
         const payload = await readQvaPayPayload(upstream);
         if (!upstream.ok) {
           return json(
-            { error: "QvaPay API error", detail: payload },
+            { error: "QvaPay API error." },
             upstream.status,
           );
         }
@@ -156,7 +156,7 @@ export async function handleOperationsRoutes(
       return json(
         upstream.ok
           ? { offer_uuid: uuid, qvapay: payload }
-          : { error: "No se pudo consultar la oferta", detail: payload },
+          : { error: "No se pudo consultar la oferta." },
         upstream.status,
       );
     } catch (error) {
@@ -250,7 +250,7 @@ export async function handleOperationsRoutes(
       return json(
         upstream.ok
           ? { ok: true, action, offer_uuid: uuid, qvapay: payload }
-          : { error: "QvaPay API error", detail: payload },
+          : { error: "QvaPay API error." },
         upstream.status,
       );
     } catch (error) {
@@ -273,7 +273,7 @@ export async function handleOperationsRoutes(
       return json(
         upstream.ok
           ? { qvapay: payload }
-          : { error: "QvaPay API error", detail: payload },
+          : { error: "QvaPay API error." },
         upstream.status,
       );
     } catch (error) {
@@ -298,10 +298,7 @@ export async function handleOperationsRoutes(
       return json(
         upstream.ok
           ? { applied: true, offer_uuid: uuid, qvapay: payload }
-          : {
-              error: "No se pudo aplicar a la oferta",
-              detail: payload,
-            },
+          : { error: "No se pudo aplicar a la oferta." },
         upstream.status,
       );
     } catch (error) {
