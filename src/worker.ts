@@ -455,6 +455,14 @@ async function handleApi(
           ? String((body as JsonRecord).password ?? "")
           : "";
 
+      if (!env.AUTH_USERNAME || !env.AUTH_PASSWORD) {
+        console.error("Authentication secrets are not configured.");
+        return json(
+          { error: "El servicio de autenticación no está configurado." },
+          503,
+        );
+      }
+
       if (
         !username ||
         !password ||
@@ -471,9 +479,10 @@ async function handleApi(
         username,
       );
     } catch (error) {
+      console.error("Authentication session creation failed:", error);
       return json(
-        { error: "No se pudo iniciar sesión.", detail: String(error) },
-        500,
+        { error: "El servicio de autenticación no pudo crear la sesión." },
+        503,
       );
     }
   }
