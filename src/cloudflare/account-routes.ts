@@ -104,7 +104,7 @@ export async function handleAccountRoutes(
         },
       });
     } catch (error) {
-      return json({ error: String(error) }, errorStatus(error));
+      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
     }
   }
 
@@ -140,7 +140,7 @@ export async function handleAccountRoutes(
         upstream.status,
       );
     } catch (error) {
-      return json({ error: String(error) }, errorStatus(error));
+      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
     }
   }
 
