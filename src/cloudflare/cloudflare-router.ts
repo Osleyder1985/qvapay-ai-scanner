@@ -96,10 +96,12 @@ export async function handleApi(
   const authEnv: Parameters<typeof handleAuthRoutes>[1] = {
     DB: env.DB as unknown as SessionDatabase,
   };
-  if (env.AUTH_USERNAME !== undefined)
+  if (env.AUTH_USERNAME !== undefined) {
     authEnv.AUTH_USERNAME = env.AUTH_USERNAME;
-  if (env.AUTH_PASSWORD !== undefined)
+  }
+  if (env.AUTH_PASSWORD !== undefined) {
     authEnv.AUTH_PASSWORD = env.AUTH_PASSWORD;
+  }
 
   const authResponse = await handleAuthRoutes(
     request,
