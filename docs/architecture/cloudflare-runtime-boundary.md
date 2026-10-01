@@ -74,6 +74,8 @@ Los módulos históricos bajo `src/backend/cloudflare/` deben considerarse **can
 
 ## Estado de verificación
 
-Se verificó que `wrangler.jsonc` apunta a `src/worker.ts` y que los dos entrypoints secundarios eliminados no forman parte de la configuración Wrangler actual.
+Se verificó que `wrangler.jsonc` apunta a `src/worker.ts`, no declara triggers `scheduled`, y que no queda un módulo bajo `src/worker/` que pueda confundirse con una segunda frontera de ejecución.
+
+Los módulos históricos bajo `src/backend/cloudflare/` siguen fuera del runtime productivo salvo cuando existe una importación explícita desde `src/cloudflare/` o desde el backend legacy. Su retirada requiere una auditoría de dependencias independiente.
 
 La ejecución completa de `npm run quality` y la verificación de CI siguen siendo necesarias antes de cerrar el issue.
