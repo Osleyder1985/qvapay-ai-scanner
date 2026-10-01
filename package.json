@@ -16,7 +16,9 @@
     "format:check": "prettier --check \"src/**/*.ts\" \"package.json\" \"tsconfig.json\"",
     "quality": "npm run lint && npm run format:check && npm test",
     "deploy:cloudflare": "npm run build && npx wrangler deploy",
-    "dev:cloudflare": "npx wrangler dev"
+    "dev:cloudflare": "npx wrangler dev",
+    "d1:migrate:local": "npx wrangler d1 migrations apply qvapay-ai-scanner --local",
+    "d1:migrate:remote": "npx wrangler d1 migrations apply qvapay-ai-scanner --remote"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
