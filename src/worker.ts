@@ -15,6 +15,7 @@ import { calculateFinanceSummary } from "./backend/finance.js";
 import { summarizeTrends } from "./backend/trend-engine.js";
 import { calculateBaselines } from "./backend/market-baseline.js";
 import { parseQvaPayApplicationIdentity } from "./cloudflare/qvapay-identity.js";
+import { parseQvaPayBalance } from "./cloudflare/qvapay-balance.js";
 import {
   credentialsMatch,
   createSession,
@@ -31,7 +32,7 @@ import {
  * @description Cloudflare Worker entrypoint for QvaPay AI Scanner.
  * @module cloudflare
  * @status active
- * @balance-contract Supports direct and nested numeric QvaPay balance responses.
+ * @balance-contract Supports only the documented { balance: number } response.
  *
  * The legacy Node runtime remains available through src/backend/server.ts for
  * local development. This entrypoint adapts the dashboard API to the
@@ -246,28 +247,6 @@ function numberValue(value: unknown): number {
   return Number.isFinite(number) ? number : NaN;
 }
 
-function findBalanceValue(payload: unknown): number {
-  if (!payload || typeof payload !== "object") return NaN;
-  if (Array.isArray(payload)) {
-    for (const item of payload) {
-      const found = findBalanceValue(item);
-      if (Number.isFinite(found)) return found;
-    }
-    return NaN;
-  }
-  const record = payload as JsonRecord;
-  if (Object.prototype.hasOwnProperty.call(record, "balance")) {
-    const direct = numberValue(record.balance);
-    if (Number.isFinite(direct)) return direct;
-  }
-  for (const value of Object.values(record)) {
-    if (value && typeof value === "object") {
-      const found = findBalanceValue(value);
-      if (Number.isFinite(found)) return found;
-    }
-  }
-  return NaN;
-}
 
 function upstreamMessage(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") return null;
@@ -740,7 +719,8 @@ async function handleApi(
         balanceRecord?.data && typeof balanceRecord.data === "object"
           ? (balanceRecord.data as JsonRecord)
           : null;
-      const balanceValue = findBalanceValue(balancePayload);
+      const parsedBalance = parseQvaPayBalance(balancePayload);
+      const balanceValue = parsedBalance.balance?.balanceUsd ?? NaN;
 
       const user = identity
         ? {
@@ -757,8 +737,9 @@ async function handleApi(
           : {
               httpStatus: balance.status,
               message:
+                parsedBalance.reason ??
                 upstreamMessage(balancePayload) ??
-                "QvaPay no devolvió un balance numérico.",
+                "QvaPay no devolvió un balance válido según el contrato documentado.",
             };
 
       const balanceRecordKeys = balanceRecord
@@ -805,11 +786,9 @@ async function handleApi(
                   upstreamMessage(infoPayload) ??
                   "QvaPay no devolvió una identidad válida para la aplicación autenticada.",
               },
-          balanceSource: Number.isFinite(balanceValue)
+          balanceSource: parsedBalance.ok
             ? "qvapay_v2_balance"
-            : balanceError
-              ? "qvapay_v2_balance_error"
-              : "unavailable",
+            : "qvapay_v2_balance_error",
           balanceHttpStatus: balance.status,
           balanceOk: balance.ok,
           balanceError,
