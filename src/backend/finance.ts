@@ -1,7 +1,7 @@
 /**
  * @file finance.ts
  * @path src/backend/finance.ts
- * @description Implements finance for QvaPay AI Scanner.
+ * @description Implementa las operaciones financieras de QvaPay AI Scanner.
  * @module backend
  * @status active
  */
@@ -14,7 +14,7 @@ export interface FinanceLot {
 
 /**
 
- * Public interface FinanceSummary used by the module.
+ * interface FinanceSummary público utilizado por el módulo.
 
  */
 
@@ -45,9 +45,9 @@ const num = (value: unknown): number | null => {
 };
 
 /**
- * Implements the calculateFinanceSummary operation for this module.
+ * Implementa la operación calculateFinanceSummary de este módulo.
 
- * @returns The operation result.
+ * @returns Resultado de la operación.
  */
 export function calculateFinanceSummary(offers: unknown[]): FinanceSummary {
   const completed = offers
