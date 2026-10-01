@@ -92,10 +92,7 @@ export async function handleOperationsRoutes(
         const upstream = await qvapay(env, "/p2p?" + pageUrl.searchParams);
         const payload = await readQvaPayPayload(upstream);
         if (!upstream.ok) {
-          return json(
-            { error: "QvaPay API error." },
-            upstream.status,
-          );
+          return json({ error: "QvaPay API error." }, upstream.status);
         }
         operations.push(...records(payload));
         const meta = pagination(payload, operations.length);
@@ -142,10 +139,7 @@ export async function handleOperationsRoutes(
         },
       });
     } catch (error) {
-      return json(
-        { error: "No se pudo completar la solicitud." },
-        errorStatus(error),
-      );
+      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
     }
   }
 
@@ -163,10 +157,7 @@ export async function handleOperationsRoutes(
         upstream.status,
       );
     } catch (error) {
-      return json(
-        { error: "No se pudo completar la solicitud." },
-        errorStatus(error),
-      );
+      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
     }
   }
 
@@ -260,10 +251,7 @@ export async function handleOperationsRoutes(
         upstream.status,
       );
     } catch (error) {
-      return json(
-        { error: "No se pudo completar la solicitud." },
-        errorStatus(error),
-      );
+      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
     }
   }
 
@@ -286,10 +274,7 @@ export async function handleOperationsRoutes(
         upstream.status,
       );
     } catch (error) {
-      return json(
-        { error: "No se pudo completar la solicitud." },
-        errorStatus(error),
-      );
+      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
     }
   }
 
@@ -314,10 +299,7 @@ export async function handleOperationsRoutes(
         upstream.status,
       );
     } catch (error) {
-      return json(
-        { error: "No se pudo completar la solicitud." },
-        errorStatus(error),
-      );
+      return json({ error: "No se pudo completar la solicitud." }, errorStatus(error));
     }
   }
 
