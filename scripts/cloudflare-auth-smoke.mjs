@@ -69,6 +69,10 @@ assertSecurityHeaders(health, "/api/health");
 const healthPayload = await json(health);
 assert(healthPayload.ok === true, "/api/health no confirmó ok=true");
 
+const loginPage = await request("/login");
+assert(loginPage.status === 200, `/login devolvió HTTP ${loginPage.status}`);
+assertSecurityHeaders(loginPage, "/login");
+
 const unauthenticated = await request("/api/p2p?page=1&take=1");
 assert(
   unauthenticated.status === 401,
