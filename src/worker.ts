@@ -771,6 +771,13 @@ async function handleApi(
         },
       );
       const payload = await readPayload(upstream);
+      if (upstream.ok && action === "received") {
+        try {
+          await recordFinanceSettlement(env.DB, uuid, payload);
+        } catch (error) {
+          console.error("D1 finance settlement persistence:", error);
+        }
+      }
       return json(
         upstream.ok
           ? { ok: true, action, offer_uuid: uuid, qvapay: payload }
