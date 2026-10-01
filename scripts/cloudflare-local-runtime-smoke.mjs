@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { createServer } from "node:http";
 import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 
@@ -9,6 +9,7 @@ const password = `ci-smoke-${Date.now()}-${Math.random().toString(36).slice(2)}`
 const devVarsPath = ".dev.vars";
 let server;
 let qvapayMockServer;
+let forceExitTimer;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -95,7 +96,26 @@ async function waitForServer() {
 }
 
 function cleanup() {
-  if (server && !server.killed) server.kill();
+  if (forceExitTimer) clearTimeout(forceExitTimer);
+
+  if (server && !server.killed) {
+    try {
+      if (process.platform === "win32") {
+        execFileSync("taskkill", ["/PID", String(server.pid), "/T", "/F"], {
+          stdio: "ignore",
+        });
+      } else if (server.pid) {
+        process.kill(-server.pid, "SIGTERM");
+      }
+    } catch {
+      try {
+        server.kill("SIGTERM");
+      } catch {
+        // El proceso ya terminó; no hay nada más que limpiar.
+      }
+    }
+  }
+
   if (qvapayMockServer) qvapayMockServer.close();
   if (existsSync(devVarsPath)) unlinkSync(devVarsPath);
 }
@@ -160,8 +180,18 @@ const wranglerEnv = {
 server = spawn(
   process.platform === "win32" ? "npx.cmd" : "npx",
   ["wrangler", "dev", "--local", "--ip", "127.0.0.1", "--port", "8787"],
-  { stdio: ["ignore", "pipe", "pipe"], env: wranglerEnv },
+  {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: wranglerEnv,
+    detached: process.platform !== "win32",
+  },
 );
+
+forceExitTimer = setTimeout(() => {
+  console.error("Cloudflare local runtime smoke test exceeded the 120s hard timeout.");
+  cleanup();
+  process.exit(1);
+}, 120_000);
 
 server.stdout.on("data", (chunk) => process.stdout.write(`[wrangler] ${chunk}`));
 server.stderr.on("data", (chunk) => process.stderr.write(`[wrangler] ${chunk}`));
@@ -257,3 +287,4 @@ console.log("Authenticated API boundary: PASS");
 console.log("Logout + session invalidation: PASS");
 
 cleanup();
+process.exit(0);
