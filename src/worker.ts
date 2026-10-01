@@ -30,9 +30,10 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/login") {
-      const assetResponse = await env.ASSETS.fetch(
-        new URL("/login.html", request.url),
-      );
+      const assetRequest = new Request(new URL("/login.html", request.url), {
+        method: "GET",
+      });
+      const assetResponse = await env.ASSETS.fetch(assetRequest);
       return withSecurityHeaders(assetResponse);
     }
 
