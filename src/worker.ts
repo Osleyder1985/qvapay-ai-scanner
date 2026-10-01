@@ -455,6 +455,14 @@ async function handleApi(
           ? String((body as JsonRecord).password ?? "")
           : "";
 
+      if (!env.AUTH_USERNAME || !env.AUTH_PASSWORD) {
+        console.error("Authentication secrets are not configured.");
+        return json(
+          { error: "El servicio de autenticación no está configurado." },
+          503,
+        );
+      }
+
       if (
         !username ||
         !password ||
@@ -463,14 +471,6 @@ async function handleApi(
         !credentialsMatch(env, username, password)
       ) {
         return json({ error: "Credenciales inválidas." }, 401);
-      }
-
-      if (!env.AUTH_USERNAME || !env.AUTH_PASSWORD) {
-        console.error("Authentication secrets are not configured.");
-        return json(
-          { error: "El servicio de autenticación no está configurado." },
-          503,
-        );
       }
 
       return await createSession(
