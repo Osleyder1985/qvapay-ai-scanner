@@ -92,7 +92,10 @@ export async function handleOperationsRoutes(
         const upstream = await qvapay(env, "/p2p?" + pageUrl.searchParams);
         const payload = await readQvaPayPayload(upstream);
         if (!upstream.ok) {
-          return json({ error: "QvaPay API error", detail: payload }, upstream.status);
+          return json(
+            { error: "QvaPay API error", detail: payload },
+            upstream.status,
+          );
         }
         operations.push(...records(payload));
         const meta = pagination(payload, operations.length);
@@ -105,7 +108,9 @@ export async function handleOperationsRoutes(
       const ledgerIds = await listOperationIds(env.DB);
       const remoteIds = new Set(
         operations
-          .map((operation) => String(operation.uuid ?? operation.id ?? "").trim())
+          .map((operation) =>
+            String(operation.uuid ?? operation.id ?? "").trim(),
+          )
           .filter(Boolean),
       );
       const localIds = new Set(ledgerIds);
@@ -164,7 +169,8 @@ export async function handleOperationsRoutes(
   );
   if (request.method === "POST" && operationMatch?.[1] && operationMatch[2]) {
     const uuid = safeUuid(operationMatch[1]);
-    if (!uuid) return json({ error: "Identificador de operación inválido." }, 400);
+    if (!uuid)
+      return json({ error: "Identificador de operación inválido." }, 400);
     try {
       const action = operationMatch[2];
       const body =
@@ -179,7 +185,10 @@ export async function handleOperationsRoutes(
             : "";
         if (!txId || txId.length > 500) {
           return json(
-            { error: "tx_id es obligatorio y debe tener como máximo 500 caracteres." },
+            {
+              error:
+                "tx_id es obligatorio y debe tener como máximo 500 caracteres.",
+            },
             400,
           );
         }
@@ -303,5 +312,7 @@ export async function handleOperationsRoutes(
 }
 
 function errorStatus(error: unknown): number {
-  return error instanceof Error && error.message.includes("QVAPAY_") ? 500 : 502;
+  return error instanceof Error && error.message.includes("QVAPAY_")
+    ? 500
+    : 502;
 }
