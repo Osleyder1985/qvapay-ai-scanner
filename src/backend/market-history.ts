@@ -1,7 +1,7 @@
 /**
  * @file market-history.ts
  * @path src/backend/market-history.ts
- * @description Implements market history for QvaPay AI Scanner.
+ * @description Implementa el histórico de mercado de QvaPay AI Scanner.
  * @module backend
  * @status active
  */
@@ -10,7 +10,7 @@ import { dirname, resolve } from "node:path";
 
 /**
 
- * Public interface MarketHistoryPoint used by the module.
+ * interface MarketHistoryPoint público utilizado por el módulo.
 
  */
 
@@ -27,7 +27,7 @@ export interface MarketHistoryPoint {
 
 /**
 
- * Public interface MarketHistoryStoreOptions used by the module.
+ * interface MarketHistoryStoreOptions público utilizado por el módulo.
 
  */
 
@@ -58,10 +58,10 @@ const median = (a: number[]): number | null => {
 };
 
 /**
- * Implements the summarizeMarket operation for this module.
- * @param offers Input used by the operation.
- * @param timestamp Input used by the operation.
- * @returns The operation result.
+ * Implementa la operación summarizeMarket de este módulo.
+ * @param offers Entrada utilizada por la operation.
+ * @param timestamp Entrada utilizada por la operation.
+ * @returns Resultado de la operación.
  */
 export function summarizeMarket(
   offers: Offer[],
@@ -101,7 +101,7 @@ export function summarizeMarket(
 
 /**
 
- * Public class MarketHistoryStore used by the module.
+ * class MarketHistoryStore público utilizado por el módulo.
 
  */
 
@@ -120,9 +120,9 @@ export class MarketHistoryStore {
   }
 
   /**
-   * Executes the initialize method and preserves the module's documented invariants.
+   * Ejecuta el método initialize y preserva las invariantes documentadas del módulo.
 
-   * @returns Promise<void> returned by the method.
+   * @returns Promise<void> devuelto por el método.
    */
   async initialize(): Promise<void> {
     await mkdir(dirname(this.path), { recursive: true });
@@ -150,9 +150,9 @@ export class MarketHistoryStore {
   }
 
   /**
-   * Executes the query method and preserves the module's documented invariants.
-   * @param limit Input used by the method.
-   * @returns MarketHistoryPoint[] returned by the method.
+   * Ejecuta el método query y preserva las invariantes documentadas del módulo.
+   * @param limit Entrada utilizada por la method.
+   * @returns MarketHistoryPoint[] devuelto por el método.
    */
   query(coin?: string, type?: string, limit = 200): MarketHistoryPoint[] {
     const c = coin?.trim().toUpperCase(),
