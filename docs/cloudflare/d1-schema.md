@@ -1,88 +1,92 @@
 # Diseño de esquema D1 — QvaPay AI Scanner
 
 ## 1. Objetivo
-Define el modelo relacional inicial para sustituir la persistencia JSON del runtime Node cuando QvaPay AI Scanner migre a Cloudflare Workers + D1.
+Define el modelo relacional utilizado por el runtime Cloudflare de QvaPay AI Scanner.
+
+D1 es la persistencia durable del Worker. El runtime Node heredado continúa disponible para desarrollo local, pero no es la fuente de verdad de producción Cloudflare.
 
 ## 2. Principios
-- D1 es la fuente de verdad para estado persistente de negocio y ejecución.
-- KV no sustituye D1: se reserva para cache/configuración de baja criticidad.
-- UUID de QvaPay es la clave natural de una operación.
+- D1 es la fuente de verdad para el estado persistente gestionado por el Worker.
+- UUID de QvaPay es la clave natural de una operación cuando existe.
 - Las escrituras repetidas deben ser idempotentes.
-- Las sincronizaciones remotas son upsert, nunca reemplazos destructivos.
-- El historial de mercado es append-oriented y consultable por ventana temporal.
-- El ledger financiero conserva el UUID de operación y la información de fee.
-- Auto-Apply separa configuración, estado diario, intentos y rechazos VIP.
-- Timestamps en UTC como ISO-8601 TEXT.
-- Importes/tasas REAL en esta fase para conservar semántica con el código Node existente.
+- Las sincronizaciones remotas son upsert y no reemplazos destructivos.
+- El histórico de mercado es append-oriented.
+- El ledger financiero conserva el UUID de operación y la información de fee disponible.
+- Auto-Apply mantiene configuración, estado, intentos, rechazos VIP y lease separados para una futura ejecución controlada.
+- Timestamps se almacenan como texto ISO-8601 en UTC.
+- Los importes/tasas utilizan REAL en esta fase para conservar la semántica del código existente.
 
-## 3. Tablas
+## 3. Tablas del esquema
 
-### market_snapshots
-Equivale a data/market-history.json y MarketHistoryPoint. Columnas: id INTEGER PK, captured_at TEXT, coin TEXT, type TEXT, samples INTEGER, min_rate REAL, median_rate REAL, max_rate REAL, spread REAL, created_at TEXT.
-Índice principal: (coin, type, captured_at DESC).
+### Tablas creadas por `0001_initial_qvapay_scanner.sql`
 
-### p2p_operations
-Fuente persistente del historial reconstruido desde QvaPay. Sustituye operations-ledger.json. UUID QvaPay es PK. Conserva type, status, amount, receive, current_user_id, User/Peer desnormalizados para consultas, recorded_at, last_seen_at y raw_json.
-Índices: (status,last_seen_at DESC), (type,status,last_seen_at DESC), last_seen_at DESC.
+- `market_snapshots`: snapshots de mercado del esquema inicial.
+- `p2p_operations`: historial persistente de operaciones P2P.
+- `finance_ledger`: ledger financiero de operaciones completadas.
+- `auto_apply_config`: configuración singleton de Auto-Apply.
+- `auto_apply_state`: estado singleton de Auto-Apply.
+- `auto_apply_attempts`: registro durable de intentos.
+- `auto_apply_applied_offers`: idempotencia por oferta aplicada.
+- `auto_apply_vip_rejections`: cooldown de rechazos por falta de VIP.
+- `sync_runs`: auditoría de sincronizaciones.
 
-### finance_ledger
-Fuente financiera derivada de operaciones completadas. UUID es PK y referencia lógica a p2p_operations.uuid. Conserva amount, receive, gross_amount_qusd, fee_qusd, net_amount_qusd y fee_source. Las escrituras deben ser upsert preservando recorded_at y fees ya confirmados.
+### Tabla añadida por `0002_auto_apply_execution_lease.sql`
 
-### auto_apply_config
-Configuración singleton id=1: enabled, type, coin, rate_min, rate_max, amount_min, amount_max, daily_max_qusd, max_concurrent, updated_at.
+- `auto_apply_execution_lease`: lease singleton para evitar ejecuciones simultáneas futuras de Auto-Apply.
 
-### auto_apply_state
-Estado singleton id=1: daily_date, daily_applied_qusd, last_scan_at, last_action_at, last_message, updated_at. No se persiste running: en Workers será una propiedad de la ejecución actual.
+### Tablas añadidas por `0003_cloudflare_runtime.sql`
 
-### auto_apply_execution_lease
-Lease singleton para exclusión mutua de ejecuciones Cloudflare. Conserva owner_id, acquired_at, expires_at y updated_at. Un lease expirado puede ser recuperado por una ejecución posterior.
+- `market_history`: histórico agregado utilizado por las rutas Cloudflare de histórico, tendencias y baselines.
+- `operations_ledger`: ledger/snapshot de operaciones utilizado por la reconciliación del Worker Cloudflare.
 
-### auto_apply_attempts
-Registro durable de intentos: offer_uuid, attempted_at, http_status, success, amount_qusd, response_json, reason. Sustituye recentApplyAttempts y permite imponer 2 intentos/60 s mediante consulta D1.
-
-### auto_apply_applied_offers
-Idempotencia explícita: offer_uuid PK, applied_at, amount_qusd. Sustituye appliedOfferIds.
-
-### auto_apply_vip_rejections
-Cooldown persistente: offer_uuid PK, rejected_at, expires_at, reason.
-
-### sync_runs
-Auditoría de sincronizaciones: started_at, finished_at, pages_fetched, remote_count, ledger_count, missing_in_ledger_count, stale_local_count, truncated, status y error_message.
+La migración `0003` extiende el esquema y no redefine las tablas anteriores.
 
 ## 4. Idempotencia
-Operaciones hacen upsert por UUID. Finanzas hacen upsert por UUID y preservan fees confirmados. Auto-Apply registra intentos y resultados y usa offer_uuid para impedir una segunda aplicación.
+Las operaciones se actualizan por UUID.
 
-Una transacción D1 no puede deshacer una mutación ya aceptada por QvaPay. El diseño requiere estado de intento y reconciliación; no se asume atomicidad distribuida.
+Las entradas financieras se actualizan por UUID y conservan la información de comisión ya registrada cuando el nuevo payload no la sustituye.
 
-## 5. Retención inicial
-- market_snapshots: 90 días, configurable.
-- auto_apply_attempts: 90 días.
-- sync_runs: 180 días.
-- auto_apply_vip_rejections: limpiar expirados.
-- p2p_operations y finance_ledger: sin borrado automático durante la fase inicial.
+Auto-Apply dispone de estructuras separadas para intentos, ofertas aplicadas, rechazos VIP y exclusión mutua. Estas tablas no activan por sí mismas ninguna ejecución automática.
 
-## 6. Mapeo
-| Persistencia actual | D1 |
+Una transacción D1 no puede deshacer una mutación ya aceptada por QvaPay. Cualquier futura ejecución automática debe tratar D1 y QvaPay como sistemas separados y utilizar reconciliación.
+
+## 5. Retención
+El comportamiento desplegado actualmente **no ejecuta purgas automáticas**.
+
+Los objetivos de retención pueden definirse posteriormente mediante una política explícita, una migración/versionado y una tarea programada controlada. No deben interpretarse como una característica activa del esquema actual.
+
+## 6. Mapeo de persistencia
+
+| Persistencia del runtime Node | D1 Cloudflare |
 |---|---|
-| data/market-history.json | market_snapshots |
-| data/operations-ledger.json | p2p_operations + sync_runs |
-| data/finance-ledger.json | finance_ledger |
-| data/auto-apply.json config | auto_apply_config |
-| data/auto-apply.json state | auto_apply_state |
-| recentApplyAttempts | auto_apply_attempts |
-| appliedOfferIds | auto_apply_applied_offers |
-| vipRejectedOffers | auto_apply_vip_rejections |
-| MarketSnapshotService.cache | KV opcional / cache por request |
-| MarketSnapshotService.nextAvailableAt | No persistir; controlar rate limit en arquitectura Worker |
+| `data/market-history.json` | `market_snapshots` |
+| histórico agregado del Worker | `market_history` |
+| `data/operations-ledger.json` | `p2p_operations` |
+| ledger de operaciones del Worker | `operations_ledger` |
+| `data/finance-ledger.json` | `finance_ledger` |
+| configuración de Auto-Apply | `auto_apply_config` |
+| estado de Auto-Apply | `auto_apply_state` |
+| intentos recientes | `auto_apply_attempts` |
+| ofertas aplicadas | `auto_apply_applied_offers` |
+| rechazos VIP | `auto_apply_vip_rejections` |
+| ejecuciones de sincronización | `sync_runs` |
+| exclusión mutua Cloudflare | `auto_apply_execution_lease` |
 
-## 7. Decisiones pendientes
-1. Confirmar precisión monetaria soportada por QvaPay y decidir si REAL debe reemplazarse por unidades enteras.
-2. Definir autenticación pública del dashboard.
-3. Definir si Auto-Apply requiere cadencia de 30 s o si 1 minuto es suficiente.
-4. Medir consumo real de D1/Workers.
-5. Provisión y aceptación del recurso D1 productivo (#90).
-6. Mantener la aceptación real de QvaPay (#13) separada de esta migración.
+## 7. Rutas Cloudflare relacionadas
+- `GET /api/cloudflare/d1/health`
+- `GET /api/market/snapshot`
+- `GET /api/history`
+- `GET /api/trends`
+- `GET /api/baselines`
+- `GET /api/operations`
+- `GET /api/finance`
 
-## 8. Estado
-**Diseño:** baseline técnico de migración.
-**Implementación:** repositorio D1 y runtime Worker implementados en `production/cloudflare`. La provisión del recurso D1 productivo, aplicación remota de migraciones y despliegue siguen pendientes del Issue #90.
+Las rutas de mercado pueden generar nuevos puntos en `market_history` cuando consultan la primera página del mercado.
+
+## 8. Estado de producción
+Estado verificado para `production/cloudflare`:
+- D1 productivo configurado con binding `DB`.
+- Migraciones `0001`, `0002` y `0003` aplicadas.
+- Worker desplegado.
+- El dashboard obtiene datos P2P reales mediante el Worker.
+- Auto-Apply continúa deshabilitado.
