@@ -414,6 +414,93 @@ async function handleApi(
     return json({ ok: true, service: "qvapay-ai-scanner-worker" });
   }
 
+  if (request.method === "GET" && url.pathname === "/api/cloudflare/d1/health") {
+    try {
+      return json(await d1Health(env.DB));
+    } catch (error) {
+      return json(
+        {
+          ok: false,
+          error: "D1 no está disponible o no tiene el esquema aplicado.",
+          detail: String(error),
+        },
+        503,
+      );
+    }
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/market/snapshot") {
+    try {
+      const health = await d1Health(env.DB);
+      return json({
+        marketSnapshot: {
+          persistence: health.ok ? "d1" : "unavailable",
+          tables: health.tables,
+        },
+      });
+    } catch (error) {
+      return json(
+        { error: "No se pudo consultar el estado de D1", detail: String(error) },
+        503,
+      );
+    }
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/history") {
+    try {
+      const coin = url.searchParams.get("coin") ?? undefined;
+      const type = url.searchParams.get("type") ?? undefined;
+      const limit = Number(url.searchParams.get("limit") ?? "200");
+      return json({
+        history: await queryMarketHistory(
+          env.DB,
+          coin,
+          type,
+          Number.isFinite(limit) ? limit : 200,
+        ),
+      });
+    } catch (error) {
+      return json(
+        { error: "No se pudo consultar el histórico de mercado", detail: String(error) },
+        503,
+      );
+    }
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/trends") {
+    try {
+      const coin = url.searchParams.get("coin") ?? undefined;
+      const type = url.searchParams.get("type") ?? undefined;
+      const points = await queryMarketHistory(env.DB, coin, type, 1000);
+      return json({ trends: summarizeTrends(points) });
+    } catch (error) {
+      return json(
+        { error: "No se pudieron calcular las tendencias", detail: String(error) },
+        503,
+      );
+    }
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/baselines") {
+    try {
+      const coin = url.searchParams.get("coin") ?? undefined;
+      const type = url.searchParams.get("type") ?? undefined;
+      const lookback = Number(url.searchParams.get("lookback") ?? "24");
+      const points = await queryMarketHistory(env.DB, coin, type, 1000);
+      return json({
+        baselines: calculateBaselines(
+          points,
+          Number.isFinite(lookback) ? lookback : 24,
+        ),
+      });
+    } catch (error) {
+      return json(
+        { error: "No se pudieron calcular las líneas base", detail: String(error) },
+        503,
+      );
+    }
+  }
+
   if (url.pathname === "/api/p2p" && request.method === "GET") {
     try {
       const result = await market(env, url);
