@@ -26,11 +26,7 @@ export interface QvaPayBalanceParseResult {
 export function parseQvaPayBalance(
   payload: unknown,
 ): QvaPayBalanceParseResult {
-  if (
-    !payload ||
-    typeof payload !== "object" ||
-    Array.isArray(payload)
-  ) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return {
       ok: false,
       balance: null,
