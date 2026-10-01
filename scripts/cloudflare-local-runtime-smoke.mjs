@@ -115,16 +115,21 @@ qvapayMockServer = createServer((request, response) => {
 });
 qvapayMockServer.listen(8788, "127.0.0.1");
 
-writeFileSync(
-  devVarsPath,
-  `AUTH_USERNAME=${username}\nAUTH_PASSWORD=${password}\nQVAPAY_API_BASE_URL=${qvapayMockUrl}\nQVAPAY_APP_ID=ci-smoke-app\nQVAPAY_APP_SECRET=ci-smoke-secret\n`,
-  "utf8",
-);
+writeFileSync(devVarsPath, "", "utf8");
+
+const wranglerEnv = {
+  ...process.env,
+  AUTH_USERNAME: username,
+  AUTH_PASSWORD: password,
+  QVAPAY_API_BASE_URL: qvapayMockUrl,
+  QVAPAY_APP_ID: "ci-smoke-app",
+  QVAPAY_APP_SECRET: "ci-smoke-secret",
+};
 
 server = spawn(
   process.platform === "win32" ? "npx.cmd" : "npx",
   ["wrangler", "dev", "--local", "--ip", "127.0.0.1", "--port", "8787"],
-  { stdio: ["ignore", "pipe", "pipe"] },
+  { stdio: ["ignore", "pipe", "pipe"], env: wranglerEnv },
 );
 
 server.stdout.on("data", (chunk) => process.stdout.write(`[wrangler] ${chunk}`));
