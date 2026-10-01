@@ -3,13 +3,15 @@ import test from "node:test";
 import {
   finiteNonNegativeNumber,
   finiteNumber,
-  parseQvaPayActionResponse,
-  parseQvaPayCollection,
+  parseQvaPayP2PActionResponse,
+  parseQvaPayP2PCollection,
+  parseQvaPayP2POfferResponse,
+  parseQvaPayP2PChatResponse,
 } from "../cloudflare/qvapay-contracts.js";
 
 test("accepts a valid paginated QvaPay collection", () => {
   assert.deepEqual(
-    parseQvaPayCollection(
+    parseQvaPayP2PCollection(
       {
         data: [{ uuid: "offer-1", amount: 10, receive: 11 }],
         total: 1,
@@ -27,7 +29,7 @@ test("accepts a valid paginated QvaPay collection", () => {
 });
 
 test("accepts omitted pagination metadata using explicit fallbacks", () => {
-  assert.deepEqual(parseQvaPayCollection({ data: [] }, 4, 25), {
+  assert.deepEqual(parseQvaPayP2PCollection({ data: [] }, 4, 25), {
     data: [],
     total: 4,
     perPage: 25,
@@ -35,10 +37,10 @@ test("accepts omitted pagination metadata using explicit fallbacks", () => {
 });
 
 test("rejects malformed collection envelopes and non-numeric pagination", () => {
-  assert.equal(parseQvaPayCollection({ data: {} }), null);
-  assert.equal(parseQvaPayCollection({ data: [null] }), null);
-  assert.equal(parseQvaPayCollection({ data: [], total: "1" }), null);
-  assert.equal(parseQvaPayCollection({ data: [], per_page: "100" }), null);
+  assert.equal(parseQvaPayP2PCollection({ data: {} }), null);
+  assert.equal(parseQvaPayP2PCollection({ data: [null] }), null);
+  assert.equal(parseQvaPayP2PCollection({ data: [], total: "1" }), null);
+  assert.equal(parseQvaPayP2PCollection({ data: [], per_page: "100" }), null);
 });
 
 test("rejects numeric strings instead of coercing them", () => {
@@ -50,10 +52,18 @@ test("rejects numeric strings instead of coercing them", () => {
 });
 
 test("accepts object action responses and rejects ambiguous payloads", () => {
-  assert.deepEqual(parseQvaPayActionResponse({ success: true }), {
+  assert.deepEqual(parseQvaPayP2PActionResponse({ success: true }), {
     payload: { success: true },
   });
-  assert.equal(parseQvaPayActionResponse([]), null);
-  assert.equal(parseQvaPayActionResponse(null), null);
-  assert.equal(parseQvaPayActionResponse("ok"), null);
+  assert.equal(parseQvaPayP2PActionResponse([]), null);
+  assert.equal(parseQvaPayP2PActionResponse(null), null);
+  assert.equal(parseQvaPayP2PActionResponse("ok"), null);
+});
+
+
+test("names the P2P offer, action and chat contracts explicitly", () => {
+  const payload = { success: true };
+  assert.deepEqual(parseQvaPayP2POfferResponse(payload), { payload });
+  assert.deepEqual(parseQvaPayP2PActionResponse(payload), { payload });
+  assert.deepEqual(parseQvaPayP2PChatResponse(payload), { payload });
 });
