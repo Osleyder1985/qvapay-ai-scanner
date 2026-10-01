@@ -141,7 +141,7 @@ export async function handleOperationsRoutes(
     }
   }
 
-  const offerMatch = url.pathname.match(/^\\/api\\/p2p\\/([^/]+)$/);
+  const offerMatch = url.pathname.match(/^\/api\/p2p\/([^/]+)$/);
   if (request.method === "GET" && offerMatch?.[1]) {
     const uuid = safeUuid(offerMatch[1]);
     if (!uuid) return json({ error: "Identificador de oferta inválido." }, 400);
@@ -160,7 +160,7 @@ export async function handleOperationsRoutes(
   }
 
   const operationMatch = url.pathname.match(
-    /^\\/api\\/operations\\/([^/]+)\\/(paid|received|cancel|chat|rate)$/,
+    /^\/api\/operations\/([^/]+)\/(paid|received|cancel|chat|rate)$/,
   );
   if (request.method === "POST" && operationMatch?.[1] && operationMatch[2]) {
     const uuid = safeUuid(operationMatch[1]);
@@ -249,7 +249,7 @@ export async function handleOperationsRoutes(
     }
   }
 
-  const chatMatch = url.pathname.match(/^\\/api\\/operations\\/([^/]+)\\/chat$/);
+  const chatMatch = url.pathname.match(/^\/api\/operations\/([^/]+)\/chat$/);
   if (request.method === "GET" && chatMatch?.[1]) {
     const uuid = safeUuid(chatMatch[1]);
     if (!uuid) return json({ error: "Identificador de operación inválido." }, 400);
@@ -273,9 +273,9 @@ export async function handleOperationsRoutes(
 
   if (
     request.method === "POST" &&
-    /^\\/api\\/p2p\\/[^/]+\\/apply$/.test(url.pathname)
+    /^\/api\/p2p\/[^/]+\/apply$/.test(url.pathname)
   ) {
-    const match = url.pathname.match(/^\\/api\\/p2p\\/([^/]+)\\/apply$/);
+    const match = url.pathname.match(/^\/api\/p2p\/([^/]+)\/apply$/);
     const uuid = safeUuid(match?.[1]);
     if (!uuid) return json({ error: "Identificador de oferta inválido." }, 400);
     try {
