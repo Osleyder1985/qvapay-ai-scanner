@@ -28,7 +28,7 @@ interface ArbitrageEnv extends QvaPayHttpEnv {
 type Json = (payload: unknown, status?: number) => Response;
 
 const MAX_PAGE_SIZE = 100;
-const MAX_MARKET_PAGES = 10;
+const MAX_MARKET_PAGES = 3;
 
 function records(payload: unknown): QvaPayRecord[] {
   return parseQvaPayP2PCollection(payload, 0, MAX_PAGE_SIZE)?.data ?? [];
@@ -58,6 +58,9 @@ function marketQuery(url: URL): URLSearchParams {
     ),
   );
   params.set("status", url.searchParams.get("status")?.trim() || "open");
+  // The arbitrage monitor only needs acquisition offers (SELL). Filtering at QvaPay
+  // prevents us from downloading unrelated BUY offers and wasting the API rate budget.
+  params.set("type", "sell");
   if (coin) params.set("coin", coin);
   return params;
 }
