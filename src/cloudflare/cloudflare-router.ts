@@ -23,6 +23,12 @@ import { handleAutoApplyRoutes } from "./auto-apply-routes.js";
 import { handleArbitrageHistoryRoutes } from "./arbitrage-history-routes.js";
 import { handleArbitrageRoutes } from "./arbitrage-routes.js";
 import { ingestArbitrageWebhook } from "./arbitrage-event-ingestion.js";
+import { handleArbitrageMonitorRoutes } from "./arbitrage-monitor-routes.js";
+
+interface DurableObjectNamespaceLike {
+  idFromName(name: string): unknown;
+  get(id: unknown): { fetch(request: Request): Promise<Response> };
+}
 
 export interface WorkerEnv {
   DB: D1Database;
@@ -33,6 +39,7 @@ export interface WorkerEnv {
   QVAPAY_FEED_SECRET?: string;
   AUTH_USERNAME?: string;
   AUTH_PASSWORD?: string;
+  ARBITRAGE_MONITOR: DurableObjectNamespaceLike;
 }
 
 export function securityHeaders(): Record<string, string> {
@@ -144,6 +151,14 @@ export async function handleApi(
 
   const accountResponse = await handleAccountRoutes(request, env, url, json);
   if (accountResponse) return accountResponse;
+
+  const arbitrageMonitorResponse = await handleArbitrageMonitorRoutes(
+    request,
+    env,
+    url,
+    json,
+  );
+  if (arbitrageMonitorResponse) return arbitrageMonitorResponse;
 
   const arbitrageResponse = await handleArbitrageRoutes(
     request,

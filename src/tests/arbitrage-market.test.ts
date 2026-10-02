@@ -144,9 +144,19 @@ test("empareja únicamente ofertas de la misma moneda", () => {
 test("genera oportunidades independientes para cada moneda", () => {
   const result = scanArbitrage(
     [
-      offer({ uuid: "cup-acquire", type: "sell", coin: "BANK_CUP", receive: 900 }),
+      offer({
+        uuid: "cup-acquire",
+        type: "sell",
+        coin: "BANK_CUP",
+        receive: 900,
+      }),
       offer({ uuid: "cup-exit", type: "buy", coin: "BANK_CUP", receive: 1000 }),
-      offer({ uuid: "ete-acquire", type: "sell", coin: "ETECSA", receive: 2000 }),
+      offer({
+        uuid: "ete-acquire",
+        type: "sell",
+        coin: "ETECSA",
+        receive: 2000,
+      }),
       offer({ uuid: "ete-exit", type: "buy", coin: "ETECSA", receive: 2200 }),
     ],
     { minMarginPercent: 5, maxCapitalFiat: 10_000 },
@@ -267,7 +277,8 @@ test("calcula beneficio neto sólo cuando ambas comisiones están disponibles", 
       }),
     ],
     {
-      minMarginPercent: 0, maxCapitalFiat: 900,
+      minMarginPercent: 0,
+      maxCapitalFiat: 900,
       fees: {
         buy: ({ grossFiat }) => grossFiat * 0.01,
         sell: ({ grossFiat }) => grossFiat * 0.02,

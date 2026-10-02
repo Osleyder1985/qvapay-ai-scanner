@@ -4,11 +4,28 @@
   "main": "src/worker.ts",
   "compatibility_date": "2026-10-01",
   "workers_dev": true,
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
   "assets": {
     "directory": "./src/frontend",
     "binding": "ASSETS",
     "run_worker_first": true
   },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ARBITRAGE_MONITOR",
+        "class_name": "ArbitrageMonitor"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ArbitrageMonitor"]
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",

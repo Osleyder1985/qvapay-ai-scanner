@@ -510,18 +510,12 @@ async function handleApiArbitrageScan(
   url: URL,
 ): Promise<void> {
   try {
-    const maxAgeMs = Number(url.searchParams.get("maxAgeMs") ?? "30000");
     const maxCapitalFiat = Number(
       url.searchParams.get("maxCapitalFiat") ?? "1000",
     );
     const coin = url.searchParams.get("coin")?.trim().toUpperCase() ?? "";
 
-    if (
-      !Number.isFinite(maxAgeMs) ||
-      maxAgeMs < 0 ||
-      !Number.isFinite(maxCapitalFiat) ||
-      maxCapitalFiat <= 0
-    ) {
+    if (!Number.isFinite(maxCapitalFiat) || maxCapitalFiat <= 0) {
       sendJson(response, 400, {
         error: "Parámetros de arbitraje inválidos.",
       });
@@ -532,15 +526,14 @@ async function handleApiArbitrageScan(
     if (coin) marketUrl.searchParams.set("coin", coin);
     const result = await fetchAllMarketPages(marketUrl);
     const scan = scanArbitrage(result.offers, {
-      maxAgeMs,
       maxCapitalFiat,
+      minMarginPercent: 5,
     });
 
     sendJson(response, 200, {
       mode: "read-only",
       executionEnabled: false,
       capitalLimitFiat: maxCapitalFiat,
-      maxAgeMs,
       coin: coin || null,
       coverage: {
         total: result.total,
