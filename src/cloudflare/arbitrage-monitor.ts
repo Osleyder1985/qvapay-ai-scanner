@@ -101,7 +101,7 @@ function localParts(date: Date, timezone: string): { day: number; minutes: numbe
 
 function parseTime(value: string | null): number | null {
   if (!value || !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return null;
-  const [h, m] = value.split(":").map(Number);
+  const [h = 0, m = 0] = value.split(":").map(Number);
   return h * 60 + m;
 }
 
