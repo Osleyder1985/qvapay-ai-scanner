@@ -50,7 +50,23 @@ function drawArbitrage() {
   if (!box) return;
   const opportunities = S.arbitrage?.opportunities || [];
   if (!opportunities.length) {
-    box.innerHTML = '<div class="empty-inline">No hay oportunidades válidas con los parámetros actuales. Prueba la simulación para comprobar el flujo completo.</div>';
+    const coverage = S.arbitrage?.coverage || {};
+    const rejected = S.arbitrage?.rejected || {};
+    const diagnostics =
+      Number(coverage.fetched || 0) > 0
+        ? '<div class="arbitrage-diagnostics">' +
+          '<b>Diagnóstico del escaneo</b>' +
+          '<span>Leídas: ' + arbitrageMoney(coverage.fetched) + '</span>' +
+          '<span>Caducadas: ' + arbitrageMoney(rejected.staleOffers) + '</span>' +
+          '<span>Inválidas: ' + arbitrageMoney(rejected.invalidOffers) + '</span>' +
+          '<span>Sin spread rentable: ' + arbitrageMoney(rejected.nonProfitablePairs) + '</span>' +
+          '<span>Sin liquidez suficiente: ' + arbitrageMoney(rejected.insufficientLiquidity) + '</span>' +
+          '</div>'
+        : '';
+    box.innerHTML =
+      '<div class="empty-inline">No hay oportunidades válidas con los parámetros actuales.</div>' +
+      diagnostics +
+      '<div class="empty-inline">Aumenta la antigüedad máxima si las ofertas están abiertas pero llevan más tiempo sin actualizarse.</div>';
     return;
   }
   box.innerHTML = opportunities.map(arbitragePlan).join("");
@@ -58,7 +74,7 @@ function drawArbitrage() {
 
 async function loadArbitrage() {
   const capital = Number($("arbCapital")?.value || S.arbitrage?.capitalLimitFiat || 1000);
-  const age = Number($("arbAge")?.value || S.arbitrage?.maxAgeMs || 30000);
+  const age = Number($("arbAge")?.value || S.arbitrage?.maxAgeMs || 300000);
   const coin = ($("arbCoin")?.value || "").trim().toUpperCase();
   try {
     const query = new URLSearchParams({
@@ -89,7 +105,7 @@ function runArbitrageDemo() {
     mode: "demo",
     executionEnabled: false,
     capitalLimitFiat: 1000,
-    maxAgeMs: 30000,
+    maxAgeMs: 300000,
     coin: "BANK_CUP",
     coverage: { fetched: 2, total: 2, pagesFetched: 1, truncated: false },
     opportunities: [{
