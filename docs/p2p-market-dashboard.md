@@ -2,31 +2,26 @@
 
 ## Objetivo
 
-Proporcionar una vista de solo lectura del mercado P2P abierto de QvaPay para que el operador pueda revisar las ofertas disponibles, compararlas y posteriormente construir capacidades de análisis.
+Proporcionar una vista de solo lectura del mercado P2P abierto de QvaPay para revisar ofertas, compararlas y alimentar capacidades de análisis.
 
-## Implementación
+## Estado de implementación
 
-- Backend: Node.js + TypeScript.
-- Frontend: HTML, CSS y JavaScript sin framework en esta primera versión.
-- Credenciales QvaPay: variables de entorno del proceso backend.
-- El backend sirve el frontend y actúa como proxy controlado hacia QvaPay.
+El documento describe la evolución funcional del dashboard original. La aplicación actualmente se despliega como **Cloudflare Worker + frontend estático**, mientras que parte del backend modular Node.js/TypeScript permanece como runtime y referencia de desarrollo local.
 
-La decisión tecnológica está registrada en `architecture/ADR-001-backend-technology-selection.md`.
+Las rutas públicas de la aplicación mantienen el contrato `/api/p2p`; el Worker centraliza la integración con QvaPay y protege las credenciales.
 
 ## Fuente de datos
 
 La fuente primaria es la API oficial de QvaPay:
 
-- Endpoint: GET /p2p
-- Base URL: https://api.qvapay.com
-- Autenticación: credenciales de aplicación mediante headers app-id y app-secret.
-- Tamaño máximo documentado por página: 100 ofertas.
-
-La consulta se ejecuta desde el backend para evitar exponer app-secret al navegador.
+- Endpoint remoto: `GET /p2p`
+- Base URL: `https://api.qvapay.com`
+- La integración usa credenciales de aplicación en el lado servidor.
+- La consulta se pagina y respeta los límites definidos por la capa de integración.
 
 ## Datos visibles
 
-La primera versión muestra:
+La vista de mercado puede mostrar:
 
 - tipo de oferta: buy / sell;
 - moneda;
@@ -35,51 +30,36 @@ La primera versión muestra:
 - tasa calculada como receive / amount;
 - monto disponible;
 - límites mínimo/máximo cuando existen;
-- usuario ofertante;
-- valoración y cantidad de valoraciones;
-- operaciones completadas del usuario;
-- indicadores KYC, teléfono, Telegram, VIP y Golden Check cuando están presentes.
+- datos del usuario ofertante cuando QvaPay los proporciona;
+- indicadores de mercado disponibles en el contrato recibido.
 
-## Filtros y ordenamiento
+## Funciones relacionadas
 
-La interfaz expone:
+El dashboard actual se complementa con:
 
-- tipo;
-- moneda;
-- monto mínimo y máximo;
-- solo VIP;
-- mejor tasa;
-- ratio;
-- fecha de actualización;
-- fecha de creación;
-- monto;
-- recepción;
-- valoración;
-- operaciones;
-- orden ascendente/descendente.
+- monitor de arbitraje server-side;
+- historial y métricas descriptivas;
+- estado persistido en D1;
+- lectura de snapshots sin depender de una pestaña abierta.
 
 ## Seguridad
 
-Esta versión no contiene credenciales QvaPay en el frontend.
+Las credenciales de QvaPay no se envían al navegador.
 
-No se implementan en este incremento:
+El monitor de arbitraje es de solo lectura y no ejecuta compras ni ventas.
 
-- crear ofertas;
-- aplicar a ofertas;
-- marcar pagos;
-- confirmar recepción;
-- retirar fondos;
-- ejecución automática.
+Las capacidades de Auto-Apply son un módulo separado y deben considerarse operaciones reales sobre QvaPay; no deben confundirse con el monitor de arbitraje.
 
-## Limitación deliberada
+## Feed de mercado
 
-La primera versión utiliza consultas bajo demanda. No se activa el Feed del mercado P2P ni SSE porque la documentación actual de QvaPay lo ofrece dentro de una suscripción de 10 USD por 30 días. La necesidad de tiempo real se evaluará después de medir el valor del dashboard con la API estándar.
+El proyecto mantiene una frontera de integración para eventos/stream cuando corresponda. El monitor de arbitraje actual no depende de una conexión SSE abierta desde el navegador ni de un proceso local permanente.
 
 ## Próximas extensiones
 
-1. Historial local de ofertas observadas.
-2. Detección de cambios de precio y disponibilidad.
-3. Métricas por moneda y método de pago.
-4. Filtros avanzados de tasa y liquidez.
-5. Alertas.
-6. Análisis económico antes de cualquier ejecución automática.
+Las extensiones se gestionarán mediante requisitos y decisiones trazables. Entre ellas pueden estar:
+
+1. ampliar el histórico de operaciones completadas;
+2. métricas por moneda y método de pago;
+3. alertas;
+4. configuración de horarios del monitor;
+5. validación económica y operativa antes de cualquier automatización financiera.
