@@ -219,8 +219,8 @@ test("mantiene las monedas completamente separadas", () => {
   assert.equal(result.tradedVolumeQusd, 10);
 });
 
-test("usa por defecto las últimas 100 operaciones completadas", () => {
-  const events = Array.from({ length: 105 }, (_, index) =>
+test("usa por defecto las últimas 500 operaciones completadas", () => {
+  const events = Array.from({ length: 505 }, (_, index) =>
     event({
       offerUuid: `offer-${index}`,
       dedupeKey: `key-${index}`,
@@ -231,9 +231,9 @@ test("usa por defecto las últimas 100 operaciones completadas", () => {
     }),
   );
   const result = calculateCurrencyAnalytics(events, "BANK_CUP");
-  assert.equal(result.completedCount, 100);
+  assert.equal(result.completedCount, 500);
   assert.equal(result.minRate, 1005);
-  assert.equal(result.maxRate, 1104);
+  assert.equal(result.maxRate, 1504);
 });
 
 test("calcula mediana, percentiles y VWAP", () => {
@@ -270,7 +270,7 @@ test("calcula mediana, percentiles y VWAP", () => {
   assert.equal(result.percentiles.p75, 250);
 });
 
-test("separa completadas de canceladas", () => {
+test("excluye canceladas de la ventana de operaciones completadas", () => {
   const result = calculateCurrencyAnalytics(
     [
       event({ offerUuid: "done", dedupeKey: "done" }),
@@ -284,9 +284,9 @@ test("separa completadas de canceladas", () => {
     "BANK_CUP",
   );
   assert.equal(result.completedCount, 1);
-  assert.equal(result.cancelledCount, 1);
-  assert.equal(result.completionRatePercent, 50);
-  assert.equal(result.cancellationRatePercent, 50);
+  assert.equal(result.cancelledCount, 0);
+  assert.equal(result.completionRatePercent, 100);
+  assert.equal(result.cancellationRatePercent, null);
 });
 
 test("no cuenta una operación incompleta como ejecución", () => {
