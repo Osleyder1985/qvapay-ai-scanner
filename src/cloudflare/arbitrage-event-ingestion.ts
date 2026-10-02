@@ -18,6 +18,7 @@ import {
   type QvaPayHttpEnv,
 } from "./qvapay-http.js";
 import {
+  isRecord,
   parseQvaPayP2PCollection,
   type QvaPayRecord,
 } from "./qvapay-contracts.js";
