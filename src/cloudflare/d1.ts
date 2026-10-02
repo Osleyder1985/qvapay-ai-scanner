@@ -386,9 +386,22 @@ export async function appendMarketEvents(
              event_at = excluded.event_at,
              observed_at = excluded.observed_at,
              source = excluded.source
-           WHERE excluded.observed_at > market_events.observed_at
-              OR (excluded.observed_at = market_events.observed_at
-                  AND excluded.event_at > market_events.event_at)`,
+           WHERE (
+             market_events.event = 'created'
+             AND (
+               excluded.event_at < market_events.event_at
+               OR (excluded.event_at = market_events.event_at
+                   AND excluded.observed_at > market_events.observed_at)
+             )
+           )
+           OR (
+             market_events.event <> 'created'
+             AND (
+               excluded.observed_at > market_events.observed_at
+               OR (excluded.observed_at = market_events.observed_at
+                   AND excluded.event_at > market_events.event_at)
+             )
+           )`,
         )
         .bind(
           event.dedupeKey,
