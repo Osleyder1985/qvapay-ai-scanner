@@ -12,7 +12,11 @@ import {
   type RawMarketEvent,
 } from "../backend/arbitrage-market-history.js";
 import { appendMarketEvents, type D1Database } from "./d1.js";
-import { qvapay, readQvaPayPayload, type QvaPayHttpEnv } from "./qvapay-http.js";
+import {
+  qvapay,
+  readQvaPayPayload,
+  type QvaPayHttpEnv,
+} from "./qvapay-http.js";
 import {
   parseQvaPayP2PCollection,
   type QvaPayRecord,
@@ -125,7 +129,10 @@ function hexToBytes(value: string): Uint8Array | null {
   if (!/^[0-9a-f]{64}$/i.test(normalized)) return null;
   const bytes = new Uint8Array(32);
   for (let index = 0; index < bytes.length; index += 1) {
-    bytes[index] = Number.parseInt(normalized.slice(index * 2, index * 2 + 2), 16);
+    bytes[index] = Number.parseInt(
+      normalized.slice(index * 2, index * 2 + 2),
+      16,
+    );
   }
   return bytes;
 }
