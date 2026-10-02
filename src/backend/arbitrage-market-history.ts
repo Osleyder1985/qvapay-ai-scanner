@@ -93,6 +93,11 @@ function positive(value: unknown): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+function nonNegative(value: unknown): number | null {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
 function timestamp(value: unknown): string | null {
   const valueText = text(value);
   if (!valueText) return null;
@@ -142,7 +147,7 @@ export function normalizeMarketEvent(
   }
 
   const amount = positive(raw.amount);
-  const availableAmount = positive(raw.availableAmount);
+  const availableAmount = nonNegative(raw.availableAmount);
   const receive = positive(raw.receive);
   const rate = amount !== null && receive !== null ? receive / amount : null;
 
