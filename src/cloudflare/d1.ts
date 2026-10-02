@@ -93,17 +93,18 @@ export async function d1Health(db: D1Database): Promise<{
 }> {
   const result = await db
     .prepare(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?, ?, ?)",
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?, ?, ?, ?)",
     )
     .bind(
       "market_history",
       "operations_ledger",
       "finance_ledger",
       "auto_apply_config",
+      "market_events",
     )
     .all<{ name: string }>();
   return {
-    ok: result.results.length >= 4,
+    ok: result.results.length >= 5,
     tables: result.results.map((row) => row.name).sort(),
   };
 }
