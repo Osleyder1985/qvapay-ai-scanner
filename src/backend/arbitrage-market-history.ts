@@ -295,8 +295,7 @@ export function calculateCurrencyAnalytics(
     .sort(
       (a, b) =>
         new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime() ||
-        new Date(a.observedAt).getTime() -
-          new Date(b.observedAt).getTime() ||
+        new Date(a.observedAt).getTime() - new Date(b.observedAt).getTime() ||
         a.offerUuid.localeCompare(b.offerUuid),
     );
   for (const event of completedEvents) {
