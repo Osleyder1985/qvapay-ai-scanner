@@ -432,3 +432,36 @@ export async function listMarketEvents(
         .all<MarketEventRow>();
   return result.results;
 }
+
+
+export async function listMarketEventsForAnalytics(
+  db: D1Database,
+  coin: string,
+  terminalLimit = 100,
+): Promise<MarketEventRow[]> {
+  const safeLimit = Math.min(Math.max(Math.trunc(terminalLimit), 1), 1000);
+  const normalizedCoin = coin.trim().toUpperCase();
+  if (!normalizedCoin) return [];
+
+  const result = await db
+    .prepare(
+      `SELECT dedupe_key, event_id, offer_uuid, event, status, side, coin,
+              amount, available_amount, receive, rate, event_at, observed_at, source
+       FROM market_events
+       WHERE coin = ?
+         AND offer_uuid IN (
+           SELECT offer_uuid
+           FROM market_events
+           WHERE coin = ?
+             AND event IN ('completed', 'cancelled')
+           GROUP BY offer_uuid
+           ORDER BY MAX(event_at) DESC, MAX(observed_at) DESC
+           LIMIT ?
+         )
+       ORDER BY event_at ASC, observed_at ASC`,
+    )
+    .bind(normalizedCoin, normalizedCoin, safeLimit)
+    .all<MarketEventRow>();
+
+  return result.results;
+}
