@@ -138,6 +138,8 @@ test("acepta webhook firmado y persiste el evento normalizado", async () => {
 });
 
 test("reconciliación conserva estados terminales y omite estados no soportados", async () => {
+  const db = mockDatabase();
+  const env = {
     DB: db,
     QVAPAY_APP_ID: "app",
     QVAPAY_APP_SECRET: "secret",
@@ -181,7 +183,6 @@ test("reconciliación conserva estados terminales y omite estados no soportados"
     ["completed-1|created", "completed-1|completed"],
   );
 });
-
 test("reconciliación continúa cuando la API omite total", async () => {
   const db = mockDatabase();
   const env = {
