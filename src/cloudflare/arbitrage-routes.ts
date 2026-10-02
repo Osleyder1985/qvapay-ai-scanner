@@ -28,7 +28,7 @@ interface ArbitrageEnv extends QvaPayHttpEnv {
 type Json = (payload: unknown, status?: number) => Response;
 
 const MAX_PAGE_SIZE = 100;
-const MAX_MARKET_PAGES = 4;
+const MAX_MARKET_PAGES = 3;
 
 function records(payload: unknown): QvaPayRecord[] {
   return parseQvaPayP2PCollection(payload, 0, MAX_PAGE_SIZE)?.data ?? [];
