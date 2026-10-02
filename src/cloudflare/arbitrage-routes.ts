@@ -151,8 +151,26 @@ export async function handleArbitrageRoutes(
       const payload = await readQvaPayPayload(upstream);
 
       if (!upstream.ok) {
+        const upstreamError =
+          payload &&
+          typeof payload === "object" &&
+          !Array.isArray(payload)
+            ? (payload as Record<string, unknown>)
+            : {};
+        const detail =
+          typeof upstreamError.message === "string"
+            ? upstreamError.message
+            : typeof upstreamError.msg === "string"
+              ? upstreamError.msg
+              : typeof upstreamError.error === "string"
+                ? upstreamError.error
+                : undefined;
         return json(
-          { error: "QvaPay API error.", upstreamStatus: upstream.status },
+          {
+            error: "QvaPay API error.",
+            detail,
+            upstreamStatus: upstream.status,
+          },
           upstream.status,
         );
       }
