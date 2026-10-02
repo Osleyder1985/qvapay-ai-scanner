@@ -8,7 +8,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { securityHeaders } from "../cloudflare/cloudflare-router.js";
+import { securityHeaders } from "../backend/security-headers.js";
 
 test("security headers define the baseline browser protections", () => {
   const headers = securityHeaders();
@@ -33,5 +33,6 @@ test("content security policy blocks object embedding and cross-origin framing",
   assert.match(policy, /object-src 'none'/);
   assert.match(policy, /frame-ancestors 'none'/);
   assert.match(policy, /form-action 'self'/);
-  assert.match(policy, /connect-src 'self'(?:;|$)/);\n  assert.doesNotMatch(policy, /api\\.qvapay\\.com/);
+  assert.match(policy, /connect-src 'self'(?:;|$)/);
+  assert.doesNotMatch(policy, /api\\.qvapay\\.com/);
 });
