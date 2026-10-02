@@ -8,10 +8,13 @@
 
 import { runArbitrageMonitor, INTERVAL_MS, type ArbitrageMonitorEnv } from "./arbitrage-monitor.js";
 
+interface AlarmStorage { setAlarm(timestamp: number): Promise<void>; getAlarm(): Promise<number | null>; }
+interface DurableObjectStateLike { storage: AlarmStorage; }
+
 export class ArbitrageMonitor {
   constructor(
-    private readonly ctx: DurableObjectState,
-    private readonly env: ArbitrageMonitorEnv & { ARBITRAGE_MONITOR?: DurableObjectNamespace },
+    private readonly ctx: DurableObjectStateLike,
+    private readonly env: ArbitrageMonitorEnv,
   ) {}
 
   async fetch(request: Request): Promise<Response> {
