@@ -114,8 +114,18 @@ test("limita la cantidad por liquidez y capital", () => {
 test("calcula beneficio neto sólo cuando ambas comisiones están disponibles", () => {
   const withFees = scanArbitrage(
     [
-      offer({ uuid: "buy", type: "buy", receive: 900 }),
-      offer({ uuid: "sell", type: "sell", receive: 1000 }),
+      offer({
+        uuid: "buy",
+        type: "buy",
+        available_amount: 10,
+        receive: 900,
+      }),
+      offer({
+        uuid: "sell",
+        type: "sell",
+        available_amount: 10,
+        receive: 1000,
+      }),
     ],
     {
       now: NOW,
@@ -129,9 +139,9 @@ test("calcula beneficio neto sólo cuando ambas comisiones están disponibles", 
   );
 
   const opportunity = withFees.opportunities[0]!;
-  assert.equal(opportunity.totalFeesFiat, 27);
-  assert.equal(opportunity.netProfitFiat, 73);
-  assert.equal(opportunity.netMarginPercent, (73 / 900) * 100);
+  assert.equal(opportunity.totalFeesFiat, 29);
+  assert.equal(opportunity.netProfitFiat, 71);
+  assert.equal(opportunity.netMarginPercent, (71 / 900) * 100);
 
   const withoutFees = scanArbitrage(
     [
