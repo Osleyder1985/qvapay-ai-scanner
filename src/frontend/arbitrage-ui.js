@@ -57,7 +57,6 @@ function drawArbitrage() {
         ? '<div class="arbitrage-diagnostics">' +
           '<b>Diagnóstico del escaneo</b>' +
           '<span>Leídas: ' + arbitrageMoney(coverage.fetched) + '</span>' +
-          '<span>Caducadas: ' + arbitrageMoney(rejected.staleOffers) + '</span>' +
           '<span>Inválidas: ' + arbitrageMoney(rejected.invalidOffers) + '</span>' +
           '<span>Sin spread rentable: ' + arbitrageMoney(rejected.nonProfitablePairs) + '</span>' +
           '<span>Sin liquidez suficiente: ' + arbitrageMoney(rejected.insufficientLiquidity) + '</span>' +
@@ -66,20 +65,18 @@ function drawArbitrage() {
     box.innerHTML =
       '<div class="empty-inline">No hay oportunidades válidas con los parámetros actuales.</div>' +
       diagnostics +
-      '<div class="empty-inline">Aumenta la antigüedad máxima si las ofertas están abiertas pero llevan más tiempo sin actualizarse.</div>';
+      '<div class="empty-inline">Prueba un margen mínimo menor si quieres detectar spreads más pequeños.</div>';
     return;
   }
   box.innerHTML = opportunities.map(arbitragePlan).join("");
 }
 
 async function loadArbitrage() {
-  const capital = Number($("arbCapital")?.value || S.arbitrage?.capitalLimitFiat || 1000);
-  const age = Number($("arbAge")?.value || S.arbitrage?.maxAgeMs || 300000);
+  const margin = Number($("arbMargin")?.value || S.arbitrage?.minMarginPercent || 0);
   const coin = ($("arbCoin")?.value || "").trim().toUpperCase();
   try {
     const query = new URLSearchParams({
-      maxCapitalFiat: String(capital),
-      maxAgeMs: String(age),
+      minMarginPercent: String(margin),
     });
     if (coin) query.set("coin", coin);
     S.arbitrage = await api("/api/arbitrage/scan?" + query.toString());
@@ -87,8 +84,7 @@ async function loadArbitrage() {
   } catch (e) {
     S.arbitrage = {
       mode: "error",
-      capitalLimitFiat: capital,
-      maxAgeMs: age,
+      minMarginPercent: margin,
       coin,
       opportunities: [],
       coverage: { fetched: 0 },
@@ -104,8 +100,7 @@ function runArbitrageDemo() {
   const result = {
     mode: "demo",
     executionEnabled: false,
-    capitalLimitFiat: 1000,
-    maxAgeMs: 300000,
+    minMarginPercent: 1,
     coin: "BANK_CUP",
     coverage: { fetched: 2, total: 2, pagesFetched: 1, truncated: false },
     opportunities: [{
