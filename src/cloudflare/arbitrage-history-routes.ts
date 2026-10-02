@@ -64,7 +64,9 @@ export async function handleArbitrageHistoryRoutes(
   }
 
   const rows = await listMarketEvents(env.DB, coin, 10000);
-  const analytics = calculateCurrencyAnalytics(rows.map(toEvent), coin, { windowSize });
+  const analytics = calculateCurrencyAnalytics(rows.map(toEvent), coin, {
+    windowSize,
+  });
 
   return json({
     coin,
