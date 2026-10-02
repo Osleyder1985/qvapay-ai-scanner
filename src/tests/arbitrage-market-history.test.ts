@@ -98,12 +98,12 @@ test("deduplica el mismo lifecycle entre webhook y reconciliación", () => {
 test("deduplica un completed aunque webhook y stream usen event IDs distintos", () => {
   const webhook = event({
     offerUuid: "same-offer",
-    dedupeKey: "ignored-webhook-id",
+    dedupeKey: "same-offer|completed",
     eventId: "webhook-evt-1",
   });
   const stream = event({
     offerUuid: "same-offer",
-    dedupeKey: "ignored-stream-id",
+    dedupeKey: "same-offer|completed",
     eventId: "stream-evt-9",
     source: "stream",
   });
