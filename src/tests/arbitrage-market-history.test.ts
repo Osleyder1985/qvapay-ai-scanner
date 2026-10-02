@@ -192,17 +192,17 @@ test("rechaza estados desconocidos y no infiere completed", () => {
 test(
   "deduplica el mismo evento sin eliminar eventos distintos de la misma oferta",
   () => {
-  const first = event({ dedupeKey: "same" });
-  const duplicate = event({ dedupeKey: "same", source: "webhook" });
-  const cancelled = event({
-    dedupeKey: "cancel",
-    event: "cancelled",
-    status: "cancelled",
-  });
-  assert.equal(
-    deduplicateMarketEvents([first, duplicate, cancelled]).length,
-    2,
-  );
+    const first = event({ dedupeKey: "same" });
+    const duplicate = event({ dedupeKey: "same", source: "webhook" });
+    const cancelled = event({
+      dedupeKey: "cancel",
+      event: "cancelled",
+      status: "cancelled",
+    });
+    assert.equal(
+      deduplicateMarketEvents([first, duplicate, cancelled]).length,
+      2,
+    );
   },
 );
 
