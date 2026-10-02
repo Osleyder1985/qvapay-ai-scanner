@@ -81,6 +81,8 @@ test("elige la adquisición SELL más barata y la salida BUY más cara dentro de
   assert.equal(opportunity.exitOfferUuid, "exit-high");
   assert.equal(opportunity.buyRate, 90);
   assert.equal(opportunity.sellRate, 150);
+  assert.equal(opportunity.buyOfferUuid, opportunity.acquisitionOfferUuid);
+  assert.equal(opportunity.sellOfferUuid, opportunity.exitOfferUuid);
 });
 
 test("elige el par que maximiza el beneficio con liquidez limitada", () => {
