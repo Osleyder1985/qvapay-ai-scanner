@@ -67,11 +67,7 @@ export async function handleArbitrageHistoryRoutes(
 
   const rawWindow = url.searchParams.get("window");
   const windowSize = rawWindow === null ? 500 : Number(rawWindow);
-  if (
-    !Number.isInteger(windowSize) ||
-    windowSize < 1 ||
-    windowSize > 1000
-  ) {
+  if (!Number.isInteger(windowSize) || windowSize < 1 || windowSize > 1000) {
     return json(
       { error: "window debe ser un entero positivo entre 1 y 1000." },
       400,
