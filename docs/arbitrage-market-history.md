@@ -75,12 +75,12 @@ For each currency, the deterministic analytics layer exposes:
 - p10/p25/p50/p75/p90;
 - VWAP weighted by QUSD quantity;
 - traded QUSD volume;
-- completion/cancellation rates over the selected completed-operation window;
+- completion rate for the selected completed-operation window; cancellation rate is intentionally not calculated because cancelled operations are excluded from the sample;
 - average time from `created` to `completed`;
 - newest event/observation timestamps;
 - stale-data flag.
 
-The default completed-trade window is 100 operations. A different window can be requested without deleting older records.
+The default completed-trade window is 500 valid completed operations. A different window can be requested without deleting older records. Cancelled or otherwise unexecuted offers do not consume positions in this window.
 
 ## Data integrity
 
