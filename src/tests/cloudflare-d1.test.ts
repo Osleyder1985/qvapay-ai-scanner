@@ -25,10 +25,12 @@ test("D1 health reports the required runtime tables", async () => {
   const db: D1Database = {
     prepare: () =>
       statement([
+        { name: "arbitrage_monitor_config" },
+        { name: "arbitrage_monitor_state" },
         { name: "auto_apply_config" },
         { name: "finance_ledger" },
-        { name: "market_history" },
         { name: "market_events" },
+        { name: "market_history" },
         { name: "operations_ledger" },
       ]),
     batch: async () => [],
@@ -38,6 +40,8 @@ test("D1 health reports the required runtime tables", async () => {
 
   assert.equal(health.ok, true);
   assert.deepEqual(health.tables, [
+    "arbitrage_monitor_config",
+    "arbitrage_monitor_state",
     "auto_apply_config",
     "finance_ledger",
     "market_events",
