@@ -159,6 +159,35 @@ test("D1 market event persistence refreshes repeated event IDs by observation ti
   );
 });
 
+test("D1 market event persistence fails when D1 reports a batch error", async () => {
+  const db: D1Database = {
+    prepare: () => statement([]),
+    batch: async () => [{ success: false, meta: { changes: 0 } }],
+  };
+
+  await assert.rejects(
+    appendMarketEvents(db, [
+      {
+        dedupeKey: "offer-1|completed",
+        eventId: "event-1",
+        offerUuid: "offer-1",
+        event: "completed",
+        status: "completed",
+        side: "sell",
+        coin: "BANK_CUP",
+        amount: 10,
+        availableAmount: 0,
+        receive: 12000,
+        rate: 1200,
+        eventAt: "2026-10-02T12:00:00.000Z",
+        observedAt: "2026-10-02T12:00:01.000Z",
+        source: "webhook",
+      },
+    ]),
+    /D1 market event batch persistence failed/,
+  );
+});
+
 test("D1 market event persistence chunks large batches", async () => {
   const batchSizes: number[] = [];
   const db: D1Database = {
