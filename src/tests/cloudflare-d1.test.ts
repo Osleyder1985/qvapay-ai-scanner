@@ -8,9 +8,9 @@ import {
   type D1PreparedStatement,
 } from "../cloudflare/d1.js";
 
-const failedBatch = (() => [
+const failedBatch = (async () => [
   { success: false, meta: { changes: 0 } },
-]) as D1Database["batch"];
+]) as unknown as D1Database["batch"];
 
 function statement(result: unknown): D1PreparedStatement {
   return {
