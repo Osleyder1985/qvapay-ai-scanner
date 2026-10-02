@@ -97,16 +97,12 @@ export async function handleArbitrageRoutes(
     return null;
   }
 
-  const maxCapitalFiat = Number(
-    url.searchParams.get("maxCapitalFiat") ?? "1000",
+  const minMarginPercent = Number(
+    url.searchParams.get("minMarginPercent") ?? "0",
   );
-  const maxAgeMs = Number(url.searchParams.get("maxAgeMs") ?? "300000");
 
-  if (!Number.isFinite(maxCapitalFiat) || maxCapitalFiat <= 0) {
-    return json({ error: "maxCapitalFiat debe ser un número positivo." }, 400);
-  }
-  if (!Number.isFinite(maxAgeMs) || maxAgeMs < 0) {
-    return json({ error: "maxAgeMs debe ser un número no negativo." }, 400);
+  if (!Number.isFinite(minMarginPercent) || minMarginPercent < 0) {
+    return json({ error: "minMarginPercent debe ser un número no negativo." }, 400);
   }
 
   try {
@@ -147,15 +143,13 @@ export async function handleArbitrageRoutes(
     }
 
     const result = scanArbitrage(toRawOffers(offers), {
-      maxCapitalFiat,
-      maxAgeMs,
+      minMarginPercent,
     });
 
     return json({
       mode: "read-only",
       executionEnabled: false,
-      capitalLimitFiat: maxCapitalFiat,
-      maxAgeMs,
+      minMarginPercent,
       coin: base.get("coin") ?? "",
       opportunities: result.opportunities,
       rejected: result.rejected,
