@@ -68,7 +68,22 @@ test("rechaza webhook sin firma válida", async () => {
   assert.equal(response.status, 401);
 });
 
-test("rechaza webhook con cuerpo sobredimensionado", async () => {\n  const db = mockDatabase();\n  const response = await ingestArbitrageWebhook(\n    new Request("https://scanner.example/api/arbitrage/webhook", {\n      method: "POST",\n      headers: { "content-length": String(256 * 1024 + 1) },\n      body: "x",\n    }),\n    db as never,\n    "secret",\n  );\n  assert.equal(response.status, 413);\n  assert.equal(db.stored.length, 0);\n});\n\ntest("acepta webhook firmado y persiste el evento normalizado", async () => {
+test("rechaza webhook con cuerpo sobredimensionado", async () => {
+  const db = mockDatabase();
+  const response = await ingestArbitrageWebhook(
+    new Request("https://scanner.example/api/arbitrage/webhook", {
+      method: "POST",
+      headers: { "content-length": String(256 * 1024 + 1) },
+      body: "x",
+    }),
+    db as never,
+    "secret",
+  );
+  assert.equal(response.status, 413);
+  assert.equal(db.stored.length, 0);
+});
+
+test("acepta webhook firmado y persiste el evento normalizado", async () => {
   const db = mockDatabase();
   const body = JSON.stringify({
     event: "p2p.completed",
