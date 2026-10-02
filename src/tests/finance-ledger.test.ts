@@ -55,3 +55,53 @@ test("finance ledger persists completed operations idempotently", async () => {
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("finance ledger rejects inconsistent settlements", async () => {
+  const dir = await mkdtemp(join(process.cwd(), "tmp-finance-settlement-"));
+  const path = join(dir, "ledger.json");
+  const previous = process.env.FINANCE_LEDGER_PATH;
+  process.env.FINANCE_LEDGER_PATH = path;
+  try {
+    const store = new FinanceLedgerStore();
+    await store.upsert([
+      {
+        uuid: "s1",
+        status: "completed",
+        type: "buy",
+        coin: "BANK_CUP",
+        amount: 10,
+        receive: 100,
+      },
+    ]);
+
+    assert.equal(
+      await store.recordSettlement("s1", {
+        gross_amount: 100,
+        fee: 101,
+        amount: 0,
+      }),
+      false,
+    );
+    assert.equal(
+      await store.recordSettlement("s1", {
+        gross_amount: 100,
+        fee: 10,
+        amount: 80,
+      }),
+      false,
+    );
+    assert.equal(
+      await store.recordSettlement("s1", {
+        gross_amount: 100,
+        fee: 0.1,
+        amount: 99.9,
+      }),
+      true,
+    );
+  } finally {
+    if (previous === undefined) delete process.env.FINANCE_LEDGER_PATH;
+    else process.env.FINANCE_LEDGER_PATH = previous;
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
