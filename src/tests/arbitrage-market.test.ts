@@ -84,7 +84,7 @@ test("respeta los límites de orden de ofertas flexibles", () => {
         order_max: 50,
       }),
     ],
-    { now: NOW, minMarginPercent: 0, maxCapitalFiat: 10_000 },
+    { minMarginPercent: 0, maxCapitalFiat: 10_000 },
   );
 
   assert.equal(result.opportunities[0]?.quantityQusd, 50);
@@ -112,7 +112,7 @@ test("rechaza una oportunidad cuando el capital no alcanza el mínimo de ambas �
         order_min: 50,
       }),
     ],
-    { now: NOW, minMarginPercent: 0, maxCapitalFiat: 450 },
+    { minMarginPercent: 0, maxCapitalFiat: 450 },
   );
 
   assert.equal(result.opportunities.length, 0);
@@ -136,9 +136,27 @@ test("empareja únicamente ofertas de la misma moneda", () => {
       offer({ uuid: "buy-cup", type: "buy", coin: "BANK_CUP", receive: 1000 }),
       offer({ uuid: "sell-usdt", type: "sell", coin: "USDT", receive: 1500 }),
     ],
-    { now: NOW, minMarginPercent: 0, maxCapitalFiat: 10_000 },
+    { minMarginPercent: 0, maxCapitalFiat: 10_000 },
   );
   assert.equal(result.opportunities.length, 0);
+});
+
+test("genera oportunidades independientes para cada moneda", () => {
+  const result = scanArbitrage(
+    [
+      offer({ uuid: "cup-acquire", type: "sell", coin: "BANK_CUP", receive: 900 }),
+      offer({ uuid: "cup-exit", type: "buy", coin: "BANK_CUP", receive: 1000 }),
+      offer({ uuid: "ete-acquire", type: "sell", coin: "ETECSA", receive: 2000 }),
+      offer({ uuid: "ete-exit", type: "buy", coin: "ETECSA", receive: 2200 }),
+    ],
+    { minMarginPercent: 5, maxCapitalFiat: 10_000 },
+  );
+
+  assert.equal(result.opportunities.length, 2);
+  assert.deepEqual(
+    new Set(result.opportunities.map((item) => item.coin)),
+    new Set(["BANK_CUP", "ETECSA"]),
+  );
 });
 
 test("elige la adquisición SELL más barata y la salida BUY más cara dentro de la misma moneda", () => {
@@ -149,7 +167,7 @@ test("elige la adquisición SELL más barata y la salida BUY más cara dentro de
       offer({ uuid: "exit-low", type: "buy", receive: 1300 }),
       offer({ uuid: "exit-high", type: "buy", receive: 1500 }),
     ],
-    { now: NOW, minMarginPercent: 0, maxCapitalFiat: 10_000 },
+    { minMarginPercent: 0, maxCapitalFiat: 10_000 },
   );
 
   assert.equal(result.opportunities.length, 1);
@@ -194,7 +212,7 @@ test("elige el par que maximiza el beneficio con liquidez limitada", () => {
         receive: 1200,
       }),
     ],
-    { now: NOW, minMarginPercent: 0, maxCapitalFiat: 2_000 },
+    { minMarginPercent: 0, maxCapitalFiat: 2_000 },
   );
 
   const opportunity = result.opportunities[0]!;
@@ -222,7 +240,7 @@ test("limita la cantidad por liquidez y capital", () => {
         receive: 750,
       }),
     ],
-    { now: NOW, minMarginPercent: 0, maxCapitalFiat: 500 },
+    { minMarginPercent: 0, maxCapitalFiat: 500 },
   );
 
   const opportunity = result.opportunities[0]!;
@@ -249,7 +267,6 @@ test("calcula beneficio neto sólo cuando ambas comisiones están disponibles", 
       }),
     ],
     {
-      now: NOW,
       minMarginPercent: 0, maxCapitalFiat: 900,
       fees: {
         buy: ({ grossFiat }) => grossFiat * 0.01,
@@ -268,7 +285,7 @@ test("calcula beneficio neto sólo cuando ambas comisiones están disponibles", 
       offer({ uuid: "acquire", type: "sell", receive: 900 }),
       offer({ uuid: "exit", type: "buy", receive: 1000 }),
     ],
-    { now: NOW, minMarginPercent: 0, maxCapitalFiat: 900 },
+    { minMarginPercent: 0, maxCapitalFiat: 900 },
   );
   assert.equal(withoutFees.opportunities[0]!.netProfitFiat, null);
   assert.equal(withoutFees.opportunities[0]!.feesStatus, "unknown");
@@ -280,7 +297,7 @@ test("rechaza pares con spread cero o negativo", () => {
       offer({ uuid: "acquire", type: "sell", receive: 1000 }),
       offer({ uuid: "exit", type: "buy", receive: 1000 }),
     ],
-    { now: NOW, minMarginPercent: 0, maxCapitalFiat: 10_000 },
+    { minMarginPercent: 0, maxCapitalFiat: 10_000 },
   );
   assert.equal(result.opportunities.length, 0);
   assert.equal(result.rejected.nonProfitablePairs, 1);
@@ -315,7 +332,7 @@ test("separa monedas incluso cuando sus tasas hacen parecer rentable el cruce", 
       offer({ uuid: "buy-1", type: "buy", coin: "BANK_CUP", receive: 900 }),
       offer({ uuid: "sell-2", type: "sell", coin: "ETECSA", receive: 9000 }),
     ],
-    { now: NOW, minMarginPercent: 0, maxCapitalFiat: 10_000 },
+    { minMarginPercent: 0, maxCapitalFiat: 10_000 },
   );
   assert.deepEqual(result.opportunities, []);
 });
