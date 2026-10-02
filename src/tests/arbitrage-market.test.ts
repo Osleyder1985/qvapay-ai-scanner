@@ -52,27 +52,14 @@ test("rechaza una oferta sin liquidez explícita", () => {
 });
 
 test("rechaza una oferta cuya liquidez supera el monto declarado", () => {
-  assert.equal(
-    normalizeArbitrageOffer(offer({ available_amount: 11 })),
-    null,
-  );
+  assert.equal(normalizeArbitrageOffer(offer({ available_amount: 11 })), null);
 });
 
 test("empareja únicamente ofertas de la misma moneda", () => {
   const result = scanArbitrage(
     [
-      offer({
-        uuid: "buy-cup",
-        type: "buy",
-        coin: "BANK_CUP",
-        receive: 1000,
-      }),
-      offer({
-        uuid: "sell-usdt",
-        type: "sell",
-        coin: "USDT",
-        receive: 1500,
-      }),
+      offer({ uuid: "buy-cup", type: "buy", coin: "BANK_CUP", receive: 1000 }),
+      offer({ uuid: "sell-usdt", type: "sell", coin: "USDT", receive: 1500 }),
     ],
     { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 10_000 },
   );
@@ -202,18 +189,8 @@ test(
   () => {
     const result = scanArbitrage(
       [
-        offer({
-          uuid: "buy-1",
-          type: "buy",
-          coin: "BANK_CUP",
-          receive: 900,
-        }),
-        offer({
-          uuid: "sell-2",
-          type: "sell",
-          coin: "ETECSA",
-          receive: 9000,
-        }),
+        offer({ uuid: "buy-1", type: "buy", coin: "BANK_CUP", receive: 900 }),
+        offer({ uuid: "sell-2", type: "sell", coin: "ETECSA", receive: 9000 }),
       ],
       { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 10_000 },
     );
