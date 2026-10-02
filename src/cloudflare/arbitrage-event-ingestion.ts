@@ -219,10 +219,13 @@ export async function ingestArbitrageWebhook(
 
   const rawBody = await request.text();
   if (new TextEncoder().encode(rawBody).byteLength > maxBodyBytes) {
-    return new Response(JSON.stringify({ error: "Cuerpo de webhook demasiado grande." }), {
-      status: 413,
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Cuerpo de webhook demasiado grande." }),
+      {
+        status: 413,
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+      },
+    );
   }
   const valid = await verifyFeedSignature(
     rawBody,
