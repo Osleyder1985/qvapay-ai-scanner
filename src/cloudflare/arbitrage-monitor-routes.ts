@@ -8,11 +8,13 @@
 
 import { monitorState } from "./arbitrage-monitor.js";
 import type { D1Database } from "./d1.js";
-import type { DurableObjectNamespace } from "cloudflare:workers";
+
+interface DurableObjectStub { fetch(request: Request): Promise<Response>; }
+interface DurableObjectNamespaceLike { idFromName(name: string): unknown; get(id: unknown): DurableObjectStub; }
 
 interface Env {
   DB: D1Database;
-  ARBITRAGE_MONITOR: DurableObjectNamespace;
+  ARBITRAGE_MONITOR: DurableObjectNamespaceLike;
 }
 
 type Json = (payload: unknown, status?: number) => Response;
