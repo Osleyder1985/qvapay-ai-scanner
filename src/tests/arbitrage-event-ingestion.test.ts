@@ -14,7 +14,7 @@ import {
 } from "../cloudflare/arbitrage-event-ingestion.js";
 
 function mockDatabase() {
-  const stored: unknown[] = [];
+  const stored: unknown[][] = [];
   return {
     stored,
     prepare() {
