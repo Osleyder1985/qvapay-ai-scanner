@@ -341,7 +341,12 @@ export async function reconcileArbitrageHistory(
       throw new Error("QvaPay API contract error.");
     }
 
+    const totalKnown = isRecord(payload) && payload.total !== undefined;
     fetched += collection.data.length;
+    if (totalKnown && collection.total < fetched) {
+      throw new Error("QvaPay API pagination contract error.");
+    }
+
     for (const operation of collection.data) {
       const rawEvents = reconciliationEvents(operation, now.toISOString());
       if (!rawEvents.length) {
@@ -355,7 +360,6 @@ export async function reconcileArbitrageHistory(
     }
 
     pagesFetched = page;
-    const totalKnown = isRecord(payload) && payload.total !== undefined;
     lastPage = totalKnown
       ? Math.max(1, Math.ceil(collection.total / collection.perPage))
       : page + (collection.data.length >= collection.perPage ? 1 : 0);
