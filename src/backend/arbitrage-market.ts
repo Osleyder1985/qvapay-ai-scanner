@@ -203,78 +203,95 @@ export function scanArbitrage(
       .filter((offer) => offer.side === "buy")
       .sort((a, b) => b.rate - a.rate);
 
-    const buy = acquisitionOffers[0];
-    const sell = exitOffers[0];
-    if (!buy || !sell) continue;
+    let bestOpportunity: ArbitrageOpportunity | null = null;
+    let bestScore = -Infinity;
 
-    const spreadPerQusd = sell.rate - buy.rate;
-    if (!(spreadPerQusd > 0)) {
-      nonProfitablePairs += 1;
-      continue;
+    for (const buy of acquisitionOffers) {
+      for (const sell of exitOffers) {
+        if (buy.uuid === sell.uuid) continue;
+
+        const spreadPerQusd = sell.rate - buy.rate;
+        if (!(spreadPerQusd > 0)) {
+          nonProfitablePairs += 1;
+          continue;
+        }
+
+        const liquidityQusd = Math.min(
+          buy.availableQusd,
+          sell.availableQusd,
+        );
+        const capitalLimitedQusd = options.maxCapitalFiat / buy.rate;
+        const quantityQusd = Math.min(liquidityQusd, capitalLimitedQusd);
+
+        if (!(quantityQusd > 0)) {
+          insufficientLiquidity += 1;
+          continue;
+        }
+
+        const capitalRequiredFiat = quantityQusd * buy.rate;
+        const grossProfitFiat = quantityQusd * spreadPerQusd;
+        const grossMarginPercent =
+          capitalRequiredFiat > 0
+            ? (grossProfitFiat / capitalRequiredFiat) * 100
+            : 0;
+
+        const buyFeeFiat = fee(options.fees?.buy, {
+          side: "buy",
+          coin,
+          quantityQusd,
+          grossFiat: capitalRequiredFiat,
+        });
+        const sellProceedsFiat = quantityQusd * sell.rate;
+        const sellFeeFiat = fee(options.fees?.sell, {
+          side: "sell",
+          coin,
+          quantityQusd,
+          grossFiat: sellProceedsFiat,
+        });
+        const feesKnown = buyFeeFiat !== null && sellFeeFiat !== null;
+        const totalFeesFiat = feesKnown
+          ? (buyFeeFiat as number) + (sellFeeFiat as number)
+          : null;
+        const netProfitFiat =
+          totalFeesFiat === null ? null : grossProfitFiat - totalFeesFiat;
+        const netMarginPercent =
+          netProfitFiat === null || capitalRequiredFiat <= 0
+            ? null
+            : (netProfitFiat / capitalRequiredFiat) * 100;
+
+        const candidate: ArbitrageOpportunity = {
+          coin,
+          buyOfferUuid: buy.uuid,
+          sellOfferUuid: sell.uuid,
+          acquisitionOfferUuid: buy.uuid,
+          exitOfferUuid: sell.uuid,
+          buyRate: buy.rate,
+          sellRate: sell.rate,
+          quantityQusd,
+          capitalRequiredFiat,
+          grossProfitFiat,
+          grossMarginPercent,
+          buyFeeFiat,
+          sellFeeFiat,
+          totalFeesFiat,
+          netProfitFiat,
+          netMarginPercent,
+          feesStatus: feesKnown ? "known" : "unknown",
+          observedAt:
+            buy.observedAt < sell.observedAt
+              ? buy.observedAt
+              : sell.observedAt,
+          stale: false,
+        };
+        const score = netProfitFiat ?? grossProfitFiat;
+        if (score > bestScore) {
+          bestScore = score;
+          bestOpportunity = candidate;
+        }
+      }
     }
 
-    const liquidityQusd = Math.min(buy.availableQusd, sell.availableQusd);
-    const capitalLimitedQusd = options.maxCapitalFiat / buy.rate;
-    const quantityQusd = Math.min(liquidityQusd, capitalLimitedQusd);
-
-    if (!(quantityQusd > 0)) {
-      insufficientLiquidity += 1;
-      continue;
-    }
-
-    const capitalRequiredFiat = quantityQusd * buy.rate;
-    const grossProfitFiat = quantityQusd * spreadPerQusd;
-    const grossMarginPercent =
-      capitalRequiredFiat > 0
-        ? (grossProfitFiat / capitalRequiredFiat) * 100
-        : 0;
-
-    const buyFeeFiat = fee(options.fees?.buy, {
-      side: "buy",
-      coin,
-      quantityQusd,
-      grossFiat: capitalRequiredFiat,
-    });
-    const sellProceedsFiat = quantityQusd * sell.rate;
-    const sellFeeFiat = fee(options.fees?.sell, {
-      side: "sell",
-      coin,
-      quantityQusd,
-      grossFiat: sellProceedsFiat,
-    });
-    const feesKnown = buyFeeFiat !== null && sellFeeFiat !== null;
-    const totalFeesFiat = feesKnown
-      ? (buyFeeFiat as number) + (sellFeeFiat as number)
-      : null;
-    const netProfitFiat =
-      totalFeesFiat === null ? null : grossProfitFiat - totalFeesFiat;
-    const netMarginPercent =
-      netProfitFiat === null || capitalRequiredFiat <= 0
-        ? null
-        : (netProfitFiat / capitalRequiredFiat) * 100;
-
-    opportunities.push({
-      coin,
-      buyOfferUuid: buy.uuid,
-      sellOfferUuid: sell.uuid,
-      acquisitionOfferUuid: buy.uuid,
-      exitOfferUuid: sell.uuid,
-      buyRate: buy.rate,
-      sellRate: sell.rate,
-      quantityQusd,
-      capitalRequiredFiat,
-      grossProfitFiat,
-      grossMarginPercent,
-      buyFeeFiat,
-      sellFeeFiat,
-      totalFeesFiat,
-      netProfitFiat,
-      netMarginPercent,
-      feesStatus: feesKnown ? "known" : "unknown",
-      observedAt:
-        buy.observedAt < sell.observedAt ? buy.observedAt : sell.observedAt,
-      stale: false,
-    });
+    if (bestOpportunity) opportunities.push(bestOpportunity);
   }
 
   opportunities.sort((a, b) => b.grossProfitFiat - a.grossProfitFiat);
