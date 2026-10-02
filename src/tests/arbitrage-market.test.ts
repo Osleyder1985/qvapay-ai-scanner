@@ -83,6 +83,48 @@ test("elige BUY más barato y SELL más caro dentro de la misma moneda", () => {
   assert.equal(opportunity.sellRate, 150);
 });
 
+test("elige el par que maximiza el beneficio con liquidez limitada", () => {
+  const result = scanArbitrage(
+    [
+      offer({
+        uuid: "acquire-cheap-small",
+        type: "sell",
+        amount: 2,
+        available_amount: 2,
+        receive: 180,
+      }),
+      offer({
+        uuid: "acquire-mid-large",
+        type: "sell",
+        amount: 10,
+        available_amount: 10,
+        receive: 1000,
+      }),
+      offer({
+        uuid: "exit-high-small",
+        type: "buy",
+        amount: 2,
+        available_amount: 2,
+        receive: 260,
+      }),
+      offer({
+        uuid: "exit-mid-large",
+        type: "buy",
+        amount: 10,
+        available_amount: 10,
+        receive: 1200,
+      }),
+    ],
+    { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 2_000 },
+  );
+
+  const opportunity = result.opportunities[0]!;
+  assert.equal(opportunity.acquisitionOfferUuid, "acquire-mid-large");
+  assert.equal(opportunity.exitOfferUuid, "exit-mid-large");
+  assert.equal(opportunity.quantityQusd, 10);
+  assert.equal(opportunity.grossProfitFiat, 200);
+});
+
 test("limita la cantidad por liquidez y capital", () => {
   const result = scanArbitrage(
     [
