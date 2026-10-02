@@ -2,75 +2,70 @@
 
 ## Objetivo
 
-El módulo de arbitraje detecta oportunidades potenciales sobre el mercado P2P observado por el sistema. Esta primera etapa es exclusivamente **Scanner Mode**: analiza datos y no ejecuta mutaciones contra QvaPay.
+El módulo de arbitraje detecta y simula oportunidades potenciales sobre el mercado P2P. La capacidad actual es exclusivamente read-only / Scanner Mode: analiza datos y no ejecuta mutaciones contra QvaPay.
 
-## Invariante principal: aislamiento por moneda
+## Aislamiento por moneda
 
-Cada oportunidad pertenece a una única moneda.
+Cada oportunidad pertenece a una única moneda. Una oportunidad sólo puede utilizar ofertas con el mismo coin normalizado. El motor no convierte monedas ni mezcla BANK_CUP, ETECSA, CLASICA, USDT u otros códigos.
 
-Una oferta BUY sólo puede emparejarse con una oferta SELL cuando ambas tienen exactamente la misma moneda normalizada. El motor no convierte monedas, no estima tipos de cambio externos y no crea pares entre BANK_CUP, ETECSA, CLASICA, USDT u otros códigos diferentes.
+## Semántica QvaPay
 
-## Normalización
+- SELL: el usuario adquiere QUSD pagando la moneda cotizada.
+- BUY: el usuario vende QUSD y recibe la moneda cotizada.
 
-El normalizador exige:
+La simulación de compra utiliza ofertas SELL. La salida teórica puede utilizar una oferta BUY del mismo coin.
 
-- uuid;
-- type igual a buy o sell;
-- coin;
-- amount;
-- available_amount;
-- receive;
-- updated_at o created_at como timestamp válido.
+## Criterio de margen
 
-Los campos financieros deben ser numéricos, finitos y positivos. La liquidez disponible no puede superar el amount declarado.
+La monitorización persistente utiliza minMarginPercent, cuyo valor predeterminado es 5%.
 
-No se aplican sustituciones silenciosas. Si QvaPay no entrega available_amount, la oferta se rechaza para este motor en lugar de asumir que amount equivale a liquidez disponible.
+La antigüedad de una oferta no es un criterio de exclusión del monitor actual. No debe documentarse maxAgeMs como parámetro vigente de esta ruta.
 
-## Detección
+## Simulación QUSD/CUP
 
-Para cada moneda:
+Para BANK_CUP la interfaz representa explícitamente: entregar CUP → adquirir QUSD → calcular tasa objetivo → vender QUSD → recibir CUP.
 
-1. se separan las ofertas BUY y SELL;
-2. se selecciona la tasa BUY válida más baja;
-3. se selecciona la tasa SELL válida más alta;
-4. se calcula el spread;
-5. se limita la cantidad por la liquidez explícita de ambos lados y por el capital máximo configurado.
+Para una cantidad QUSD:
 
-Las tasas se calculan como receive / amount, manteniendo la convención ya utilizada por el dashboard.
+- purchaseRate = receive / amount
+- capitalRequiredFiat = Q × purchaseRate
+- targetSaleRate = purchaseRate × (1 + minMarginPercent / 100)
+- targetSaleProceedsFiat = Q × targetSaleRate
+- projectedGrossProfitFiat = targetSaleProceedsFiat - capitalRequiredFiat
+- projectedGrossMarginPercent = projectedGrossProfitFiat / capitalRequiredFiat × 100
 
-## Beneficio
+Ejemplo: 100 QUSD a 1.000 CUP/QUSD y margen 5% requieren 100.000 CUP; la tasa objetivo es 1.050, el retorno proyectado 105.000 CUP y la ganancia bruta 5.000 CUP.
 
-Para una cantidad Q:
+Estos cálculos son simulaciones y no garantizan una oferta de salida.
 
-- capital = Q × buyRate
-- grossProfit = Q × (sellRate - buyRate)
-- grossMargin = grossProfit / capital × 100
+## Monitorización persistente
 
-El beneficio neto requiere datos de comisiones proporcionados por una fuente externa al motor. No se codifican porcentajes ni importes de comisión dentro del módulo.
+El escaneo ya no depende del navegador. La arquitectura desplegada utiliza Cloudflare Worker, Durable Object ArbitrageMonitor, D1 y Durable Object Alarms.
 
-Si alguna comisión requerida no está disponible, netProfitFiat permanece en null y feesStatus es unknown. El sistema no inventa una comisión ni transforma una comisión QUSD a fiat sin una regla de valoración explícita.
+El objetivo es un ciclo de aproximadamente 10 segundos. El frontend sólo visualiza el snapshot persistido. El monitor puede continuar aunque no exista ninguna pestaña abierta.
 
-## Frescura
+El calendario por defecto es 24/7. D1 ya contiene campos para una futura configuración de días, horario y zona horaria, pero esa configuración todavía no está expuesta por la API/UI.
 
-Una observación sólo puede participar si:
+## Estado y errores
 
-0 <= now - observedAt <= maxAgeMs
+Cada ciclo persiste estado, scan ID, timestamps, próxima ejecución y errores. Ante un error transitorio de QvaPay se conserva el último snapshot válido y se registra el error; el Durable Object vuelve a programar el siguiente ciclo.
 
-Las observaciones futuras o demasiado antiguas se excluyen.
+La interfaz muestra 10 → 0 como cuenta regresiva de presentación; no ejecuta el escaneo.
 
 ## Seguridad operacional
 
-Esta etapa no llama a apply, paid, received, cancel ni a ningún endpoint de mutación. La salida del motor es información de análisis, no una orden de ejecución.
+El monitor es read-only. No llama a apply, paid, received, cancel ni a endpoints de creación de órdenes. La respuesta declara mode read-only y executionEnabled false.
 
-## Evolución prevista
+## Endpoints
 
-Después de cerrar esta etapa con evidencia, la secuencia prevista es:
+- GET /api/arbitrage/scan: análisis bajo demanda.
+- GET /api/arbitrage/monitor: configuración, estado y snapshot persistidos.
+- POST /api/arbitrage/monitor: actualización del margen/moneda y arranque del monitor.
 
-1. Risk Engine.
-2. Execution Engine con revalidación e idempotencia.
-3. Settlement Engine.
-4. P&L Ledger.
-5. Dashboard de arbitraje.
-6. Live Execution bajo controles explícitos.
+## Límites conocidos
 
-Cada etapa deberá conservar el aislamiento por moneda y las restricciones de seguridad financiera.
+- La consulta del mercado tiene un límite de páginas y expone coverage.truncated cuando corresponde.
+- Se realizan escrituras frecuentes en D1 porque se persiste el estado/snapshot de cada ciclo.
+- El margen es bruto; las comisiones reales sólo pueden incorporarse con información suficiente.
+- La tasa objetivo de venta es una simulación y no reserva una oferta BUY.
+- La configuración de horario está preparada en D1 pero aún no forma parte del contrato público.
