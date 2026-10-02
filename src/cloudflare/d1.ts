@@ -161,7 +161,7 @@ export async function queryMarketHistory(
     .prepare(
       `SELECT timestamp, coin, type, samples, min_rate, median_rate, max_rate, spread
        FROM market_history${where}
-       ORDER BY timestamp ASC
+       ORDER BY timestamp DESC
        LIMIT ?`,
     )
     .bind(...values, safeLimit)
