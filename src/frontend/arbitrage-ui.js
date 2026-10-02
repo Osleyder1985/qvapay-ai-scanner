@@ -84,7 +84,8 @@ function drawArbitrage() {
   const state = S.arbitrage?.state;
   if (status) {
     if (state?.status === "error") {
-      status.textContent = "⚠ ERROR · reintentando en " + (countdown ?? 10) + " s";
+      const detail = state?.lastError ? " · " + state.lastError : "";
+      status.textContent = "⚠ ERROR" + detail + " · reintentando en " + (countdown ?? 10) + " s";
     } else if (countdown !== null) {
       status.textContent = "MONITOR SERVER · siguiente escaneo en " + countdown + " s";
     } else if (state?.scannedAt) {
