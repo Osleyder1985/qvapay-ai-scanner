@@ -137,7 +137,7 @@ test("acepta webhook firmado y persiste el evento normalizado", async () => {
   assert.equal(db.stored[0]?.[11], "2026-10-02T12:00:00.000Z");
 });
 
-test("reconciliación conserva estados terminales y omite estados no soportados", async () => {
+test(\n  "reconciliación conserva estados terminales y omite estados no soportados",\n  async () => {
   const db = mockDatabase();
   const env = {
     DB: db,
