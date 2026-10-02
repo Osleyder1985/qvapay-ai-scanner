@@ -98,7 +98,7 @@ test("acepta webhook firmado y persiste el evento normalizado", async () => {
   );
   assert.equal(response.status, 202);
   assert.equal(db.stored.length, 1);
-  assert.equal(db.stored[0]?.[0], "p2p.completed:offer-1");
+  assert.equal(db.stored[0]?.[0], "offer-1|completed");
   assert.equal(db.stored[0]?.[11], "2026-10-02T12:00:00.000Z");
 });
 
