@@ -134,7 +134,6 @@ async function init(){
   addEventListener('hashchange',nav);
   if(!(await ensureAuthenticated()))return;
   nav();
-  if(typeof startArbitragePolling==='function')startArbitragePolling();
   void refreshAll();
   setInterval(loadAuto,5000);
   setInterval(async()=>{if(!S.active)return;await loadOperations();if(S.operations.some(o=>String(o.uuid)===String(S.active)))await loadOperation(S.active,null,false)},10000);
