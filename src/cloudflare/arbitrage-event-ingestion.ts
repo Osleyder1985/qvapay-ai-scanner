@@ -87,13 +87,13 @@ function feedRawEvent(
   };
 }
 
-function reconciliationEvent(
+function reconciliationEvents(
   operation: QvaPayRecord,
   observedAt: string,
-): RawMarketEvent | null {
+): RawMarketEvent[] {
   const uuid = stringValue(operation.uuid ?? operation.id);
   const status = stringValue(operation.status)?.toLowerCase();
-  if (!uuid || !status) return null;
+  if (!uuid || !status) return [];
 
   const eventByStatus: Record<string, string> = {
     open: "created",
@@ -103,12 +103,10 @@ function reconciliationEvent(
     cancelled: "cancelled",
   };
   const event = eventByStatus[status];
-  if (!event) return null;
+  if (!event) return [];
 
-  return {
-    eventId: `${event}:${uuid}`,
+  const base = {
     offerUuid: uuid,
-    event,
     status,
     type: operation.type,
     coin: operation.coin,
@@ -117,10 +115,28 @@ function reconciliationEvent(
     receive: operation.receive,
     createdAt: operation.created_at,
     updatedAt: operation.updated_at,
-    eventAt: operation.updated_at ?? operation.created_at,
     observedAt,
-    source: "reconciliation",
+    source: "reconciliation" as const,
   };
+
+  const events: RawMarketEvent[] = [];
+  if (stringValue(operation.created_at)) {
+    events.push({
+      ...base,
+      eventId: "created:" + uuid,
+      event: "created",
+      eventAt: operation.created_at,
+    });
+  }
+
+  events.push({
+    ...base,
+    eventId: event + ":" + uuid,
+    event,
+    eventAt: operation.updated_at ?? operation.created_at,
+  });
+
+  return events;
 }
 
 function hexToBytes(value: string): Uint8Array | null {
@@ -266,13 +282,15 @@ export async function reconcileArbitrageHistory(
 
     fetched += collection.data.length;
     for (const operation of collection.data) {
-      const raw = reconciliationEvent(operation, now.toISOString());
-      if (!raw) {
+      const rawEvents = reconciliationEvents(operation, now.toISOString());
+      if (!rawEvents.length) {
         unsupported += 1;
         continue;
       }
-      const normalized = normalizeMarketEvent(raw, now);
-      if (normalized) events.push(normalized);
+      for (const raw of rawEvents) {
+        const normalized = normalizeMarketEvent(raw, now);
+        if (normalized) events.push(normalized);
+      }
     }
 
     pagesFetched = page;
