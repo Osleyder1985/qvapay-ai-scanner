@@ -227,7 +227,8 @@ function isValidCompletedTrade(event: NormalizedMarketEvent): boolean {
   }
 
   const derivedRate = event.receive / event.amount;
-  const tolerance = Math.max(Math.abs(derivedRate), Math.abs(event.rate), 1) * 1e-9;
+  const tolerance =
+    Math.max(Math.abs(derivedRate), Math.abs(event.rate), 1) * 1e-9;
   return Math.abs(derivedRate - event.rate) <= tolerance;
 }
 
