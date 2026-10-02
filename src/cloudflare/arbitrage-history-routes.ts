@@ -52,7 +52,8 @@ export async function handleArbitrageHistoryRoutes(
   if (request.method !== "GET") return null;
   if (url.pathname !== "/api/arbitrage/history") return null;
 
-  const coin = url.searchParams.get("coin")?.trim().toUpperCase() ?? "";
+  const coin =
+    url.searchParams.get("coin")?.trim().toUpperCase() ?? "";
   if (!coin) return json({ error: "coin es obligatorio." }, 400);
 
   const windowSize = Math.min(
