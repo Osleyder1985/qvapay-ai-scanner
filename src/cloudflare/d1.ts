@@ -370,10 +370,25 @@ export async function appendMarketEvents(
     const statements = chunk.map((event) =>
       db
         .prepare(
-          `INSERT OR REPLACE INTO market_events
+          `INSERT INTO market_events
            (dedupe_key, event_id, offer_uuid, event, status, side, coin,
             amount, available_amount, receive, rate, event_at, observed_at, source)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(dedupe_key) DO UPDATE SET
+             event_id = excluded.event_id,
+             status = excluded.status,
+             side = excluded.side,
+             coin = excluded.coin,
+             amount = excluded.amount,
+             available_amount = excluded.available_amount,
+             receive = excluded.receive,
+             rate = excluded.rate,
+             event_at = excluded.event_at,
+             observed_at = excluded.observed_at,
+             source = excluded.source
+           WHERE excluded.observed_at > market_events.observed_at
+              OR (excluded.observed_at = market_events.observed_at
+                  AND excluded.event_at > market_events.event_at)`,
         )
         .bind(
           event.dedupeKey,
