@@ -29,7 +29,10 @@ function mockDatabase() {
       };
     },
     batch: async (statements: Array<{ run?: () => Promise<unknown> }>) =>
-      statements.map(() => ({ success: true })),
+      statements.map(() => ({
+        success: true,
+        meta: { changes: 1 },
+      })),
   };
 }
 
