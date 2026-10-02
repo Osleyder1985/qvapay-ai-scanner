@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
 import {
+  appendMarketEvents,
   d1Health,
   queryMarketHistory,
   type D1Database,
@@ -77,4 +78,38 @@ test("D1 market history query normalizes stored numeric fields", async () => {
       spread: 5,
     },
   ]);
+});
+
+
+test("D1 market event persistence chunks large batches", async () => {
+  const batchSizes: number[] = [];
+  const db: D1Database = {
+    prepare: () => statement([]),
+    batch: async (statements) => {
+      batchSizes.push(statements.length);
+      return statements.map(() => ({ success: true, meta: { changes: 1 } }));
+    },
+  };
+
+  const events = Array.from({ length: 251 }, (_, index) => ({
+    dedupeKey: `offer-${index}|completed`,
+    eventId: `event-${index}`,
+    offerUuid: `offer-${index}`,
+    event: "completed",
+    status: "completed",
+    side: "sell",
+    coin: "BANK_CUP",
+    amount: 10,
+    availableAmount: 10,
+    receive: 12000,
+    rate: 1200,
+    eventAt: "2026-10-02T12:00:00.000Z",
+    observedAt: "2026-10-02T12:00:01.000Z",
+    source: "webhook",
+  }));
+
+  const inserted = await appendMarketEvents(db, events);
+
+  assert.equal(inserted, 251);
+  assert.deepEqual(batchSizes, [250, 1]);
 });
