@@ -138,7 +138,9 @@ function fee(
 ): number | null {
   if (!calculator) return null;
   const value = calculator(context);
-  return Number.isFinite(value) && value >= 0 ? value : null;
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : null;
 }
 
 /**
