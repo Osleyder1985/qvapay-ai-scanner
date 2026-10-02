@@ -249,8 +249,7 @@ export function calculateCurrencyAnalytics(
         event.rate !== null,
     )
     .sort(
-      (a, b) =>
-        new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime(),
+      (a, b) => new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime(),
     );
   for (const event of completedEvents) {
     if (completedOfferIdsSeen.has(event.offerUuid)) continue;
@@ -263,8 +262,8 @@ export function calculateCurrencyAnalytics(
   const windowEvents = all.filter((event) =>
     completedOfferIds.has(event.offerUuid),
   );
-  const completed = completedTradesFromEvents(windowEvents).filter(
-    (trade) => completedOfferIds.has(trade.offerUuid),
+  const completed = completedTradesFromEvents(windowEvents).filter((trade) =>
+    completedOfferIds.has(trade.offerUuid),
   );
   const completedIds = new Set(completed.map((trade) => trade.offerUuid));
   const cancelledCount = 0;
