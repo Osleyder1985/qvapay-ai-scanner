@@ -67,3 +67,14 @@ test("AI Auditor fails closed when its secret is not configured", async () => {
   assert.equal(result.ok, false);
   if (!result.ok) assert.equal(result.status, 503);
 });
+
+test("AI Auditor rejects a malformed configured hash", async () => {
+  const result = await authorizeAiAuditor(
+    new Request("https://example.test/api/ai-audit/health", {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+    "not-a-sha256-hash",
+  );
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.equal(result.status, 503);
+});

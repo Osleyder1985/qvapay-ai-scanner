@@ -12,6 +12,7 @@ const WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 60;
 
 const buckets = new Map<string, { count: number; resetAt: number }>();
+const MAX_BUCKETS = 256;
 
 async function sha256Hex(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value);
@@ -39,9 +40,17 @@ function extractBearerToken(request: Request): string | null {
 }
 
 function pruneBuckets(now: number): void {
-  if (buckets.size < 256) return;
   for (const [key, bucket] of buckets) {
     if (bucket.resetAt <= now) buckets.delete(key);
+  }
+
+  if (buckets.size <= MAX_BUCKETS) return;
+
+  const oldest = [...buckets.entries()].sort(
+    (left, right) => left[1].resetAt - right[1].resetAt,
+  );
+  for (const [key] of oldest.slice(0, buckets.size - MAX_BUCKETS)) {
+    buckets.delete(key);
   }
 }
 
@@ -71,9 +80,15 @@ async function authorize(
   }
 
   const suppliedHash = await sha256Hex(token);
-  if (
-    !constantTimeEqual(suppliedHash, expectedTokenHash.trim().toLowerCase())
-  ) {
+  const configuredHash = expectedTokenHash.trim().toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(configuredHash)) {
+    return {
+      ok: false,
+      status: 503,
+      error: "AI Auditor está configurado con un hash inválido.",
+    };
+  }
+  if (!constantTimeEqual(suppliedHash, configuredHash)) {
     return { ok: false, status: 401, error: "Credenciales inválidas." };
   }
 
