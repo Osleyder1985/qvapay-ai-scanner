@@ -7,6 +7,7 @@
  */
 
 import { requireSession, type SessionDatabase } from "./cloudflare/access.js";
+import { bootstrapArbitrageMonitor } from "./cloudflare/arbitrage-monitor-routes.js";
 import {
   routeRequest,
   securityHeaders,
@@ -26,6 +27,10 @@ function withSecurityHeaders(response: Response): Response {
 }
 
 export default {
+  async scheduled(_controller: ScheduledController, env: WorkerEnv): Promise<void> {
+    await bootstrapArbitrageMonitor(env);
+  },
+
   async fetch(request: Request, env: WorkerEnv): Promise<Response> {
     const url = new URL(request.url);
 
