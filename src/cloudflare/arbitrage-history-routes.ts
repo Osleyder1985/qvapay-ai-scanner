@@ -7,7 +7,7 @@
  */
 
 import {
-  listMarketEvents,
+  listMarketEventsForAnalytics,
   type D1Database,
   type MarketEventRow,
 } from "./d1.js";
@@ -73,7 +73,7 @@ export async function handleArbitrageHistoryRoutes(
     return json({ error: "window debe ser un entero positivo." }, 400);
   }
 
-  const rows = await listMarketEvents(env.DB, coin, 10000);
+  const rows = await listMarketEventsForAnalytics(env.DB, coin, windowSize);
   const analytics = calculateCurrencyAnalytics(rows.map(toEvent), coin, {
     windowSize,
   });
