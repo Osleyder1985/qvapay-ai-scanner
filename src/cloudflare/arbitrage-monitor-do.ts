@@ -46,7 +46,6 @@ export class ArbitrageMonitor {
   async alarm(): Promise<void> {
     try {
       await runArbitrageMonitor(this.env.DB, this.env);
-      await this.ctx.storage.setAlarm(Date.now() + INTERVAL_MS);
     } catch (error) {
       await this.env.DB.prepare(
         `UPDATE arbitrage_monitor_state
@@ -59,6 +58,8 @@ export class ArbitrageMonitor {
           new Date().toISOString(),
         )
         .run();
+    } finally {
+      // Always schedule the next cycle, including upstream/API failures.
       await this.ctx.storage.setAlarm(Date.now() + INTERVAL_MS);
     }
   }
