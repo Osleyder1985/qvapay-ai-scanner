@@ -20,6 +20,7 @@ import { handleMarketRoutes } from "./market-routes.js";
 import { handleAccountRoutes } from "./account-routes.js";
 import { handleDiagnosticsRoutes } from "./diagnostics-routes.js";
 import { handleAutoApplyRoutes } from "./auto-apply-routes.js";
+import { handleArbitrageHistoryRoutes } from "./arbitrage-history-routes.js";
 
 export interface WorkerEnv {
   DB: D1Database;
@@ -136,6 +137,14 @@ export async function handleApi(
 
   const accountResponse = await handleAccountRoutes(request, env, url, json);
   if (accountResponse) return accountResponse;
+
+  const arbitrageHistoryResponse = await handleArbitrageHistoryRoutes(
+    request,
+    env,
+    url,
+    json,
+  );
+  if (arbitrageHistoryResponse) return arbitrageHistoryResponse;
 
   const autoApplyResponse = handleAutoApplyRoutes(request, url, json);
   if (autoApplyResponse) return autoApplyResponse;
