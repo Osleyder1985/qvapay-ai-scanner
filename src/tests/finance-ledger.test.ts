@@ -134,7 +134,8 @@ test("finance ledger neutralizes malformed persisted settlement values", async (
     );
     const store = new FinanceLedgerStore();
     await store.initialize();
-    const [entry] = store.list();
+    const entry = store.list()[0];
+    assert.ok(entry);
     assert.equal(entry.grossAmountQusd, 10);
     assert.equal(entry.feeQusd, null);
     assert.equal(entry.netAmountQusd, null);
