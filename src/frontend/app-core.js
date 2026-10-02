@@ -5,7 +5,7 @@
  * @module frontend/core
  * @status active
  */
-const S={offers:[],total:0,page:1,lastPage:1,intelligence:null,intelligenceCoverage:null,history:[],trends:[],baselines:[],operations:[],active:localStorage.getItem('qvapay.activeOperationId'),operation:null,operationRole:'unknown',chat:[],config:null,auto:null,account:null,finance:null};
+const S={offers:[],total:0,page:1,lastPage:1,intelligence:null,intelligenceCoverage:null,history:[],trends:[],baselines:[],arbitrage:null,operations:[],active:localStorage.getItem('qvapay.activeOperationId'),operation:null,operationRole:'unknown',chat:[],config:null,auto:null,account:null,finance:null};
 const $=id=>document.getElementById(id), esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
 /**
  * Implementa la operación num de este módulo.
@@ -14,7 +14,7 @@ const $=id=>document.getElementById(id), esc=v=>String(v??'').replaceAll('&','&a
  * @returns Resultado de la operación.
  */
 const num=(v,d=2)=>Number.isFinite(Number(v))?Number(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}):'—'; const rate=o=>Number(o?.amount)>0?Number(o.receive)/Number(o.amount):null;
-const meta={'/':['OVERVIEW','Inicio'],'/market':['MARKET','Mercado'],'/auto-apply':['AUTOMATION','Auto-Apply'],'/operations':['OPERATIONS','Operaciones'],'/operation-detail':['OPERATIONS','Detalle de operación'],'/analytics':['INTELLIGENCE','Analytics'],'/alerts':['MONITORING','Alertas'],'/account':['ACCOUNT','Cuenta'],'/finance':['FINANCE','Finanzas'],'/settings':['SYSTEM','Configuración']};
+const meta={'/':['OVERVIEW','Inicio'],'/market':['MARKET','Mercado'],'/arbitrage':['ARBITRAGE','Arbitraje'],'/auto-apply':['AUTOMATION','Auto-Apply'],'/operations':['OPERATIONS','Operaciones'],'/operation-detail':['OPERATIONS','Detalle de operación'],'/analytics':['INTELLIGENCE','Analytics'],'/alerts':['MONITORING','Alertas'],'/account':['ACCOUNT','Cuenta'],'/finance':['FINANCE','Finanzas'],'/settings':['SYSTEM','Configuración']};
 /**
  * Implementa la operación api de este módulo.
  * @param u Entrada utilizada por la operación.
@@ -72,4 +72,4 @@ function coinAnalysis(){const groups=new Map();S.offers.forEach(o=>{const coin=S
 
  * @returns Resultado de la operación.
  */
-function nav(){let raw=location.hash.slice(1)||'/';let p=raw;if(raw.startsWith('/operations/')){const id=decodeURIComponent(raw.slice('/operations/'.length));if(id){S.active=id;localStorage.setItem('qvapay.activeOperationId',id);p='/operation-detail'}}if(!meta[p])p='/';document.getElementById('pageKicker').textContent=meta[p][0];document.getElementById('pageTitle').textContent=meta[p][1];document.querySelectorAll('[data-route]').forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+(p==='/operation-detail'?'/operations':p)));document.getElementById('app').innerHTML=pages[p]();if(p==='/market'){bindFilters();drawOffers()}if(p==='/auto-apply')bindAuto();if(p==='/analytics'){drawCoinRadar();drawCoinAnalysis();void loadIntelligence().then(()=>{drawCoinRadar();drawCoinAnalysis()})}if(p==='/')drawHome();if(p==='/operations'){drawOperations();void loadOperations().then(()=>{drawOperations();if(S.active)void loadOperation(S.active)})}if(p==='/operation-detail'){void loadOperations().then(()=>loadOperation(S.active))}if(p==='/account')drawAccount();if(p==='/finance'){drawFinance();void loadFinance().then(()=>drawFinance())}}
+function nav(){let raw=location.hash.slice(1)||'/';let p=raw;if(raw.startsWith('/operations/')){const id=decodeURIComponent(raw.slice('/operations/'.length));if(id){S.active=id;localStorage.setItem('qvapay.activeOperationId',id);p='/operation-detail'}}if(!meta[p])p='/';document.getElementById('pageKicker').textContent=meta[p][0];document.getElementById('pageTitle').textContent=meta[p][1];document.querySelectorAll('[data-route]').forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+(p==='/operation-detail'?'/operations':p)));document.getElementById('app').innerHTML=pages[p]();if(p==='/market'){bindFilters();drawOffers()}if(p==='/arbitrage'){drawArbitrage();void loadArbitrage().then(drawArbitrage)}if(p==='/auto-apply')bindAuto();if(p==='/analytics'){drawCoinRadar();drawCoinAnalysis();void loadIntelligence().then(()=>{drawCoinRadar();drawCoinAnalysis()})}if(p==='/')drawHome();if(p==='/operations'){drawOperations();void loadOperations().then(()=>{drawOperations();if(S.active)void loadOperation(S.active)})}if(p==='/operation-detail'){void loadOperations().then(()=>loadOperation(S.active))}if(p==='/account')drawAccount();if(p==='/finance'){drawFinance();void loadFinance().then(()=>drawFinance())}}
