@@ -27,18 +27,25 @@ jobs:
           set -u
           mkdir -p audit-report
           endpoints="health monitor arbitrage database runtime"
+          failed=0
           for endpoint in $endpoints; do
-            curl --silent --show-error --location \
-              --header "Authorization: Bearer ${AI_AUDITOR_TOKEN}" \
-              --header "Accept: application/json" \
-              --output "audit-report/${endpoint}.json" \
-              "${AI_AUDITOR_BASE_URL}/api/ai-audit/${endpoint}" \
-              || true
+            status="$(
+              curl --silent --show-error --location                 --header "Authorization: Bearer ${AI_AUDITOR_TOKEN}"                 --header "Accept: application/json"                 --output "audit-report/${endpoint}.json"                 --write-out "%{http_code}"                 "${AI_AUDITOR_BASE_URL}/api/ai-audit/${endpoint}"                 || printf '%s' '000'
+            )"
+            printf '%s\n' "${status}" > "audit-report/${endpoint}.status"
+            if [ "${status}" -lt 200 ] || [ "${status}" -ge 300 ]; then
+              echo "AI Auditor endpoint ${endpoint} returned HTTP ${status}" >&2
+              failed=1
+            fi
           done
           unset AI_AUDITOR_TOKEN
           printf '%s\n' 'AI Auditor diagnostics collected from read-only endpoints.' > audit-report/README.txt
+          if [ "${failed}" -ne 0 ]; then
+            exit 1
+          fi
 
       - name: Upload diagnostic report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ai-auditor-runtime-report
