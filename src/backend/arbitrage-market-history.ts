@@ -260,7 +260,9 @@ export function completedTradesFromEvents(
     }))
     .sort(
       (a, b) =>
-        new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime(),
+        new Date(a.completedAt).getTime() -
+          new Date(b.completedAt).getTime() ||
+        a.offerUuid.localeCompare(b.offerUuid),
     );
 }
 
@@ -285,7 +287,11 @@ export function calculateCurrencyAnalytics(
       (event) => event.event === "completed" && isValidCompletedTrade(event),
     )
     .sort(
-      (a, b) => new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime(),
+      (a, b) =>
+        new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime() ||
+        new Date(a.observedAt).getTime() -
+          new Date(b.observedAt).getTime() ||
+        a.offerUuid.localeCompare(b.offerUuid),
     );
   for (const event of completedEvents) {
     if (completedOfferIdsSeen.has(event.offerUuid)) continue;
