@@ -136,8 +136,7 @@ export function normalizeArbitrageOffer(
           ? "fixed"
           : "flexible";
   const rawAvailableQusd = finitePositive(raw.available_amount);
-  const availableQusd =
-    offerKind === "fixed" ? amountQusd : rawAvailableQusd;
+  const availableQusd = offerKind === "fixed" ? amountQusd : rawAvailableQusd;
   const orderMinQusd =
     offerKind === "flexible" ? finitePositive(raw.order_min) : null;
   const orderMaxQusd =
