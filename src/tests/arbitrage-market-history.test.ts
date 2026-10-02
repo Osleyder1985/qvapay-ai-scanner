@@ -110,7 +110,7 @@ test("deduplica un completed aunque webhook y stream usen event IDs distintos", 
   assert.equal(deduplicateMarketEvents([webhook, stream]).length, 1);
 });
 
-test("aplica windowSize a operaciones terminales y mantiene tasas coherentes", () => {
+test("aplica windowSize únicamente a operaciones completadas", () => {
   const events = [
     event({
       offerUuid: "old-done",
@@ -140,11 +140,11 @@ test("aplica windowSize a operaciones terminales y mantiene tasas coherentes", (
   const result = calculateCurrencyAnalytics(events, "BANK_CUP", {
     windowSize: 2,
   });
-  assert.equal(result.completedCount, 1);
-  assert.equal(result.cancelledCount, 1);
+  assert.equal(result.completedCount, 2);
+  assert.equal(result.cancelledCount, 0);
   assert.equal(result.terminalCount, 2);
-  assert.equal(result.completionRatePercent, 50);
-  assert.equal(result.cancellationRatePercent, 50);
+  assert.equal(result.completionRatePercent, 100);
+  assert.equal(result.cancellationRatePercent, null);
 });
 
 test("usa la creación más antigua para calcular el tiempo de finalización", () => {
