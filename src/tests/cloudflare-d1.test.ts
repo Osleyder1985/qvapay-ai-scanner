@@ -8,13 +8,9 @@ import {
   type D1PreparedStatement,
 } from "../cloudflare/d1.js";
 
-function failedBatch<T>(): Array<
-  { success: boolean; meta: { changes: number } } & T
-> {
-  return [{ success: false, meta: { changes: 0 } }] as Array<
-    { success: boolean; meta: { changes: number } } & T
-  >;
-}
+const failedBatch = (() => [
+  { success: false, meta: { changes: 0 } },
+]) as D1Database["batch"];
 
 function statement(result: unknown): D1PreparedStatement {
   return {
