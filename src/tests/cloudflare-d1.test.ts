@@ -156,7 +156,6 @@ test("D1 market event persistence chunks large batches", async () => {
   assert.deepEqual(batchSizes, [250, 1]);
 });
 
-
 test("D1 market event listing returns the newest global events first", async () => {
   const queries: string[] = [];
   const db: D1Database = {
