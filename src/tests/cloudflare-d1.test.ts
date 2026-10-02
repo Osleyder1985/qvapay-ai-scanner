@@ -155,3 +155,20 @@ test("D1 market event persistence chunks large batches", async () => {
   assert.equal(inserted, 251);
   assert.deepEqual(batchSizes, [250, 1]);
 });
+
+
+test("D1 market event listing returns the newest global events first", async () => {
+  const queries: string[] = [];
+  const db: D1Database = {
+    prepare: (query) => {
+      queries.push(query);
+      return statement([]);
+    },
+    batch: async () => [],
+  };
+
+  const { listMarketEvents } = await import("../cloudflare/d1.js");
+  await listMarketEvents(db, undefined, 10);
+
+  assert.ok(queries[0]?.includes("ORDER BY event_at DESC, observed_at DESC"));
+});
