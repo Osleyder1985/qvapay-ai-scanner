@@ -118,7 +118,48 @@ test("D1 market event persistence uses deterministic newest-observation upsert",
     queries[0]?.includes("excluded.observed_at > market_events.observed_at"),
   );
   assert.ok(
-    queries[0]?.includes("excluded.event_id <> market_events.event_id"),
+    !queries[0]?.includes("excluded.event_id <> market_events.event_id"),
+  );
+});
+
+test("D1 market event persistence refreshes repeated event IDs by observation time", async () => {
+  const queries: string[] = [];
+  const db: D1Database = {
+    prepare: (query) => {
+      queries.push(query);
+      return statement([]);
+    },
+    batch: async () => [],
+  };
+
+  await appendMarketEvents(db, [
+    {
+      dedupeKey: "offer-1|completed",
+      eventId: "event-1",
+      offerUuid: "offer-1",
+      event: "completed",
+      status: "completed",
+      side: "sell",
+      coin: "BANK_CUP",
+      amount: 10,
+      availableAmount: 0,
+      receive: 12500,
+      rate: 1250,
+      eventAt: "2026-10-02T12:00:00.000Z",
+      observedAt: "2026-10-02T12:05:00.000Z",
+      source: "webhook",
+    },
+  ]);
+
+  assert.ok(
+    queries[0]?.includes(
+      "excluded.observed_at > market_events.observed_at",
+    ),
+  );
+  assert.ok(
+    queries[0]?.includes(
+      "excluded.observed_at = market_events.observed_at",
+    ),
   );
 });
 
