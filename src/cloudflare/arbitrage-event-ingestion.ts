@@ -93,7 +93,6 @@ function feedRawEvent(
     source,
   };
 }
-}
 
 function reconciliationEvents(
   operation: QvaPayRecord,
