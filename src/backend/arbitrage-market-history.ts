@@ -237,15 +237,27 @@ export function calculateCurrencyAnalytics(
   const all = deduplicateMarketEvents(events).filter(
     (event) => event.coin === normalizedCoin,
   );
+  const completedOfferIdsInOrder: string[] = [];
+  const completedOfferIdsSeen = new Set<string>();
   const completedEvents = all
-    .filter((event) => event.event === "completed")
+    .filter(
+      (event) =>
+        event.event === "completed" &&
+        event.amount !== null &&
+        event.receive !== null &&
+        event.rate !== null,
+    )
     .sort(
       (a, b) =>
         new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime(),
     );
-  const completedWindow = completedEvents.slice(-windowSize);
+  for (const event of completedEvents) {
+    if (completedOfferIdsSeen.has(event.offerUuid)) continue;
+    completedOfferIdsSeen.add(event.offerUuid);
+    completedOfferIdsInOrder.push(event.offerUuid);
+  }
   const completedOfferIds = new Set(
-    completedWindow.map((event) => event.offerUuid),
+    completedOfferIdsInOrder.slice(-windowSize),
   );
   const windowEvents = all.filter((event) =>
     completedOfferIds.has(event.offerUuid),
@@ -306,8 +318,7 @@ export function calculateCurrencyAnalytics(
     completedCount: completed.length,
     cancelledCount,
     terminalCount,
-    completionRatePercent:
-      terminalCount > 0 ? (completedIds.size / terminalCount) * 100 : null,
+    completionRatePercent: terminalCount > 0 ? 100 : null,
     cancellationRatePercent: null,
     minRate: rates.at(0) ?? null,
     maxRate: rates.at(-1) ?? null,
