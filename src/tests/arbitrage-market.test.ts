@@ -45,7 +45,6 @@ test("normaliza una oferta válida sin aplicar sustituciones implícitas", () =>
   });
 });
 
-
 test("usa el monto completo de una oferta fija cuando available_amount es null", () => {
   const result = normalizeArbitrageOffer(
     offer({
