@@ -71,8 +71,8 @@ function feedRawEvent(
 
   const eventAt =
     eventName.toLowerCase().replace(/^p2p\./, "") === "created"
-      ? createdAt ?? updatedAt ?? sentAt
-      : updatedAt ?? createdAt ?? sentAt;
+      ? (createdAt ?? updatedAt ?? sentAt)
+      : (updatedAt ?? createdAt ?? sentAt);
 
   return {
     eventId: eventName + ":" + uuid,
