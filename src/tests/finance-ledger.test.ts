@@ -140,6 +140,36 @@ test("finance ledger neutralizes malformed persisted settlement values", async (
     assert.equal(entry.feeQusd, null);
     assert.equal(entry.netAmountQusd, null);
     assert.equal(entry.feeSource, "unknown");
+
+    await writeFile(
+      path,
+      JSON.stringify([
+        {
+          uuid: "loaded-2",
+          status: "completed",
+          type: "buy",
+          coin: "BANK_CUP",
+          amount: 10,
+          receive: 100,
+          createdAt: "2026-10-01T00:00:00.000Z",
+          updatedAt: "2026-10-01T00:00:00.000Z",
+          recordedAt: "2026-10-01T00:00:00.000Z",
+          grossAmountQusd: 100,
+          feeQusd: null,
+          netAmountQusd: 100,
+          feeSource: "qvapay_received",
+        },
+      ]),
+      "utf8",
+    );
+    const partial = new FinanceLedgerStore();
+    await partial.initialize();
+    const partialEntry = partial.list()[0];
+    assert.ok(partialEntry);
+    assert.equal(partialEntry.grossAmountQusd, 10);
+    assert.equal(partialEntry.feeQusd, null);
+    assert.equal(partialEntry.netAmountQusd, null);
+    assert.equal(partialEntry.feeSource, "unknown");
   } finally {
     if (previous === undefined) delete process.env.FINANCE_LEDGER_PATH;
     else process.env.FINANCE_LEDGER_PATH = previous;
