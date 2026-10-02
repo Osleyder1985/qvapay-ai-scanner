@@ -80,7 +80,6 @@ test("D1 market history query normalizes stored numeric fields", async () => {
   ]);
 });
 
-
 test("D1 market event persistence chunks large batches", async () => {
   const batchSizes: number[] = [];
   const db: D1Database = {
