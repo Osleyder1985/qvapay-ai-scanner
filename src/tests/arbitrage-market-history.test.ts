@@ -81,7 +81,7 @@ test("rechaza estados desconocidos y no infiere completed", () => {
   );
 });
 
-test("deduplica el mismo evento sin eliminar eventos distintos de la misma oferta", () => {
+test(\n  "deduplica el mismo evento sin eliminar eventos distintos de la misma oferta",\n  () => {
   const first = event({ dedupeKey: "same" });
   const duplicate = event({ dedupeKey: "same", source: "webhook" });
   const cancelled = event({
@@ -182,7 +182,7 @@ test("separa completadas de canceladas", () => {
 
 test("no cuenta una operación incompleta como ejecución", () => {
   const events = [
-    event({ offerUuid: "open", dedupeKey: "open", event: "created", rate: 1200 }),
+    event({\n      offerUuid: "open",\n      dedupeKey: "open",\n      event: "created",\n      rate: 1200,\n    }),
     event({ offerUuid: "paid", dedupeKey: "paid", event: "paid", rate: 1300 }),
   ];
   const trades = completedTradesFromEvents(events);
