@@ -211,6 +211,26 @@ export function deduplicateMarketEvents(
   );
 }
 
+function isValidCompletedTrade(event: NormalizedMarketEvent): boolean {
+  if (
+    event.amount === null ||
+    event.receive === null ||
+    event.rate === null ||
+    !Number.isFinite(event.amount) ||
+    !Number.isFinite(event.receive) ||
+    !Number.isFinite(event.rate) ||
+    event.amount <= 0 ||
+    event.receive <= 0 ||
+    event.rate <= 0
+  ) {
+    return false;
+  }
+
+  const derivedRate = event.receive / event.amount;
+  const tolerance = Math.max(Math.abs(derivedRate), Math.abs(event.rate), 1) * 1e-9;
+  return Math.abs(derivedRate - event.rate) <= tolerance;
+}
+
 function percentile(sorted: number[], p: number): number | null {
   if (!sorted.length) return null;
   const position = (sorted.length - 1) * p;
@@ -226,11 +246,7 @@ export function completedTradesFromEvents(
 ): CompletedTrade[] {
   return deduplicateMarketEvents(events)
     .filter(
-      (event) =>
-        event.event === "completed" &&
-        event.amount !== null &&
-        event.receive !== null &&
-        event.rate !== null,
+      (event) => event.event === "completed" && isValidCompletedTrade(event),
     )
     .map((event) => ({
       offerUuid: event.offerUuid,
@@ -265,11 +281,7 @@ export function calculateCurrencyAnalytics(
   const completedOfferIdsSeen = new Set<string>();
   const completedEvents = all
     .filter(
-      (event) =>
-        event.event === "completed" &&
-        event.amount !== null &&
-        event.receive !== null &&
-        event.rate !== null,
+      (event) => event.event === "completed" && isValidCompletedTrade(event),
     )
     .sort(
       (a, b) => new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime(),
