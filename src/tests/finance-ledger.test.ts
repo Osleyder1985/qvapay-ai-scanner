@@ -114,7 +114,7 @@ test("finance ledger neutralizes malformed persisted settlement values", async (
     await writeFile(
       path,
       JSON.stringify([
-          {
+        {
             uuid: "loaded-1",
             status: "completed",
             type: "buy",
@@ -128,7 +128,7 @@ test("finance ledger neutralizes malformed persisted settlement values", async (
             feeQusd: 20,
             netAmountQusd: 70,
             feeSource: "qvapay_received",
-          },
+        },
       ]),
       "utf8",
     );
