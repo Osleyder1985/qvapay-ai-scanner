@@ -266,6 +266,35 @@ test("calcula tiempo medio hasta completar", () => {
   assert.equal(result.averageTimeToCompletionMs, 60 * 60 * 1000);
 });
 
+test("mantiene unknown cuando faltan cantidad o receive", () => {
+  const result = normalizeMarketEvent({
+    offerUuid: "missing",
+    event: "p2p.completed",
+    status: "completed",
+    coin: "BANK_CUP",
+    source: "webhook",
+    eventAt: "2026-10-02T11:00:00Z",
+  });
+  assert.ok(result);
+  assert.equal(result.amount, null);
+  assert.equal(result.receive, null);
+  assert.equal(result.rate, null);
+});
+
+test("no marca como stale un evento observado en el futuro", () => {
+  const result = calculateCurrencyAnalytics(
+    [
+      event({
+        eventAt: "2026-10-02T13:00:00Z",
+        observedAt: "2026-10-02T13:00:00Z",
+      }),
+    ],
+    "BANK_CUP",
+    { now: NOW, maxAgeMs: 60_000 },
+  );
+  assert.equal(result.stale, false);
+});
+
 test("marca histórico obsoleto cuando supera maxAgeMs", () => {
   const result = calculateCurrencyAnalytics(
     [event({ eventAt: "2026-10-02T10:00:00Z" })],
