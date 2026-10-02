@@ -1172,6 +1172,7 @@ async function handleRequest(
     "/app-core.js": "app-core.js",
     "/pages.js": "pages.js",
     "/market-ui.js": "market-ui.js",
+    "/arbitrage-ui.js": "arbitrage-ui.js",
     "/operations-ui.js": "operations-ui.js",
     "/runtime-ui.js": "runtime-ui.js",
     "/app.js": "app.js",
