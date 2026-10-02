@@ -387,19 +387,26 @@ export async function appendMarketEvents(
              observed_at = excluded.observed_at,
              source = excluded.source
            WHERE (
-             market_events.event = 'created'
+             (excluded.event_id IS NULL
+              OR market_events.event_id IS NULL
+              OR excluded.event_id <> market_events.event_id)
              AND (
-               excluded.event_at < market_events.event_at
-               OR (excluded.event_at = market_events.event_at
-                   AND excluded.observed_at > market_events.observed_at)
-             )
-           )
-           OR (
-             market_events.event <> 'created'
-             AND (
-               excluded.observed_at > market_events.observed_at
-               OR (excluded.observed_at = market_events.observed_at
-                   AND excluded.event_at > market_events.event_at)
+               (
+                 market_events.event = 'created'
+                 AND (
+                   excluded.event_at < market_events.event_at
+                   OR (excluded.event_at = market_events.event_at
+                       AND excluded.observed_at > market_events.observed_at)
+                 )
+               )
+               OR (
+                 market_events.event <> 'created'
+                 AND (
+                   excluded.observed_at > market_events.observed_at
+                   OR (excluded.observed_at = market_events.observed_at
+                       AND excluded.event_at > market_events.event_at)
+                 )
+               )
              )
            )`,
         )
