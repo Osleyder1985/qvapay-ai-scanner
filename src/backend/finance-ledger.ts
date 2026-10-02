@@ -171,9 +171,10 @@ export class FinanceLedgerStore {
       gross >= 0 &&
       (fee === null || (Number.isFinite(fee) && fee >= 0)) &&
       (net === null || (Number.isFinite(net) && net >= 0)) &&
-      (fee === null ||
-        net === null ||
-        (fee <= gross + settlementTolerance &&
+      ((fee === null && net === null) ||
+        (fee !== null &&
+          net !== null &&
+          fee <= gross + settlementTolerance &&
           net <= gross + settlementTolerance &&
           Math.abs(gross - (net + fee)) <= settlementTolerance));
 
@@ -193,7 +194,9 @@ export class FinanceLedgerStore {
       feeQusd: fee,
       netAmountQusd: net,
       feeSource:
-        value.feeSource === "qvapay_received" ? "qvapay_received" : "unknown",
+        fee !== null && net !== null && value.feeSource === "qvapay_received"
+          ? "qvapay_received"
+          : "unknown",
     };
   }
 
