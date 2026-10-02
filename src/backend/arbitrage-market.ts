@@ -60,8 +60,8 @@ export interface ArbitrageFeeModel {
 
 export interface ArbitrageScanOptions {
   now?: Date;
-  maxAgeMs: number;
-  maxCapitalFiat: number;
+  minMarginPercent: number;
+  maxCapitalFiat?: number;
   fees?: ArbitrageFeeModel;
 }
 
@@ -125,7 +125,7 @@ export function normalizeArbitrageOffer(
   const coin = normalizedText(raw.coin).toUpperCase();
   const amountQusd = finitePositive(raw.amount);
   const receive = finitePositive(raw.receive);
-  const observedAt = parseTimestamp(raw.updated_at ?? raw.created_at);
+  const observedAt = parseTimestamp(raw.updated_at ?? raw.created_at) ?? new Date(0).toISOString();
   const rawOfferKind = normalizedText(raw.offer_kind).toLowerCase();
   const offerKind: "fixed" | "flexible" =
     rawOfferKind === "flexible"
@@ -188,11 +188,12 @@ export function scanArbitrage(
   rawOffers: RawArbitrageOffer[],
   options: ArbitrageScanOptions,
 ): ArbitrageScanResult {
-  const nowMs = (options.now ?? new Date()).getTime();
-  if (!Number.isFinite(nowMs)) throw new Error("now inválido.");
-  if (!Number.isFinite(options.maxAgeMs) || options.maxAgeMs < 0)
-    throw new Error("maxAgeMs inválido.");
-  if (!Number.isFinite(options.maxCapitalFiat) || options.maxCapitalFiat <= 0)
+  if (!Number.isFinite(options.minMarginPercent) || options.minMarginPercent < 0)
+    throw new Error("minMarginPercent inválido.");
+  if (
+    options.maxCapitalFiat !== undefined &&
+    (!Number.isFinite(options.maxCapitalFiat) || options.maxCapitalFiat <= 0)
+  )
     throw new Error("maxCapitalFiat inválido.");
 
   let invalidOffers = 0;
@@ -203,12 +204,6 @@ export function scanArbitrage(
     const offer = normalizeArbitrageOffer(raw);
     if (!offer) {
       invalidOffers += 1;
-      continue;
-    }
-
-    const ageMs = nowMs - new Date(offer.observedAt).getTime();
-    if (ageMs < 0 || ageMs > options.maxAgeMs) {
-      staleOffers += 1;
       continue;
     }
 
@@ -252,7 +247,7 @@ export function scanArbitrage(
           buy.orderMinQusd ?? 0,
           sell.orderMinQusd ?? 0,
         );
-        const capitalLimitedQusd = options.maxCapitalFiat / buy.rate;
+        const capitalLimitedQusd = (options.maxCapitalFiat ?? Number.POSITIVE_INFINITY) / buy.rate;
         const quantityQusd = Math.min(
           liquidityQusd,
           orderMaxQusd,
@@ -270,6 +265,11 @@ export function scanArbitrage(
           capitalRequiredFiat > 0
             ? (grossProfitFiat / capitalRequiredFiat) * 100
             : 0;
+
+        if (grossMarginPercent < options.minMarginPercent) {
+          nonProfitablePairs += 1;
+          continue;
+        }
 
         const buyFeeFiat = fee(options.fees?.buy, {
           side: "buy",
@@ -334,7 +334,7 @@ export function scanArbitrage(
     opportunities,
     rejected: {
       invalidOffers,
-      staleOffers,
+      staleOffers: 0,
       nonProfitablePairs,
       insufficientLiquidity,
     },
