@@ -1,60 +1,65 @@
 # Market History
 
-## Purpose
+## Propósito
 
-The scanner persists lightweight market observations so analytics can distinguish a current snapshot from an observed trend.
+El proyecto mantiene dos capas históricas que no deben confundirse:
 
-## Storage
+1. **Histórico local del backend modular**: observaciones agregadas de mercado para desarrollo y análisis descriptivo.
+2. **Histórico operacional Cloudflare/D1**: persistencia de estado y eventos específicos de los módulos desplegados, incluido el monitor de arbitraje.
 
-The first implementation uses a local JSON file:
+## Histórico local
+
+La implementación del backend modular puede persistir observaciones agregadas en:
 
 `data/market-history.json`
 
-The file is runtime state and must not be committed. The path can be changed with `MARKET_HISTORY_PATH`.
+El archivo es estado de ejecución y no debe versionarse. La ruta puede cambiarse con `MARKET_HISTORY_PATH`.
 
-Each observation is aggregated by `coin + type` and stores:
+Cada observación agregada por `coin + type` contiene:
 
-- timestamp
-- sample count
-- minimum effective rate
-- median effective rate
-- maximum effective rate
-- spread
+- timestamp;
+- sample count;
+- minimum effective rate;
+- median effective rate;
+- maximum effective rate;
+- spread.
 
-The effective rate is:
+La tasa efectiva es:
 
 `receive / amount`
 
-## Collection
+La retención predeterminada del collector local es de 10.000 puntos agregados.
 
-The backend performs one collection at startup and then every 60 seconds.
+## Colección local
 
-The collector requests at most 100 current P2P offers. It stores aggregates rather than every individual offer to keep the initial implementation lightweight.
-
-The default retention is 10,000 aggregate points and can be changed in code through the history-store configuration.
+El backend modular realiza una colección inicial y posteriormente una colección periódica. Esta capa no es el mecanismo que mantiene vivo el monitor de arbitraje desplegado.
 
 ## API
 
 `GET /api/history`
 
-Optional query parameters:
+Parámetros opcionales:
 
 - `coin`
 - `type`
-- `limit` (maximum 1000 per request)
+- `limit` (máximo 1000 por solicitud)
 
-This is an initial persistence layer. PostgreSQL remains a later evolution when historical volume, concurrent users, or analytical requirements justify it.
+`GET /api/trends` calcula cambios descriptivos sobre las observaciones almacenadas.
 
-## Important limitation
+`GET /api/baselines` calcula una referencia aritmética reciente. No es una predicción ni una recomendación.
 
-A trend is not statistically meaningful immediately after activation. The system must accumulate observations first. The UI therefore distinguishes the historical layer from the current snapshot and does not manufacture missing history.
+## Monitor de arbitraje y D1
 
-## Trend engine
+El monitor server-side utiliza Cloudflare D1 para persistir configuración y estado. Su snapshot no sustituye automáticamente al histórico local: representa el último estado de ejecución del monitor.
 
-`GET /api/trends` groups historical observations by coin and type and calculates the first/last observed median, absolute change, percentage change, observed median range, and direction. Direction is descriptive (`up`, `down`, `flat`) and is not a prediction. A group with no valid median observations is reported as `insufficient`.
+El detalle de las tablas del monitor se documenta en `docs/cloudflare/d1-schema.md` y `docs/cloudflare/d1-persistence.md`.
 
-The UI presents these measurements only after observations exist; it does not extrapolate future prices or claim predictive accuracy.
+## Importante
 
-## Baselines
+Un snapshot actual no equivale a un histórico de operaciones completadas.
 
-`GET /api/baselines` calculates a recent arithmetic baseline from stored median observations (24 points by default) and reports the current deviation from that baseline. This is a descriptive reference, not a forecast or recommendation. The lookback can be changed with the `lookback` query parameter.
+Las estadísticas de operaciones ejecutadas requieren eventos de ciclo de vida explícitos y una fuente de datos con suficiente cobertura. No se deben inferir operaciones completadas simplemente porque una oferta desaparezca del mercado.
+
+## Estado
+
+Este documento describe la coexistencia de la capa histórica local y la persistencia operacional Cloudflare. Las nuevas capacidades históricas deben declarar explícitamente qué fuente, ventana y unidad monetaria utilizan.
