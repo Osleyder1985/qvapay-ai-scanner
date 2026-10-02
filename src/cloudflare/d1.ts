@@ -23,9 +23,7 @@ export interface D1Database {
   prepare(query: string): D1PreparedStatement;
   batch<T = unknown>(
     statements: D1PreparedStatement[],
-  ): Promise<
-    Array<{ success: boolean; meta?: { changes?: number } } & T>
-  >;
+  ): Promise<Array<{ success: boolean; meta?: { changes?: number } } & T>>;
 }
 
 export interface MarketHistoryPoint {

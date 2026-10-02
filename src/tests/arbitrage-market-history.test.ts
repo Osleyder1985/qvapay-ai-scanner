@@ -92,10 +92,7 @@ test("deduplica el mismo lifecycle entre webhook y reconciliación", () => {
   });
   assert.ok(webhook);
   assert.ok(reconciliation);
-  assert.equal(
-    deduplicateMarketEvents([webhook, reconciliation]).length,
-    1,
-  );
+  assert.equal(deduplicateMarketEvents([webhook, reconciliation]).length, 1);
 });
 
 test("rechaza estados desconocidos y no infiere completed", () => {
@@ -114,22 +111,19 @@ test("rechaza estados desconocidos y no infiere completed", () => {
   );
 });
 
-test(
-  "deduplica el mismo evento sin eliminar eventos distintos de la misma oferta",
-  () => {
-    const first = event({ dedupeKey: "same" });
-    const duplicate = event({ dedupeKey: "same", source: "webhook" });
-    const cancelled = event({
-      dedupeKey: "cancel",
-      event: "cancelled",
-      status: "cancelled",
-    });
-    assert.equal(
-      deduplicateMarketEvents([first, duplicate, cancelled]).length,
-      2,
-    );
-  },
-);
+test("deduplica el mismo evento sin eliminar eventos distintos de la misma oferta", () => {
+  const first = event({ dedupeKey: "same" });
+  const duplicate = event({ dedupeKey: "same", source: "webhook" });
+  const cancelled = event({
+    dedupeKey: "cancel",
+    event: "cancelled",
+    status: "cancelled",
+  });
+  assert.equal(
+    deduplicateMarketEvents([first, duplicate, cancelled]).length,
+    2,
+  );
+});
 
 test("mantiene las monedas completamente separadas", () => {
   const result = calculateCurrencyAnalytics(
@@ -152,9 +146,7 @@ test("usa por defecto las últimas 100 operaciones completadas", () => {
       amount: 1,
       receive: 1000 + index,
       rate: 1000 + index,
-      eventAt: new Date(
-        NOW.getTime() - (105 - index) * 1000,
-      ).toISOString(),
+      eventAt: new Date(NOW.getTime() - (105 - index) * 1000).toISOString(),
     }),
   );
   const result = calculateCurrencyAnalytics(events, "BANK_CUP");

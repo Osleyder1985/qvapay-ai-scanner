@@ -44,9 +44,9 @@ async function signature(body: string, secret: string): Promise<string> {
   const digest = new Uint8Array(
     await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body)),
   );
-  return Array.from(digest, (value) => value.toString(16).padStart(2, "0")).join(
-    "",
-  );
+  return Array.from(digest, (value) =>
+    value.toString(16).padStart(2, "0"),
+  ).join("");
 }
 
 test("rechaza webhook sin firma válida", async () => {

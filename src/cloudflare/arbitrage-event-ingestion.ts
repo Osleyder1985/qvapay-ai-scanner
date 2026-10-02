@@ -41,9 +41,7 @@ interface ReconciliationResult {
 }
 
 function record(value: unknown): QvaPayRecord | null {
-  return Boolean(value) &&
-    typeof value === "object" &&
-    !Array.isArray(value)
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
     ? (value as QvaPayRecord)
     : null;
 }

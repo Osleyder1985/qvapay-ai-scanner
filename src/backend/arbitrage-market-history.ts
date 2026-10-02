@@ -8,12 +8,7 @@
 
 export type MarketEventSource = "stream" | "webhook" | "reconciliation";
 export type MarketEventType =
-  | "created"
-  | "reopened"
-  | "applied"
-  | "paid"
-  | "completed"
-  | "cancelled";
+  "created" | "reopened" | "applied" | "paid" | "completed" | "cancelled";
 
 export interface RawMarketEvent {
   eventId?: unknown;
@@ -106,7 +101,9 @@ function timestamp(value: unknown): string | null {
 }
 
 function normalizeEventName(value: unknown): MarketEventType | null {
-  const raw = text(value).toLowerCase().replace(/^p2p\./, "");
+  const raw = text(value)
+    .toLowerCase()
+    .replace(/^p2p\./, "");
   return EVENTS.has(raw as MarketEventType) ? (raw as MarketEventType) : null;
 }
 
@@ -215,8 +212,7 @@ export function completedTradesFromEvents(
     }))
     .sort(
       (a, b) =>
-        new Date(a.completedAt).getTime() -
-        new Date(b.completedAt).getTime(),
+        new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime(),
     );
 }
 
