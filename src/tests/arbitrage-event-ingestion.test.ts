@@ -142,5 +142,9 @@ test("reconciliación conserva estados terminales y omite estados no soportados"
   const result = await reconcileArbitrageHistory(env as never);
   assert.equal(result.fetched, 2);
   assert.equal(result.unsupported, 1);
-  assert.equal(result.stored, 1);
+  assert.equal(result.stored, 2);
+  assert.deepEqual(
+    db.stored.map((row) => row[0]),
+    ["completed-1|created", "completed-1|completed"],
+  );
 });
