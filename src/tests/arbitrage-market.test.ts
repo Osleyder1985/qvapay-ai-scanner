@@ -130,34 +130,34 @@ test(
   "calcula beneficio neto sólo cuando ambas comisiones están disponibles",
   () => {
     const withFees = scanArbitrage(
-    [
-      offer({ uuid: "buy", type: "buy", receive: 900 }),
-      offer({ uuid: "sell", type: "sell", receive: 1000 }),
-    ],
-    {
-      now: NOW,
-      maxAgeMs: 120_000,
-      maxCapitalFiat: 900,
-      fees: {
-        buy: ({ grossFiat }) => grossFiat * 0.01,
-        sell: ({ grossFiat }) => grossFiat * 0.02,
+      [
+        offer({ uuid: "buy", type: "buy", receive: 900 }),
+        offer({ uuid: "sell", type: "sell", receive: 1000 }),
+      ],
+      {
+        now: NOW,
+        maxAgeMs: 120_000,
+        maxCapitalFiat: 900,
+        fees: {
+          buy: ({ grossFiat }) => grossFiat * 0.01,
+          sell: ({ grossFiat }) => grossFiat * 0.02,
+        },
       },
-    },
-  );
+    );
 
-  const opportunity = withFees.opportunities[0]!;
-  assert.equal(opportunity.totalFeesFiat, 27);
-  assert.equal(opportunity.netProfitFiat, 73);
-  assert.equal(opportunity.netMarginPercent, (73 / 900) * 100);
+    const opportunity = withFees.opportunities[0]!;
+    assert.equal(opportunity.totalFeesFiat, 27);
+    assert.equal(opportunity.netProfitFiat, 73);
+    assert.equal(opportunity.netMarginPercent, (73 / 900) * 100);
 
-  const withoutFees = scanArbitrage(
-    [
-      offer({ uuid: "buy", type: "buy", receive: 900 }),
-      offer({ uuid: "sell", type: "sell", receive: 1000 }),
-    ],
-    { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 900 },
-  );
-  assert.equal(withoutFees.opportunities[0]!.netProfitFiat, null);
+    const withoutFees = scanArbitrage(
+      [
+        offer({ uuid: "buy", type: "buy", receive: 900 }),
+        offer({ uuid: "sell", type: "sell", receive: 1000 }),
+      ],
+      { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 900 },
+    );
+    assert.equal(withoutFees.opportunities[0]!.netProfitFiat, null);
     assert.equal(withoutFees.opportunities[0]!.feesStatus, "unknown");
   },
 );
@@ -201,22 +201,22 @@ test(
   "separa monedas incluso cuando sus tasas hacen parecer rentable el cruce",
   () => {
     const result = scanArbitrage(
-    [
-      offer({
-        uuid: "buy-1",
-        type: "buy",
-        coin: "BANK_CUP",
-        receive: 900,
-      }),
-      offer({
-        uuid: "sell-2",
-        type: "sell",
-        coin: "ETECSA",
-        receive: 9000,
-      }),
-    ],
-    { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 10_000 },
-  );
+      [
+        offer({
+          uuid: "buy-1",
+          type: "buy",
+          coin: "BANK_CUP",
+          receive: 900,
+        }),
+        offer({
+          uuid: "sell-2",
+          type: "sell",
+          coin: "ETECSA",
+          receive: 9000,
+        }),
+      ],
+      { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 10_000 },
+    );
     assert.deepEqual(result.opportunities, []);
   },
 );
