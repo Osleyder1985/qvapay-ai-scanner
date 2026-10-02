@@ -370,7 +370,7 @@ export async function appendMarketEvents(
     const statements = chunk.map((event) =>
       db
         .prepare(
-          `INSERT OR IGNORE INTO market_events
+          `INSERT OR REPLACE INTO market_events
            (dedupe_key, event_id, offer_uuid, event, status, side, coin,
             amount, available_amount, receive, rate, event_at, observed_at, source)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
