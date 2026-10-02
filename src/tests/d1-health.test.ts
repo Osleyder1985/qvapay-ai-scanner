@@ -16,7 +16,7 @@ function statement(results: Array<{ name: string }>): D1PreparedStatement {
     async first() {
       return null;
     },
-  };
+  } as unknown as D1PreparedStatement;
 }
 
 test("d1Health requires every runtime table used by the auditor", async () => {
@@ -29,10 +29,11 @@ test("d1Health requires every runtime table used by the auditor", async () => {
     "market_history",
     "operations_ledger",
   ];
+  const rows = tables.map((name) => ({ name }));
 
   const db: D1Database = {
     prepare() {
-      return statement(tables);
+      return statement(rows);
     },
     async batch() {
       return [];
@@ -53,10 +54,11 @@ test("d1Health reports degraded when a required runtime table is missing", async
     "market_events",
     "market_history",
   ];
+  const rows = tables.map((name) => ({ name }));
 
   const db: D1Database = {
     prepare() {
-      return statement(tables);
+      return statement(rows);
     },
     async batch() {
       return [];
