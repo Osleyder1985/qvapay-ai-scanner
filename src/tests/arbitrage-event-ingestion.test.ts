@@ -86,17 +86,18 @@ test("rechaza webhook con cuerpo sobredimensionado", async () => {
 test("rechaza webhook sobredimensionado en streaming", async () => {
   const db = mockDatabase();
   const oversized = new Uint8Array(256 * 1024 + 1);
-  const response = await ingestArbitrageWebhook(
-    new Request("https://scanner.example/api/arbitrage/webhook", {
-      method: "POST",
-      body: new ReadableStream({
-        start(controller) {
-          controller.enqueue(oversized);
-          controller.close();
-        },
-      }),
-      duplex: "half",
+  const requestInit = {
+    method: "POST",
+    body: new ReadableStream({
+      start(controller) {
+        controller.enqueue(oversized);
+        controller.close();
+      },
     }),
+    duplex: "half",
+  } as RequestInit & { duplex: "half" };
+  const response = await ingestArbitrageWebhook(
+    new Request("https://scanner.example/api/arbitrage/webhook", requestInit),
     db as never,
     "secret",
   );
