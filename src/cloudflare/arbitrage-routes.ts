@@ -100,7 +100,7 @@ export async function handleArbitrageRoutes(
   const maxCapitalFiat = Number(
     url.searchParams.get("maxCapitalFiat") ?? "1000",
   );
-  const maxAgeMs = Number(url.searchParams.get("maxAgeMs") ?? "30000");
+  const maxAgeMs = Number(url.searchParams.get("maxAgeMs") ?? "300000");
 
   if (!Number.isFinite(maxCapitalFiat) || maxCapitalFiat <= 0) {
     return json({ error: "maxCapitalFiat debe ser un número positivo." }, 400);
