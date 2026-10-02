@@ -9,6 +9,7 @@
 let arbitrageMonitorTimer = null;
 let arbitrageLastScanId = null;
 let arbitrageLoading = false;
+let arbitrageCountdownDeadline = null;
 
 function arbitrageMoney(value) {
   return Number.isFinite(Number(value)) ? num(value, 2) : "—";
@@ -69,10 +70,24 @@ function drawArbitrageSignals() {
     : '<div class="empty-inline">La simulación se calcula sobre cada oferta SELL del último snapshot. No se envían órdenes.</div>';
 }
 
+function syncCountdownDeadline() {
+  const next = S.arbitrage?.state?.nextRunAt
+    ? Date.parse(S.arbitrage.state.nextRunAt)
+    : NaN;
+  if (Number.isFinite(next)) {
+    arbitrageCountdownDeadline = next;
+    return;
+  }
+  if (!Number.isFinite(arbitrageCountdownDeadline) || arbitrageCountdownDeadline <= Date.now()) {
+    arbitrageCountdownDeadline = Date.now() + 10_000;
+  }
+}
+
 function nextSeconds() {
-  const next = S.arbitrage?.state?.nextRunAt ? Date.parse(S.arbitrage.state.nextRunAt) : NaN;
-  if (!Number.isFinite(next)) return null;
-  return Math.max(0, Math.ceil((next - Date.now()) / 1000));
+  syncCountdownDeadline();
+  return Number.isFinite(arbitrageCountdownDeadline)
+    ? Math.max(0, Math.ceil((arbitrageCountdownDeadline - Date.now()) / 1000))
+    : null;
 }
 
 function drawArbitrage() {
@@ -106,6 +121,7 @@ async function fetchArbitrageMonitor({ silent = true } = {}) {
     const previousScan = S.arbitrage?.state?.scanId;
     const data = await api("/api/arbitrage/monitor");
     S.arbitrage = data;
+    syncCountdownDeadline();
     if (data.state?.scanId && data.state.scanId !== previousScan) {
       arbitrageLastScanId = data.state.scanId;
       drawArbitrage();
@@ -115,9 +131,16 @@ async function fetchArbitrageMonitor({ silent = true } = {}) {
     }
   } catch (e) {
     const existing = S.arbitrage || {};
+    const message = errorText(e);
+    arbitrageCountdownDeadline = Date.now() + 10_000;
     S.arbitrage = {
       ...existing,
-      state: { ...(existing.state || {}), status: "error", lastError: errorText(e) },
+      state: {
+        ...(existing.state || {}),
+        status: "error",
+        lastError: message,
+        nextRunAt: new Date(arbitrageCountdownDeadline).toISOString(),
+      },
     };
     drawArbitrage();
     if (!silent) toast("No se pudo leer el monitor: " + errorText(e), "error");
@@ -146,9 +169,13 @@ async function saveArbitrageConfig() {
 }
 
 function monitorTick() {
-  drawArbitrage();
   const seconds = nextSeconds();
-  if (seconds === 0) void fetchArbitrageMonitor({ silent: true });
+  drawArbitrage();
+  if (seconds === 0) {
+    // Give the server a new 10-second window while the request is in flight.
+    arbitrageCountdownDeadline = Date.now() + 10_000;
+    void fetchArbitrageMonitor({ silent: true });
+  }
 }
 
 function stopArbitragePolling() {
