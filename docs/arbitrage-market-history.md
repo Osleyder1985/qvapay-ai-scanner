@@ -59,7 +59,7 @@ The authenticated endpoint:
 
 reuses the existing paginated `GET /p2p?my=1` operation source. It writes explicit lifecycle observations for `open`, `processing`, `paid`, `completed`, and `cancelled`. Unsupported states such as `revision` are counted and are never silently converted to `completed`.
 
-Reconciliation is a recovery path, not a substitute for the real-time feed. QvaPay documents the market webhook and SSE feed as the low-latency source for market changes.
+Reconciliation is a recovery path, not a substitute for the real-time feed. La integración considera el webhook y el stream como fuentes de baja latencia; la reconciliación queda como vía de recuperación.
 
 ### Stream
 
