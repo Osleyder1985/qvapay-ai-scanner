@@ -179,6 +179,7 @@ test("D1 analytics query scopes completed operations by coin and window", async 
   assert.ok(queries[0]?.includes("ABS(rate - (receive / amount))"));
   assert.ok(queries[0]?.includes("GROUP BY offer_uuid"));
   assert.ok(queries[0]?.includes("ORDER BY MAX(event_at) DESC"));
+  assert.ok(queries[0]?.includes("offer_uuid ASC"));
   assert.ok(queries[0]?.includes("LIMIT ?"));
 });
 
