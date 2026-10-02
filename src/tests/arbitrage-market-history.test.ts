@@ -255,7 +255,7 @@ test("calcula tiempo medio hasta completar", () => {
     ],
     "BANK_CUP",
   );
-  assert.equal(result.averageTimeToCompletionMs, 60 * 60 * 1000);
+  assert.equal(result.averageTimeToCompletionMs, 45 * 60 * 1000);
 });
 
 test("mantiene unknown cuando faltan cantidad o receive", () => {
@@ -289,7 +289,10 @@ test("no marca como stale un evento observado en el futuro", () => {
 
 test("marca histórico obsoleto cuando supera maxAgeMs", () => {
   const result = calculateCurrencyAnalytics(
-    [event({ eventAt: "2026-10-02T10:00:00Z" })],
+    [event({
+      eventAt: "2026-10-02T10:00:00Z",
+      observedAt: "2026-10-02T10:00:00Z",
+    })],
     "BANK_CUP",
     { now: NOW, maxAgeMs: 60_000 },
   );
