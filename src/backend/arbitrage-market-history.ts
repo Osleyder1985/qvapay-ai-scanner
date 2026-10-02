@@ -150,12 +150,7 @@ export function normalizeMarketEvent(
   const rate = amount !== null && receive !== null ? receive / amount : null;
 
   const eventId = text(raw.eventId) || null;
-  const dedupeKey =
-    eventId ??
-    stableKey([
-      offerUuid,
-      event,
-    ]);
+  const dedupeKey = eventId ?? stableKey([offerUuid, event]);
 
   return {
     dedupeKey,
