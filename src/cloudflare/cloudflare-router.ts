@@ -21,6 +21,7 @@ import { handleAccountRoutes } from "./account-routes.js";
 import { handleDiagnosticsRoutes } from "./diagnostics-routes.js";
 import { handleAutoApplyRoutes } from "./auto-apply-routes.js";
 import { handleArbitrageHistoryRoutes } from "./arbitrage-history-routes.js";
+import { handleArbitrageRoutes } from "./arbitrage-routes.js";
 import { ingestArbitrageWebhook } from "./arbitrage-event-ingestion.js";
 
 export interface WorkerEnv {
@@ -143,6 +144,9 @@ export async function handleApi(
 
   const accountResponse = await handleAccountRoutes(request, env, url, json);
   if (accountResponse) return accountResponse;
+
+  const arbitrageResponse = await handleArbitrageRoutes(request, env, url, json);
+  if (arbitrageResponse) return arbitrageResponse;
 
   const arbitrageHistoryResponse = await handleArbitrageHistoryRoutes(
     request,
