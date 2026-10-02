@@ -58,12 +58,10 @@ function marketQuery(url: URL): URLSearchParams {
     ),
   );
   params.set("status", url.searchParams.get("status")?.trim() || "open");
-  // The arbitrage monitor only needs acquisition offers (SELL). Filtering at QvaPay
-  // prevents us from downloading unrelated BUY offers and wasting the API rate budget.
-  params.set("type", "sell");
-  // QvaPay defines best_rate=desc as best-first for SELL offers.
-  params.set("orderBy", "best_rate");
-  params.set("orderType", "desc");
+  // Keep both sides of the selected coin: SELL offers are the acquisition
+  // market, while BUY offers are required to calculate real arbitrage pairs.
+  // The monitor is capped at three pages per 10-second cycle to stay below
+  // QvaPay's documented market-request budget.
   if (coin) params.set("coin", coin);
   return params;
 }
