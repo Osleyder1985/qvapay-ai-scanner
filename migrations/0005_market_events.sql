@@ -25,3 +25,6 @@ CREATE INDEX IF NOT EXISTS idx_market_events_offer_uuid
 
 CREATE INDEX IF NOT EXISTS idx_market_events_coin_event
   ON market_events (coin, event);
+
+CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_completion
+  ON market_events (coin, event, event_at DESC, observed_at DESC, offer_uuid);
