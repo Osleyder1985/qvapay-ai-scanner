@@ -21,6 +21,7 @@ import { handleAccountRoutes } from "./account-routes.js";
 import { handleDiagnosticsRoutes } from "./diagnostics-routes.js";
 import { handleAutoApplyRoutes } from "./auto-apply-routes.js";
 import { handleArbitrageHistoryRoutes } from "./arbitrage-history-routes.js";
+import { ingestArbitrageWebhook } from "./arbitrage-event-ingestion.js";
 
 export interface WorkerEnv {
   DB: D1Database;
@@ -28,6 +29,7 @@ export interface WorkerEnv {
   QVAPAY_API_BASE_URL?: string;
   QVAPAY_APP_ID?: string;
   QVAPAY_APP_SECRET?: string;
+  QVAPAY_FEED_SECRET?: string;
   AUTH_USERNAME?: string;
   AUTH_PASSWORD?: string;
 }
@@ -95,6 +97,10 @@ export async function handleApi(
     return json({ ok: true, service: "qvapay-ai-scanner-worker" });
   }
 
+  if (request.method === "POST" && url.pathname === "/api/arbitrage/webhook") {
+    return ingestArbitrageWebhook(request, env.DB, env.QVAPAY_FEED_SECRET);
+  }
+
   const authEnv: Parameters<typeof handleAuthRoutes>[1] = {
     DB: env.DB as unknown as SessionDatabase,
   };
@@ -159,7 +165,11 @@ export async function routeRequest(
   const url = requestUrl(request);
 
   if (url.pathname.startsWith("/api/")) {
+    const publicWebhook =
+      request.method === "POST" && url.pathname === "/api/arbitrage/webhook";
+
     if (
+      !publicWebhook &&
       url.pathname !== "/api/health" &&
       !url.pathname.startsWith("/api/auth/")
     ) {
@@ -171,6 +181,7 @@ export async function routeRequest(
     }
 
     if (
+      !publicWebhook &&
       url.pathname !== "/api/health" &&
       requiresSameOrigin(request) &&
       !isSameOrigin(request)
