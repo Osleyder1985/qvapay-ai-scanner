@@ -1,7 +1,7 @@
 name: Temporary Format Diagnostic
 
 on:
-  workflow_dispatch:
+  push:
 
 jobs:
   format:
