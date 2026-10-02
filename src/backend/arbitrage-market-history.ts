@@ -115,8 +115,9 @@ function stableKey(parts: Array<string | number | null>): string {
 }
 
 /**
- * Normaliza un evento sin inferir un estado terminal a partir de la desaparición
- * de una oferta. Los eventos desconocidos se rechazan de forma explícita.
+ * Normaliza un evento sin inferir un estado terminal a partir de la
+ * desaparición de una oferta. Los eventos desconocidos se rechazan de forma
+ * explícita.
  */
 export function normalizeMarketEvent(
   raw: RawMarketEvent,
