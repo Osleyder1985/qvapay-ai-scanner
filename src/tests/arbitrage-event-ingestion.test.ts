@@ -163,3 +163,56 @@ test("reconciliación conserva estados terminales y omite estados no soportados"
     ["completed-1|created", "completed-1|completed"],
   );
 });
+
+test("reconciliación continúa cuando la API omite total", async () => {
+  const db = mockDatabase();
+  const env = {
+    DB: db,
+    QVAPAY_APP_ID: "app",
+    QVAPAY_APP_SECRET: "secret",
+  };
+  const pages: number[] = [];
+
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    const page = Number(url.searchParams.get("page"));
+    pages.push(page);
+    const uuid = `page-${page}`;
+    return new Response(
+      JSON.stringify({
+        data:
+          page === 1
+            ? Array.from({ length: 100 }, (_, index) => ({
+                uuid: `${uuid}-${index}`,
+                type: "sell",
+                coin: "BANK_CUP",
+                amount: 10,
+                receive: 12000,
+                status: "completed",
+                created_at: "2026-10-02T11:00:00Z",
+                updated_at: "2026-10-02T12:00:00Z",
+              }))
+            : [
+                {
+                  uuid,
+                  type: "sell",
+                  coin: "BANK_CUP",
+                  amount: 10,
+                  receive: 12000,
+                  status: "completed",
+                  created_at: "2026-10-02T11:00:00Z",
+                  updated_at: "2026-10-02T12:00:00Z",
+                },
+              ],
+        per_page: 100,
+      }),
+    );
+  };
+
+  const result = await reconcileArbitrageHistory(env as never);
+  assert.deepEqual(pages, [1, 2]);
+  assert.equal(result.fetched, 101);
+  assert.equal(result.pagesFetched, 2);
+  assert.equal(result.truncated, false);
+});
+
