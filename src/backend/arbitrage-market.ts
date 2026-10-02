@@ -1,12 +1,19 @@
 /**
  * @file arbitrage-market.ts
  * @path src/backend/arbitrage-market.ts
- * @description Contrato determinista para normalizar ofertas P2P y detectar oportunidades de arbitraje.
+ * @description Contrato determinista para normalizar ofertas P2P y detectar oportunidades de arbitraje sin ejecutar operaciones.
  * @module backend/arbitrage
  * @status active
  */
 
 export type ArbitrageSide = "buy" | "sell";
+
+/**
+ * En QvaPay, una oferta SELL permite al usuario comprar QUSD y una oferta BUY
+ * permite al usuario vender QUSD. El motor conserva los tipos originales, pero
+ * modela explícitamente la dirección de nuestra operación.
+ */
+export type ArbitrageAction = "acquire" | "exit";
 
 export interface RawArbitrageOffer {
   uuid?: unknown;
@@ -15,6 +22,9 @@ export interface RawArbitrageOffer {
   amount?: unknown;
   available_amount?: unknown;
   receive?: unknown;
+  offer_kind?: unknown;
+  order_min?: unknown;
+  order_max?: unknown;
   updated_at?: unknown;
   created_at?: unknown;
 }
@@ -26,6 +36,9 @@ export interface NormalizedArbitrageOffer {
   amountQusd: number;
   availableQusd: number;
   rate: number;
+  offerKind: "fixed" | "flexible";
+  orderMinQusd: number | null;
+  orderMaxQusd: number | null;
   observedAt: string;
 }
 
@@ -56,6 +69,8 @@ export interface ArbitrageOpportunity {
   coin: string;
   buyOfferUuid: string;
   sellOfferUuid: string;
+  acquisitionOfferUuid: string;
+  exitOfferUuid: string;
   buyRate: number;
   sellRate: number;
   quantityQusd: number;
@@ -109,14 +124,32 @@ export function normalizeArbitrageOffer(
   const side = normalizedText(raw.type).toLowerCase();
   const coin = normalizedText(raw.coin).toUpperCase();
   const amountQusd = finitePositive(raw.amount);
-  const availableQusd = finitePositive(raw.available_amount);
   const receive = finitePositive(raw.receive);
   const observedAt = parseTimestamp(raw.updated_at ?? raw.created_at);
+  const rawOfferKind = normalizedText(raw.offer_kind).toLowerCase();
+  const offerKind: "fixed" | "flexible" =
+    rawOfferKind === "flexible"
+      ? "flexible"
+      : rawOfferKind === "fixed"
+        ? "fixed"
+        : raw.available_amount === null
+          ? "fixed"
+          : "flexible";
+  const rawAvailableQusd = finitePositive(raw.available_amount);
+  const availableQusd = offerKind === "fixed" ? amountQusd : rawAvailableQusd;
+  const orderMinQusd =
+    offerKind === "flexible" ? finitePositive(raw.order_min) : null;
+  const orderMaxQusd =
+    offerKind === "flexible" ? finitePositive(raw.order_max) : null;
 
   if (!uuid || (side !== "buy" && side !== "sell") || !coin) return null;
   if (amountQusd === null || availableQusd === null || receive === null)
     return null;
   if (availableQusd > amountQusd) return null;
+  if (offerKind === "flexible" && orderMaxQusd !== null) {
+    if (orderMaxQusd > availableQusd) return null;
+    if (orderMinQusd !== null && orderMinQusd > orderMaxQusd) return null;
+  }
 
   const rate = receive / amountQusd;
   if (!Number.isFinite(rate) || rate <= 0 || observedAt === null) return null;
@@ -128,6 +161,9 @@ export function normalizeArbitrageOffer(
     amountQusd,
     availableQusd,
     rate,
+    offerKind,
+    orderMinQusd,
+    orderMaxQusd,
     observedAt,
   };
 }
@@ -186,83 +222,110 @@ export function scanArbitrage(
   let insufficientLiquidity = 0;
 
   for (const [coin, offers] of byCoin) {
-    const buys = offers
-      .filter((offer) => offer.side === "buy")
-      .sort((a, b) => a.rate - b.rate);
-    const sells = offers
+    // QvaPay semantics: SELL = nosotros compramos QUSD; BUY = nosotros vendemos QUSD.
+    const acquisitionOffers = offers
       .filter((offer) => offer.side === "sell")
+      .sort((a, b) => a.rate - b.rate);
+    const exitOffers = offers
+      .filter((offer) => offer.side === "buy")
       .sort((a, b) => b.rate - a.rate);
 
-    const buy = buys[0];
-    const sell = sells[0];
-    if (!buy || !sell) continue;
+    let bestOpportunity: ArbitrageOpportunity | null = null;
+    let bestScore = -Infinity;
 
-    const spreadPerQusd = sell.rate - buy.rate;
-    if (!(spreadPerQusd > 0)) {
-      nonProfitablePairs += 1;
-      continue;
+    for (const buy of acquisitionOffers) {
+      for (const sell of exitOffers) {
+        if (buy.uuid === sell.uuid) continue;
+
+        const spreadPerQusd = sell.rate - buy.rate;
+        if (!(spreadPerQusd > 0)) {
+          nonProfitablePairs += 1;
+          continue;
+        }
+
+        const liquidityQusd = Math.min(buy.availableQusd, sell.availableQusd);
+        const orderMaxQusd = Math.min(
+          buy.orderMaxQusd ?? Number.POSITIVE_INFINITY,
+          sell.orderMaxQusd ?? Number.POSITIVE_INFINITY,
+        );
+        const orderMinQusd = Math.max(
+          buy.orderMinQusd ?? 0,
+          sell.orderMinQusd ?? 0,
+        );
+        const capitalLimitedQusd = options.maxCapitalFiat / buy.rate;
+        const quantityQusd = Math.min(
+          liquidityQusd,
+          orderMaxQusd,
+          capitalLimitedQusd,
+        );
+
+        if (!(quantityQusd > 0) || quantityQusd < orderMinQusd) {
+          insufficientLiquidity += 1;
+          continue;
+        }
+
+        const capitalRequiredFiat = quantityQusd * buy.rate;
+        const grossProfitFiat = quantityQusd * spreadPerQusd;
+        const grossMarginPercent =
+          capitalRequiredFiat > 0
+            ? (grossProfitFiat / capitalRequiredFiat) * 100
+            : 0;
+
+        const buyFeeFiat = fee(options.fees?.buy, {
+          side: "buy",
+          coin,
+          quantityQusd,
+          grossFiat: capitalRequiredFiat,
+        });
+        const sellProceedsFiat = quantityQusd * sell.rate;
+        const sellFeeFiat = fee(options.fees?.sell, {
+          side: "sell",
+          coin,
+          quantityQusd,
+          grossFiat: sellProceedsFiat,
+        });
+        const feesKnown = buyFeeFiat !== null && sellFeeFiat !== null;
+        const totalFeesFiat = feesKnown
+          ? (buyFeeFiat as number) + (sellFeeFiat as number)
+          : null;
+        const netProfitFiat =
+          totalFeesFiat === null ? null : grossProfitFiat - totalFeesFiat;
+        const netMarginPercent =
+          netProfitFiat === null || capitalRequiredFiat <= 0
+            ? null
+            : (netProfitFiat / capitalRequiredFiat) * 100;
+
+        const candidate: ArbitrageOpportunity = {
+          coin,
+          buyOfferUuid: buy.uuid,
+          sellOfferUuid: sell.uuid,
+          acquisitionOfferUuid: buy.uuid,
+          exitOfferUuid: sell.uuid,
+          buyRate: buy.rate,
+          sellRate: sell.rate,
+          quantityQusd,
+          capitalRequiredFiat,
+          grossProfitFiat,
+          grossMarginPercent,
+          buyFeeFiat,
+          sellFeeFiat,
+          totalFeesFiat,
+          netProfitFiat,
+          netMarginPercent,
+          feesStatus: feesKnown ? "known" : "unknown",
+          observedAt:
+            buy.observedAt < sell.observedAt ? buy.observedAt : sell.observedAt,
+          stale: false,
+        };
+        const score = netProfitFiat ?? grossProfitFiat;
+        if (score > bestScore) {
+          bestScore = score;
+          bestOpportunity = candidate;
+        }
+      }
     }
 
-    const liquidityQusd = Math.min(buy.availableQusd, sell.availableQusd);
-    const capitalLimitedQusd = options.maxCapitalFiat / buy.rate;
-    const quantityQusd = Math.min(liquidityQusd, capitalLimitedQusd);
-
-    if (!(quantityQusd > 0)) {
-      insufficientLiquidity += 1;
-      continue;
-    }
-
-    const capitalRequiredFiat = quantityQusd * buy.rate;
-    const grossProfitFiat = quantityQusd * spreadPerQusd;
-    const grossMarginPercent =
-      capitalRequiredFiat > 0
-        ? (grossProfitFiat / capitalRequiredFiat) * 100
-        : 0;
-
-    const buyFeeFiat = fee(options.fees?.buy, {
-      side: "buy",
-      coin,
-      quantityQusd,
-      grossFiat: capitalRequiredFiat,
-    });
-    const sellProceedsFiat = quantityQusd * sell.rate;
-    const sellFeeFiat = fee(options.fees?.sell, {
-      side: "sell",
-      coin,
-      quantityQusd,
-      grossFiat: sellProceedsFiat,
-    });
-    const feesKnown = buyFeeFiat !== null && sellFeeFiat !== null;
-    const totalFeesFiat = feesKnown
-      ? (buyFeeFiat as number) + (sellFeeFiat as number)
-      : null;
-    const netProfitFiat =
-      totalFeesFiat === null ? null : grossProfitFiat - totalFeesFiat;
-    const netMarginPercent =
-      netProfitFiat === null || capitalRequiredFiat <= 0
-        ? null
-        : (netProfitFiat / capitalRequiredFiat) * 100;
-
-    opportunities.push({
-      coin,
-      buyOfferUuid: buy.uuid,
-      sellOfferUuid: sell.uuid,
-      buyRate: buy.rate,
-      sellRate: sell.rate,
-      quantityQusd,
-      capitalRequiredFiat,
-      grossProfitFiat,
-      grossMarginPercent,
-      buyFeeFiat,
-      sellFeeFiat,
-      totalFeesFiat,
-      netProfitFiat,
-      netMarginPercent,
-      feesStatus: feesKnown ? "known" : "unknown",
-      observedAt:
-        buy.observedAt < sell.observedAt ? buy.observedAt : sell.observedAt,
-      stale: false,
-    });
+    if (bestOpportunity) opportunities.push(bestOpportunity);
   }
 
   opportunities.sort((a, b) => b.grossProfitFiat - a.grossProfitFiat);

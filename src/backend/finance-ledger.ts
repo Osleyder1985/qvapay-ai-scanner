@@ -132,6 +132,10 @@ export class FinanceLedgerStore {
       net < 0
     )
       return false;
+    const settlementTolerance = Math.max(Math.abs(gross), 1) * 1e-9;
+    if (fee > gross + settlementTolerance || net > gross + settlementTolerance)
+      return false;
+    if (Math.abs(gross - (net + fee)) > settlementTolerance) return false;
     const next = {
       ...entry,
       grossAmountQusd: gross,
@@ -157,17 +161,42 @@ export class FinanceLedgerStore {
   }
 
   private normalizeLoaded(value: FinanceLedgerEntry): FinanceLedgerEntry {
+    const gross = Number(value.grossAmountQusd);
+    const fee = value.feeQusd === null ? null : Number(value.feeQusd);
+    const net =
+      value.netAmountQusd === null ? null : Number(value.netAmountQusd);
+    const settlementTolerance = Math.max(Math.abs(gross), 1) * 1e-9;
+    const settlementValid =
+      Number.isFinite(gross) &&
+      gross >= 0 &&
+      (fee === null || (Number.isFinite(fee) && fee >= 0)) &&
+      (net === null || (Number.isFinite(net) && net >= 0)) &&
+      ((fee === null && net === null) ||
+        (fee !== null &&
+          net !== null &&
+          fee <= gross + settlementTolerance &&
+          net <= gross + settlementTolerance &&
+          Math.abs(gross - (net + fee)) <= settlementTolerance));
+
+    if (!settlementValid) {
+      return {
+        ...value,
+        grossAmountQusd: value.amount,
+        feeQusd: null,
+        netAmountQusd: null,
+        feeSource: "unknown",
+      };
+    }
+
     return {
       ...value,
-      grossAmountQusd: Number.isFinite(value.grossAmountQusd)
-        ? value.grossAmountQusd
-        : value.amount,
-      feeQusd: Number.isFinite(value.feeQusd) ? value.feeQusd : null,
-      netAmountQusd: Number.isFinite(value.netAmountQusd)
-        ? value.netAmountQusd
-        : null,
+      grossAmountQusd: gross,
+      feeQusd: fee,
+      netAmountQusd: net,
       feeSource:
-        value.feeSource === "qvapay_received" ? "qvapay_received" : "unknown",
+        fee !== null && net !== null && value.feeSource === "qvapay_received"
+          ? "qvapay_received"
+          : "unknown",
     };
   }
 

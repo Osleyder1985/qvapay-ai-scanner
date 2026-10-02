@@ -23,7 +23,7 @@ export interface D1Database {
   prepare(query: string): D1PreparedStatement;
   batch<T = unknown>(
     statements: D1PreparedStatement[],
-  ): Promise<Array<{ success: boolean } & T>>;
+  ): Promise<Array<{ success: boolean; meta?: { changes?: number } } & T>>;
 }
 
 export interface MarketHistoryPoint {
@@ -91,17 +91,18 @@ export async function d1Health(db: D1Database): Promise<{
 }> {
   const result = await db
     .prepare(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?, ?, ?)",
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?, ?, ?, ?)",
     )
     .bind(
       "market_history",
       "operations_ledger",
       "finance_ledger",
       "auto_apply_config",
+      "market_events",
     )
     .all<{ name: string }>();
   return {
-    ok: result.results.length >= 4,
+    ok: result.results.length >= 5,
     tables: result.results.map((row) => row.name).sort(),
   };
 }
@@ -311,6 +312,14 @@ export async function recordFinanceSettlement(
   ) {
     return false;
   }
+
+  const settlementTolerance = Math.max(Math.abs(gross), 1) * 1e-9;
+  if (fee > gross + settlementTolerance || net > gross + settlementTolerance) {
+    return false;
+  }
+  if (Math.abs(gross - (net + fee)) > settlementTolerance) {
+    return false;
+  }
   const result = await db
     .prepare(
       `UPDATE finance_ledger
@@ -323,4 +332,186 @@ export async function recordFinanceSettlement(
     .bind(gross, fee, net, uuid)
     .run();
   return Number(result.meta?.changes ?? 0) > 0;
+}
+
+export interface MarketEventRow {
+  dedupe_key: string;
+  event_id: string | null;
+  offer_uuid: string;
+  event: string;
+  status: string | null;
+  side: string | null;
+  coin: string;
+  amount: number | null;
+  available_amount: number | null;
+  receive: number | null;
+  rate: number | null;
+  event_at: string;
+  observed_at: string;
+  source: string;
+}
+
+export async function appendMarketEvents(
+  db: D1Database,
+  events: Array<{
+    dedupeKey: string;
+    eventId: string | null;
+    offerUuid: string;
+    event: string;
+    status: string | null;
+    side: string | null;
+    coin: string;
+    amount: number | null;
+    availableAmount: number | null;
+    receive: number | null;
+    rate: number | null;
+    eventAt: string;
+    observedAt: string;
+    source: string;
+  }>,
+): Promise<number> {
+  if (!events.length) return 0;
+  const BATCH_SIZE = 250;
+  let inserted = 0;
+  for (let offset = 0; offset < events.length; offset += BATCH_SIZE) {
+    const chunk = events.slice(offset, offset + BATCH_SIZE);
+    const statements = chunk.map((event) =>
+      db
+        .prepare(
+          `INSERT INTO market_events
+           (dedupe_key, event_id, offer_uuid, event, status, side, coin,
+            amount, available_amount, receive, rate, event_at, observed_at, source)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(dedupe_key) DO UPDATE SET
+             event_id = excluded.event_id,
+             status = excluded.status,
+             side = excluded.side,
+             coin = excluded.coin,
+             amount = excluded.amount,
+             available_amount = excluded.available_amount,
+             receive = excluded.receive,
+             rate = excluded.rate,
+             event_at = excluded.event_at,
+             observed_at = excluded.observed_at,
+             source = excluded.source
+           WHERE (
+             (excluded.event_id IS NULL
+              OR market_events.event_id IS NULL
+              OR excluded.event_id <> market_events.event_id)
+             AND (
+               (
+                 market_events.event = 'created'
+                 AND (
+                   excluded.event_at < market_events.event_at
+                   OR (excluded.event_at = market_events.event_at
+                       AND excluded.observed_at > market_events.observed_at)
+                 )
+               )
+               OR (
+                 market_events.event <> 'created'
+                 AND (
+                   excluded.observed_at > market_events.observed_at
+                   OR (excluded.observed_at = market_events.observed_at
+                       AND excluded.event_at > market_events.event_at)
+                 )
+               )
+             )
+           )`,
+        )
+        .bind(
+          event.dedupeKey,
+          event.eventId,
+          event.offerUuid,
+          event.event,
+          event.status,
+          event.side,
+          event.coin,
+          event.amount,
+          event.availableAmount,
+          event.receive,
+          event.rate,
+          event.eventAt,
+          event.observedAt,
+          event.source,
+        ),
+    );
+    const results = await db.batch(statements);
+    inserted += results.reduce(
+      (count, result) => count + Number(result.meta?.changes ?? 0),
+      0,
+    );
+  }
+  return inserted;
+}
+
+export async function listMarketEvents(
+  db: D1Database,
+  coin?: string,
+  limit = 1000,
+): Promise<MarketEventRow[]> {
+  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 10000);
+  const normalizedCoin = coin?.trim().toUpperCase();
+  const result = normalizedCoin
+    ? await db
+        .prepare(
+          `SELECT dedupe_key, event_id, offer_uuid, event, status, side, coin,
+                  amount, available_amount, receive, rate, event_at, observed_at, source
+           FROM market_events
+           WHERE coin = ?
+           ORDER BY event_at DESC, observed_at DESC
+           LIMIT ?`,
+        )
+        .bind(normalizedCoin, safeLimit)
+        .all<MarketEventRow>()
+    : await db
+        .prepare(
+          `SELECT dedupe_key, event_id, offer_uuid, event, status, side, coin,
+                  amount, available_amount, receive, rate, event_at, observed_at, source
+           FROM market_events
+           ORDER BY event_at DESC, observed_at DESC
+           LIMIT ?`,
+        )
+        .bind(safeLimit)
+        .all<MarketEventRow>();
+  return result.results;
+}
+
+export async function listMarketEventsForAnalytics(
+  db: D1Database,
+  coin: string,
+  completedLimit = 500,
+): Promise<MarketEventRow[]> {
+  const safeLimit = Math.min(Math.max(Math.trunc(completedLimit), 1), 1000);
+  const normalizedCoin = coin.trim().toUpperCase();
+  if (!normalizedCoin) return [];
+
+  const result = await db
+    .prepare(
+      `SELECT dedupe_key, event_id, offer_uuid, event, status, side, coin,
+              amount, available_amount, receive, rate, event_at, observed_at, source
+       FROM market_events
+       WHERE coin = ?
+         AND offer_uuid IN (
+           SELECT offer_uuid
+           FROM market_events
+           WHERE coin = ?
+             AND event = 'completed'
+             AND amount IS NOT NULL
+             AND receive IS NOT NULL
+             AND rate IS NOT NULL
+             AND amount > 0
+             AND receive > 0
+             AND rate > 0
+             AND ABS(rate - (receive / amount)) <=
+                 MAX(ABS(rate), ABS(receive / amount), 1) * 1e-9
+           GROUP BY offer_uuid
+           ORDER BY MAX(event_at) DESC, MAX(observed_at) DESC, offer_uuid ASC
+           LIMIT ?
+         )
+       ORDER BY event_at ASC, observed_at ASC`,
+    )
+    .bind(normalizedCoin, normalizedCoin, safeLimit)
+    .all<MarketEventRow>();
+
+  return result.results;
 }

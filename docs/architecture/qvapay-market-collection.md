@@ -13,7 +13,7 @@ The service provides:
 
 At 2.6 seconds between upstream requests, the theoretical continuous rate is about 23 requests/minute, below QvaPay's current documented 25 queries/minute per account. QvaPay's list documentation also contains a contradictory 429 table mentioning 30/60 seconds; the implementation deliberately uses the more conservative 25/minute limit.
 
-QvaPay states that public market-list responses are cached server-side for a few seconds, so polling faster does not necessarily produce fresher data. citeturn0search2
+La política del colector asume que respuestas públicas consecutivas pueden estar cacheadas durante unos segundos; por eso acelerar el polling no se considera una garantía de mayor frescura.
 
 ## 429 behavior
 
@@ -23,9 +23,11 @@ A 429 is not cached. The collector extends its next available request time by at
 
 Market, intelligence, history, Auto-Apply and operations listing now share the same market-request scheduler. User-specific `my=1` reads are paced by the same scheduler but are not treated as public-market cache data across different query keys.
 
-## Future feed
+## Event feed integration
 
-QvaPay currently offers a paid market feed through webhook or SSE for $10/30 days. Webhook provides queued delivery/retries; SSE is live but can lose events while disconnected. Neither is a dependency of the current architecture.
+QvaPay currently offers the P2P market feed through webhook or SSE. The arbitrage history module exposes a signed webhook ingestion boundary and a normalization contract for SSE events. The existing Cloudflare Worker does not keep a long-lived SSE connection open; reconciliation remains the recovery path for the authenticated operation history.
+
+The feed is a paid QvaPay subscription. Its secret is represented by the runtime-only `QVAPAY_FEED_SECRET` binding and is never committed to source control.
 
 ## Verification target
 
