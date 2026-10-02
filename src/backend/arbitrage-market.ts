@@ -128,11 +128,13 @@ export function normalizeArbitrageOffer(
   const observedAt = parseTimestamp(raw.updated_at ?? raw.created_at);
   const rawOfferKind = normalizedText(raw.offer_kind).toLowerCase();
   const offerKind: "fixed" | "flexible" =
-    rawOfferKind === "flexible" || rawOfferKind === "fixed"
-      ? rawOfferKind
-      : raw.available_amount === null || raw.available_amount === undefined
+    rawOfferKind === "flexible"
+      ? "flexible"
+      : rawOfferKind === "fixed"
         ? "fixed"
-        : "flexible";
+        : raw.available_amount === null || raw.available_amount === undefined
+          ? "fixed"
+          : "flexible";
   const rawAvailableQusd = finitePositive(raw.available_amount);
   const availableQusd =
     offerKind === "fixed" ? amountQusd : rawAvailableQusd;
