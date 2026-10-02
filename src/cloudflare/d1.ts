@@ -415,7 +415,7 @@ export async function listMarketEvents(
                   amount, available_amount, receive, rate, event_at, observed_at, source
            FROM market_events
            WHERE coin = ?
-           ORDER BY event_at ASC, observed_at ASC
+           ORDER BY event_at DESC, observed_at DESC
            LIMIT ?`,
         )
         .bind(normalizedCoin, safeLimit)
