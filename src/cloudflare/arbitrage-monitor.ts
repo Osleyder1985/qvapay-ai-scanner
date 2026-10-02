@@ -139,7 +139,6 @@ async function saveState(db: D1Database, state: {
        payload_json=excluded.payload_json,
        updated_at=excluded.updated_at`,
   ).bind(
-    1,
     state.status,
     state.scanId ?? current?.scan_id ?? null,
     state.scannedAt ?? current?.scanned_at ?? null,
