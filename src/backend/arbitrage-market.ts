@@ -1,12 +1,19 @@
 /**
  * @file arbitrage-market.ts
  * @path src/backend/arbitrage-market.ts
- * @description Contrato determinista para normalizar ofertas P2P y detectar oportunidades de arbitraje.
+ * @description Contrato determinista para normalizar ofertas P2P y detectar oportunidades de arbitraje sin ejecutar operaciones.
  * @module backend/arbitrage
  * @status active
  */
 
 export type ArbitrageSide = "buy" | "sell";
+
+/**
+ * En QvaPay, una oferta SELL permite al usuario comprar QUSD y una oferta BUY
+ * permite al usuario vender QUSD. El motor conserva los tipos originales, pero
+ * modela explícitamente la dirección de nuestra operación.
+ */
+export type ArbitrageAction = "acquire" | "exit";
 
 export interface RawArbitrageOffer {
   uuid?: unknown;
@@ -56,6 +63,8 @@ export interface ArbitrageOpportunity {
   coin: string;
   buyOfferUuid: string;
   sellOfferUuid: string;
+  acquisitionOfferUuid: string;
+  exitOfferUuid: string;
   buyRate: number;
   sellRate: number;
   quantityQusd: number;
@@ -186,15 +195,16 @@ export function scanArbitrage(
   let insufficientLiquidity = 0;
 
   for (const [coin, offers] of byCoin) {
-    const buys = offers
-      .filter((offer) => offer.side === "buy")
-      .sort((a, b) => a.rate - b.rate);
-    const sells = offers
+    // QvaPay semantics: SELL = nosotros compramos QUSD; BUY = nosotros vendemos QUSD.
+    const acquisitionOffers = offers
       .filter((offer) => offer.side === "sell")
+      .sort((a, b) => a.rate - b.rate);
+    const exitOffers = offers
+      .filter((offer) => offer.side === "buy")
       .sort((a, b) => b.rate - a.rate);
 
-    const buy = buys[0];
-    const sell = sells[0];
+    const buy = acquisitionOffers[0];
+    const sell = exitOffers[0];
     if (!buy || !sell) continue;
 
     const spreadPerQusd = sell.rate - buy.rate;
@@ -247,6 +257,8 @@ export function scanArbitrage(
       coin,
       buyOfferUuid: buy.uuid,
       sellOfferUuid: sell.uuid,
+      acquisitionOfferUuid: buy.uuid,
+      exitOfferUuid: sell.uuid,
       buyRate: buy.rate,
       sellRate: sell.rate,
       quantityQusd,
