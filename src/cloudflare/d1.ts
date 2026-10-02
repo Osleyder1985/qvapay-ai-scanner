@@ -453,7 +453,7 @@ export async function listMarketEvents(
           `SELECT dedupe_key, event_id, offer_uuid, event, status, side, coin,
                   amount, available_amount, receive, rate, event_at, observed_at, source
            FROM market_events
-           ORDER BY event_at ASC, observed_at ASC
+           ORDER BY event_at DESC, observed_at DESC
            LIMIT ?`,
         )
         .bind(safeLimit)
