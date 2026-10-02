@@ -22,9 +22,11 @@ import { handleDiagnosticsRoutes } from "./diagnostics-routes.js";
 import { handleAutoApplyRoutes } from "./auto-apply-routes.js";
 import { handleArbitrageHistoryRoutes } from "./arbitrage-history-routes.js";
 import { handleArbitrageRoutes } from "./arbitrage-routes.js";
+interface DurableObjectNamespaceLike { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> }; }
+
 import { ingestArbitrageWebhook } from "./arbitrage-event-ingestion.js";
 import { handleArbitrageMonitorRoutes } from "./arbitrage-monitor-routes.js";
-import type { DurableObjectNamespace } from "cloudflare:workers";
+
 
 export interface WorkerEnv {
   DB: D1Database;
@@ -35,7 +37,7 @@ export interface WorkerEnv {
   QVAPAY_FEED_SECRET?: string;
   AUTH_USERNAME?: string;
   AUTH_PASSWORD?: string;
-  ARBITRAGE_MONITOR: DurableObjectNamespace;
+  ARBITRAGE_MONITOR: DurableObjectNamespaceLike;
 }
 
 export function securityHeaders(): Record<string, string> {
