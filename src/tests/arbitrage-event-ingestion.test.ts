@@ -95,6 +95,7 @@ test("rechaza webhook sobredimensionado en streaming", async () => {
           controller.close();
         },
       }),
+      duplex: "half",
     }),
     db as never,
     "secret",
