@@ -17,8 +17,11 @@ function database(changes = 1): D1Database {
         bind() {
           return statement;
         },
-        async run() {
-          return { success: true, meta: { changes } };
+        async run<T = unknown>() {
+          return { success: true, meta: { changes } } as {
+            success: boolean;
+            meta: { changes: number };
+          } & T;
         },
         async all() {
           return { success: true, results: [] };
