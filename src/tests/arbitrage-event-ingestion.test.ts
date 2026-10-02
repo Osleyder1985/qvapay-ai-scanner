@@ -183,6 +183,7 @@ test("reconciliación conserva estados terminales y omite estados no soportados"
     ["completed-1|created", "completed-1|completed"],
   );
 });
+
 test("reconciliación continúa cuando la API omite total", async () => {
   const db = mockDatabase();
   const env = {
