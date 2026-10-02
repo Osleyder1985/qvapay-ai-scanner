@@ -185,9 +185,20 @@ export async function handleAiAuditRoutes(
 ): Promise<Response | null> {
   if (!url.pathname.startsWith("/api/ai-audit/")) return null;
 
+  const allowedPaths = new Set([
+    "/api/ai-audit/health",
+    "/api/ai-audit/monitor",
+    "/api/ai-audit/arbitrage",
+    "/api/ai-audit/database",
+    "/api/ai-audit/runtime",
+  ]);
   const auth = await authorizeAiAuditor(request, env.AI_AUDITOR_TOKEN_HASH);
   if (!auth.ok) {
     return auditError(json, auth.status, auth.error);
+  }
+
+  if (!allowedPaths.has(url.pathname)) {
+    return auditError(json, 404, "Ruta de auditoría no encontrada.");
   }
 
   try {
