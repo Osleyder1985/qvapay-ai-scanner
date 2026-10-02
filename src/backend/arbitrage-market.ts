@@ -59,7 +59,6 @@ export interface ArbitrageFeeModel {
 }
 
 export interface ArbitrageScanOptions {
-  now?: Date;
   minMarginPercent: number;
   maxCapitalFiat?: number;
   fees?: ArbitrageFeeModel;
@@ -197,7 +196,6 @@ export function scanArbitrage(
     throw new Error("maxCapitalFiat inválido.");
 
   let invalidOffers = 0;
-  let staleOffers = 0;
   const byCoin = new Map<string, NormalizedArbitrageOffer[]>();
 
   for (const raw of rawOffers) {
