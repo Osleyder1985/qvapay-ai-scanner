@@ -185,7 +185,12 @@ test("separa completadas de canceladas", () => {
 
 test("no cuenta una operación incompleta como ejecución", () => {
   const events = [
-    event({\n      offerUuid: "open",\n      dedupeKey: "open",\n      event: "created",\n      rate: 1200,\n    }),
+    event({
+      offerUuid: "open",
+      dedupeKey: "open",
+      event: "created",
+      rate: 1200,
+    }),
     event({ offerUuid: "paid", dedupeKey: "paid", event: "paid", rate: 1300 }),
   ];
   const trades = completedTradesFromEvents(events);
