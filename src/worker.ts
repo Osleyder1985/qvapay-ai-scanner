@@ -8,6 +8,9 @@
 
 import { requireSession, type SessionDatabase } from "./cloudflare/access.js";
 import { bootstrapArbitrageMonitor } from "./cloudflare/arbitrage-monitor-routes.js";
+import { ArbitrageMonitor } from "./cloudflare/arbitrage-monitor-do.js";
+
+export { ArbitrageMonitor };
 import {
   routeRequest,
   securityHeaders,
