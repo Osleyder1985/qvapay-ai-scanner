@@ -168,8 +168,7 @@ test("D1 analytics query scopes completed operations by coin and window", async 
     },
     batch: async () => [],
   };
-  const { listMarketEventsForAnalytics } =
-    await import("../cloudflare/d1.js");
+  const { listMarketEventsForAnalytics } = await import("../cloudflare/d1.js");
 
   await listMarketEventsForAnalytics(db, "bank_cup", 500);
 
