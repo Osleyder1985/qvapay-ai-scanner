@@ -132,7 +132,7 @@ export function normalizeArbitrageOffer(
       ? "flexible"
       : rawOfferKind === "fixed"
         ? "fixed"
-        : raw.available_amount === null || raw.available_amount === undefined
+        : raw.available_amount === null
           ? "fixed"
           : "flexible";
   const rawAvailableQusd = finitePositive(raw.available_amount);
