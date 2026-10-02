@@ -177,6 +177,8 @@ const wranglerEnv = {
   CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "true",
 };
 
+await applyLocalD1Migrations();
+
 server = spawn(
   process.platform === "win32" ? "npx.cmd" : "npx",
   ["wrangler", "dev", "--local", "--ip", "127.0.0.1", "--port", "8787"],
@@ -193,10 +195,8 @@ forceExitTimer = setTimeout(() => {
   process.exit(1);
 }, 120_000);
 
-server.stdout.on("data", (chunk) => process.stdout.write(`[wrangler] ${chunk}`));
-server.stderr.on("data", (chunk) => process.stderr.write(`[wrangler] ${chunk}`));
-
-await applyLocalD1Migrations();
+server.stdout.on("data", (chunk) => process.stdout.write("[wrangler] " + chunk));
+server.stderr.on("data", (chunk) => process.stderr.write("[wrangler] " + chunk));
 
 await waitForServer();
 
