@@ -112,7 +112,11 @@ test("deduplica un completed aunque webhook y stream usen event IDs distintos", 
 
 test("aplica windowSize a operaciones terminales y mantiene tasas coherentes", () => {
   const events = [
-    event({ offerUuid: "old-done", dedupeKey: "old-done", eventAt: "2026-10-01T10:00:00Z" }),
+    event({
+      offerUuid: "old-done",
+      dedupeKey: "old-done",
+      eventAt: "2026-10-01T10:00:00Z",
+    }),
     event({
       offerUuid: "old-cancel",
       dedupeKey: "old-cancel",
@@ -120,7 +124,11 @@ test("aplica windowSize a operaciones terminales y mantiene tasas coherentes", (
       status: "cancelled",
       eventAt: "2026-10-01T11:00:00Z",
     }),
-    event({ offerUuid: "new-done", dedupeKey: "new-done", eventAt: "2026-10-02T11:00:00Z" }),
+    event({
+      offerUuid: "new-done",
+      dedupeKey: "new-done",
+      eventAt: "2026-10-02T11:00:00Z",
+    }),
     event({
       offerUuid: "new-cancel",
       dedupeKey: "new-cancel",
@@ -129,7 +137,9 @@ test("aplica windowSize a operaciones terminales y mantiene tasas coherentes", (
       eventAt: "2026-10-02T11:30:00Z",
     }),
   ];
-  const result = calculateCurrencyAnalytics(events, "BANK_CUP", { windowSize: 2 });
+  const result = calculateCurrencyAnalytics(events, "BANK_CUP", {
+    windowSize: 2,
+  });
   assert.equal(result.completedCount, 1);
   assert.equal(result.cancelledCount, 1);
   assert.equal(result.terminalCount, 2);
@@ -179,7 +189,9 @@ test("rechaza estados desconocidos y no infiere completed", () => {
   );
 });
 
-test("deduplica el mismo evento sin eliminar eventos distintos de la misma oferta", () => {
+test(
+  "deduplica el mismo evento sin eliminar eventos distintos de la misma oferta",
+  () => {
   const first = event({ dedupeKey: "same" });
   const duplicate = event({ dedupeKey: "same", source: "webhook" });
   const cancelled = event({
@@ -191,7 +203,8 @@ test("deduplica el mismo evento sin eliminar eventos distintos de la misma ofert
     deduplicateMarketEvents([first, duplicate, cancelled]).length,
     2,
   );
-});
+  },
+);
 
 test("mantiene las monedas completamente separadas", () => {
   const result = calculateCurrencyAnalytics(
