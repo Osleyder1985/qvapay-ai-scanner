@@ -19,6 +19,7 @@ import { handleOperationsRoutes } from "./operations-routes.js";
 import { handleMarketRoutes } from "./market-routes.js";
 import { handleAccountRoutes } from "./account-routes.js";
 import { handleDiagnosticsRoutes } from "./diagnostics-routes.js";
+import { handleAiAuditRoutes } from "./ai-audit-routes.js";
 import { handleAutoApplyRoutes } from "./auto-apply-routes.js";
 import { handleArbitrageHistoryRoutes } from "./arbitrage-history-routes.js";
 import { handleArbitrageRoutes } from "./arbitrage-routes.js";
@@ -39,6 +40,8 @@ export interface WorkerEnv {
   QVAPAY_FEED_SECRET?: string;
   AUTH_USERNAME?: string;
   AUTH_PASSWORD?: string;
+  AI_AUDITOR_TOKEN_HASH?: string;
+  AI_AUDITOR_BUILD_SHA?: string;
   ARBITRAGE_MONITOR: DurableObjectNamespaceLike;
 }
 
@@ -100,6 +103,9 @@ export async function handleApi(
   env: WorkerEnv,
 ): Promise<Response | null> {
   const url = requestUrl(request);
+
+  const aiAuditResponse = await handleAiAuditRoutes(request, env, url, json);
+  if (aiAuditResponse) return aiAuditResponse;
 
   if (request.method === "GET" && url.pathname === "/api/health") {
     return json({ ok: true, service: "qvapay-ai-scanner-worker" });
@@ -195,7 +201,8 @@ export async function routeRequest(
     if (
       !publicWebhook &&
       url.pathname !== "/api/health" &&
-      !url.pathname.startsWith("/api/auth/")
+      !url.pathname.startsWith("/api/auth/") &&
+      !url.pathname.startsWith("/api/ai-audit/")
     ) {
       const session = await requireSession(
         request,
@@ -207,6 +214,7 @@ export async function routeRequest(
     if (
       !publicWebhook &&
       url.pathname !== "/api/health" &&
+      !url.pathname.startsWith("/api/ai-audit/") &&
       requiresSameOrigin(request) &&
       !isSameOrigin(request)
     ) {
