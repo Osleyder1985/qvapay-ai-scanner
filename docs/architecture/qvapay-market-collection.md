@@ -13,7 +13,7 @@ The service provides:
 
 At 2.6 seconds between upstream requests, the theoretical continuous rate is about 23 requests/minute, below QvaPay's current documented 25 queries/minute per account. QvaPay's list documentation also contains a contradictory 429 table mentioning 30/60 seconds; the implementation deliberately uses the more conservative 25/minute limit.
 
-QvaPay states that public market-list responses are cached server-side for a few seconds, so polling faster does not necessarily produce fresher data. citeturn0search2
+La política del colector asume que respuestas públicas consecutivas pueden estar cacheadas durante unos segundos; por eso acelerar el polling no se considera una garantía de mayor frescura.
 
 ## 429 behavior
 
