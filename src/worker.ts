@@ -30,7 +30,7 @@ function withSecurityHeaders(response: Response): Response {
 }
 
 export default {
-  async scheduled(_controller: ScheduledController, env: WorkerEnv): Promise<void> {
+  async scheduled(_controller: unknown, env: WorkerEnv): Promise<void> {
     await bootstrapArbitrageMonitor(env);
   },
 
