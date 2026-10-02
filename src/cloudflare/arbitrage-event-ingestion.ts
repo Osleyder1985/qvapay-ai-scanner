@@ -322,8 +322,17 @@ export async function reconcileArbitrageHistory(
     }
 
     pagesFetched = page;
-    lastPage = Math.max(1, Math.ceil(collection.total / collection.perPage));
-    if (page >= lastPage || collection.data.length === 0) break;
+    const totalKnown = isRecord(payload) && payload.total !== undefined;
+    lastPage = totalKnown
+      ? Math.max(1, Math.ceil(collection.total / collection.perPage))
+      : page + (collection.data.length >= collection.perPage ? 1 : 0);
+    if (
+      collection.data.length === 0 ||
+      (totalKnown && page >= lastPage) ||
+      (!totalKnown && collection.data.length < collection.perPage)
+    ) {
+      break;
+    }
   }
 
   const stored = await appendMarketEvents(env.DB, events);
