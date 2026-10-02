@@ -147,7 +147,7 @@ export function normalizeMarketEvent(
   const rate = amount !== null && receive !== null ? receive / amount : null;
 
   const eventId = text(raw.eventId) || null;
-  // Lifecycle identity is authoritative for analytics. Provider event IDs can differ\n  // between webhook, stream, and reconciliation observations of the same event.\n  const dedupeKey = stableKey([offerUuid, event]);
+  // La identidad del ciclo de vida prevalece para la analítica. Los IDs de evento\n  // pueden diferir entre webhook, stream y reconciliación para la misma observación.\n  const dedupeKey = stableKey([offerUuid, event]);
 
   return {
     dedupeKey,
