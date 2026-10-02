@@ -57,7 +57,10 @@ function marketQuery(url: URL): URLSearchParams {
         : MAX_PAGE_SIZE,
     ),
   );
-  params.set("status", url.searchParams.get("status")?.trim() || "open");
+  params.set(
+    "status",
+    url.searchParams.get("status")?.trim() || "open",
+  );
   // Keep both sides of the selected coin: SELL offers are the acquisition
   // market, while BUY offers are required to calculate real arbitrage pairs.
   // The monitor is capped at three pages per 10-second cycle to stay below
