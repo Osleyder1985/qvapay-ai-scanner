@@ -147,7 +147,7 @@ export function normalizeMarketEvent(
   const rate = amount !== null && receive !== null ? receive / amount : null;
 
   const eventId = text(raw.eventId) || null;
-  const dedupeKey = eventId ?? stableKey([offerUuid, event]);
+  // Lifecycle identity is authoritative for analytics. Provider event IDs can differ\n  // between webhook, stream, and reconciliation observations of the same event.\n  const dedupeKey = stableKey([offerUuid, event]);
 
   return {
     dedupeKey,
@@ -230,18 +230,27 @@ export function calculateCurrencyAnalytics(
   const all = deduplicateMarketEvents(events).filter(
     (event) => event.coin === normalizedCoin,
   );
-  const completed = completedTradesFromEvents(all).slice(-windowSize);
+  const terminalEvents = all
+    .filter(
+      (event) =>
+        event.event === "completed" || event.event === "cancelled",
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime(),
+    );
+  const terminalWindow = terminalEvents.slice(-windowSize);
+  const completed = completedTradesFromEvents(terminalWindow);
   const completedIds = new Set(completed.map((trade) => trade.offerUuid));
-  const cancelledCount = new Set(
-    all
+  const cancelledIds = new Set(
+    terminalWindow
       .filter((event) => event.event === "cancelled")
       .map((event) => event.offerUuid),
-  ).size;
+  );
+  const cancelledCount = cancelledIds.size;
   const terminalIds = new Set([
     ...completedIds,
-    ...all
-      .filter((event) => event.event === "cancelled")
-      .map((event) => event.offerUuid),
+    ...cancelledIds,
   ]);
   const rates = completed.map((trade) => trade.rate).sort((a, b) => a - b);
   const volume = completed.reduce((sum, trade) => sum + trade.amount, 0);
@@ -251,10 +260,15 @@ export function calculateCurrencyAnalytics(
   );
   const completionTimes = completed
     .map((trade) => {
-      const created = all.find(
-        (event) =>
-          event.offerUuid === trade.offerUuid && event.event === "created",
-      );
+      const created = all
+        .filter(
+          (event) =>
+            event.offerUuid === trade.offerUuid && event.event === "created",
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime(),
+        )[0];
       if (!created) return null;
       const delta =
         new Date(trade.completedAt).getTime() -
