@@ -388,7 +388,10 @@ export async function appendMarketEvents(
       ),
   );
   const results = await db.batch(statements);
-  return results.length;
+  return results.reduce(
+    (count, result) => count + Number(result.meta?.changes ?? 0),
+    0,
+  );
 }
 
 export async function listMarketEvents(
