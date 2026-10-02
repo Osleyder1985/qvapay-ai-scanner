@@ -177,20 +177,38 @@ export function normalizeMarketEvent(
 export function deduplicateMarketEvents(
   events: NormalizedMarketEvent[],
 ): NormalizedMarketEvent[] {
-  const seen = new Set<string>();
-  const result: NormalizedMarketEvent[] = [];
-  const ordered = [...events].sort(
+  const canonical = new Map<string, NormalizedMarketEvent>();
+  for (const event of events) {
+    const lifecycleKey = stableKey([event.offerUuid, event.event]);
+    const current = canonical.get(lifecycleKey);
+    if (!current) {
+      canonical.set(lifecycleKey, event);
+      continue;
+    }
+
+    const eventAt = new Date(event.eventAt).getTime();
+    const currentEventAt = new Date(current.eventAt).getTime();
+    const observedAt = new Date(event.observedAt).getTime();
+    const currentObservedAt = new Date(current.observedAt).getTime();
+
+    // La creación representa el inicio real del ciclo: conservar la primera
+    // fecha de creación. Para el resto de estados, conservar la observación
+    // más reciente, que es la que puede contener el payload final corregido.
+    const shouldReplace =
+      event.event === "created"
+        ? eventAt < currentEventAt ||
+          (eventAt === currentEventAt && observedAt > currentObservedAt)
+        : observedAt > currentObservedAt ||
+          (observedAt === currentObservedAt && eventAt > currentEventAt);
+
+    if (shouldReplace) canonical.set(lifecycleKey, event);
+  }
+
+  return [...canonical.values()].sort(
     (a, b) =>
       new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime() ||
       new Date(a.observedAt).getTime() - new Date(b.observedAt).getTime(),
   );
-  for (const event of ordered) {
-    const lifecycleKey = stableKey([event.offerUuid, event.event]);
-    if (seen.has(lifecycleKey)) continue;
-    seen.add(lifecycleKey);
-    result.push(event);
-  }
-  return result;
 }
 
 function percentile(sorted: number[], p: number): number | null {
