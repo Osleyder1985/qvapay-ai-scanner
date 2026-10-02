@@ -27,6 +27,7 @@ import {
   reconcileCompletedIds,
 } from "./finance-reconciliation.js";
 import { OperationsLedgerStore } from "./operations-ledger.js";
+import { scanArbitrage } from "./arbitrage-market.js";
 
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
@@ -500,6 +501,63 @@ async function handleApiIntelligence(
     });
   }
 }
+/**
+ * Ejecuta un escaneo de arbitraje exclusivamente de lectura.
+ * Nunca aplica ofertas ni modifica operaciones en QvaPay.
+ */
+async function handleApiArbitrageScan(
+  response: ServerResponse,
+  url: URL,
+): Promise<void> {
+  try {
+    const maxAgeMs = Number(url.searchParams.get("maxAgeMs") ?? "30000");
+    const maxCapitalFiat = Number(
+      url.searchParams.get("maxCapitalFiat") ?? "1000",
+    );
+    const coin = url.searchParams.get("coin")?.trim().toUpperCase() ?? "";
+
+    if (
+      !Number.isFinite(maxAgeMs) ||
+      maxAgeMs < 0 ||
+      !Number.isFinite(maxCapitalFiat) ||
+      maxCapitalFiat <= 0
+    ) {
+      sendJson(response, 400, {
+        error: "Parámetros de arbitraje inválidos.",
+      });
+      return;
+    }
+
+    const marketUrl = new URL("/p2p", "http://127.0.0.1");
+    if (coin) marketUrl.searchParams.set("coin", coin);
+    const result = await fetchAllMarketPages(marketUrl);
+    const scan = scanArbitrage(result.offers, {
+      maxAgeMs,
+      maxCapitalFiat,
+    });
+
+    sendJson(response, 200, {
+      mode: "read-only",
+      executionEnabled: false,
+      capitalLimitFiat: maxCapitalFiat,
+      maxAgeMs,
+      coin: coin || null,
+      coverage: {
+        total: result.total,
+        fetched: result.offers.length,
+        pagesFetched: result.pagesFetched,
+        truncated: result.truncated,
+      },
+      ...scan,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    sendJson(response, message.includes("QVAPAY_APP_ID") ? 500 : 502, {
+      error: message,
+    });
+  }
+}
+
 
 /**
  * Implementa la operación handleApiP2POffer de este módulo.
@@ -1004,6 +1062,11 @@ async function handleRequest(
         error: message,
       });
     }
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/arbitrage/scan") {
+    await handleApiArbitrageScan(response, url);
     return;
   }
 
