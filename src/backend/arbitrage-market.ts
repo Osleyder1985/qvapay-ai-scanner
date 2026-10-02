@@ -22,6 +22,9 @@ export interface RawArbitrageOffer {
   amount?: unknown;
   available_amount?: unknown;
   receive?: unknown;
+  offer_kind?: unknown;
+  order_min?: unknown;
+  order_max?: unknown;
   updated_at?: unknown;
   created_at?: unknown;
 }
@@ -33,6 +36,9 @@ export interface NormalizedArbitrageOffer {
   amountQusd: number;
   availableQusd: number;
   rate: number;
+  offerKind: "fixed" | "flexible";
+  orderMinQusd: number | null;
+  orderMaxQusd: number | null;
   observedAt: string;
 }
 
@@ -118,14 +124,31 @@ export function normalizeArbitrageOffer(
   const side = normalizedText(raw.type).toLowerCase();
   const coin = normalizedText(raw.coin).toUpperCase();
   const amountQusd = finitePositive(raw.amount);
-  const availableQusd = finitePositive(raw.available_amount);
   const receive = finitePositive(raw.receive);
   const observedAt = parseTimestamp(raw.updated_at ?? raw.created_at);
+  const rawOfferKind = normalizedText(raw.offer_kind).toLowerCase();
+  const offerKind: "fixed" | "flexible" =
+    rawOfferKind === "flexible" || rawOfferKind === "fixed"
+      ? rawOfferKind
+      : raw.available_amount === null || raw.available_amount === undefined
+        ? "fixed"
+        : "flexible";
+  const rawAvailableQusd = finitePositive(raw.available_amount);
+  const availableQusd =
+    offerKind === "fixed" ? amountQusd : rawAvailableQusd;
+  const orderMinQusd =
+    offerKind === "flexible" ? finitePositive(raw.order_min) : null;
+  const orderMaxQusd =
+    offerKind === "flexible" ? finitePositive(raw.order_max) : null;
 
   if (!uuid || (side !== "buy" && side !== "sell") || !coin) return null;
   if (amountQusd === null || availableQusd === null || receive === null)
     return null;
   if (availableQusd > amountQusd) return null;
+  if (offerKind === "flexible" && orderMaxQusd !== null) {
+    if (orderMaxQusd > availableQusd) return null;
+    if (orderMinQusd !== null && orderMinQusd > orderMaxQusd) return null;
+  }
 
   const rate = receive / amountQusd;
   if (!Number.isFinite(rate) || rate <= 0 || observedAt === null) return null;
@@ -137,6 +160,9 @@ export function normalizeArbitrageOffer(
     amountQusd,
     availableQusd,
     rate,
+    offerKind,
+    orderMinQusd,
+    orderMaxQusd,
     observedAt,
   };
 }
@@ -217,10 +243,22 @@ export function scanArbitrage(
         }
 
         const liquidityQusd = Math.min(buy.availableQusd, sell.availableQusd);
+        const orderMaxQusd = Math.min(
+          buy.orderMaxQusd ?? Number.POSITIVE_INFINITY,
+          sell.orderMaxQusd ?? Number.POSITIVE_INFINITY,
+        );
+        const orderMinQusd = Math.max(
+          buy.orderMinQusd ?? 0,
+          sell.orderMinQusd ?? 0,
+        );
         const capitalLimitedQusd = options.maxCapitalFiat / buy.rate;
-        const quantityQusd = Math.min(liquidityQusd, capitalLimitedQusd);
+        const quantityQusd = Math.min(
+          liquidityQusd,
+          orderMaxQusd,
+          capitalLimitedQusd,
+        );
 
-        if (!(quantityQusd > 0)) {
+        if (!(quantityQusd > 0) || quantityQusd < orderMinQusd) {
           insufficientLiquidity += 1;
           continue;
         }
