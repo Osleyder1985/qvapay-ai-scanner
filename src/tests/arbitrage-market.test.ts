@@ -45,7 +45,10 @@ test("normaliza una oferta válida sin aplicar sustituciones implícitas", () =>
 });
 
 test("rechaza una oferta sin liquidez explícita", () => {
-  assert.equal(normalizeArbitrageOffer(offer({ available_amount: undefined })), null);
+  assert.equal(
+    normalizeArbitrageOffer(offer({ available_amount: undefined })),
+    null,
+  );
 });
 
 test("rechaza una oferta cuya liquidez supera el monto declarado", () => {
@@ -55,8 +58,18 @@ test("rechaza una oferta cuya liquidez supera el monto declarado", () => {
 test("empareja únicamente ofertas de la misma moneda", () => {
   const result = scanArbitrage(
     [
-      offer({ uuid: "buy-cup", type: "buy", coin: "BANK_CUP", receive: 1000 }),
-      offer({ uuid: "sell-usdt", type: "sell", coin: "USDT", receive: 1500 }),
+      offer({
+        uuid: "buy-cup",
+        type: "buy",
+        coin: "BANK_CUP",
+        receive: 1000,
+      }),
+      offer({
+        uuid: "sell-usdt",
+        type: "sell",
+        coin: "USDT",
+        receive: 1500,
+      }),
     ],
     { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 10_000 },
   );
@@ -85,8 +98,20 @@ test("elige BUY más barato y SELL más caro dentro de la misma moneda", () => {
 test("limita la cantidad por liquidez y capital", () => {
   const result = scanArbitrage(
     [
-      offer({ uuid: "buy", type: "buy", amount: 20, available_amount: 20, receive: 2000 }),
-      offer({ uuid: "sell", type: "sell", amount: 5, available_amount: 5, receive: 600 }),
+      offer({
+        uuid: "buy",
+        type: "buy",
+        amount: 20,
+        available_amount: 20,
+        receive: 2000,
+      }),
+      offer({
+        uuid: "sell",
+        type: "sell",
+        amount: 5,
+        available_amount: 5,
+        receive: 600,
+      }),
     ],
     { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 500 },
   );
@@ -146,7 +171,11 @@ test("rechaza pares con spread cero o negativo", () => {
 test("excluye ofertas obsoletas y ofertas con timestamp futuro", () => {
   const result = scanArbitrage(
     [
-      offer({ uuid: "stale-buy", type: "buy", updated_at: "2026-10-01T00:00:00.000Z" }),
+      offer({
+        uuid: "stale-buy",
+        type: "buy",
+        updated_at: "2026-10-01T00:00:00.000Z",
+      }),
       offer({ uuid: "fresh-sell", type: "sell", receive: 1500 }),
       offer({
         uuid: "future-sell",
@@ -165,8 +194,18 @@ test("excluye ofertas obsoletas y ofertas con timestamp futuro", () => {
 test("separa monedas incluso cuando sus tasas hacen parecer rentable el cruce", () => {
   const result = scanArbitrage(
     [
-      offer({ uuid: "buy-1", type: "buy", coin: "BANK_CUP", receive: 900 }),
-      offer({ uuid: "sell-2", type: "sell", coin: "ETECSA", receive: 9000 }),
+      offer({
+        uuid: "buy-1",
+        type: "buy",
+        coin: "BANK_CUP",
+        receive: 900,
+      }),
+      offer({
+        uuid: "sell-2",
+        type: "sell",
+        coin: "ETECSA",
+        receive: 9000,
+      }),
     ],
     { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 10_000 },
   );
