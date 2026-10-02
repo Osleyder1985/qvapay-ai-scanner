@@ -6,10 +6,19 @@
  * @status active
  */
 
-import { runArbitrageMonitor, INTERVAL_MS, type ArbitrageMonitorEnv } from "./arbitrage-monitor.js";
+import {
+  runArbitrageMonitor,
+  INTERVAL_MS,
+  type ArbitrageMonitorEnv,
+} from "./arbitrage-monitor.js";
 
-interface AlarmStorage { setAlarm(timestamp: number): Promise<void>; getAlarm(): Promise<number | null>; }
-interface DurableObjectStateLike { storage: AlarmStorage; }
+interface AlarmStorage {
+  setAlarm(timestamp: number): Promise<void>;
+  getAlarm(): Promise<number | null>;
+}
+interface DurableObjectStateLike {
+  storage: AlarmStorage;
+}
 
 export class ArbitrageMonitor {
   constructor(
@@ -47,11 +56,13 @@ export class ArbitrageMonitor {
         `UPDATE arbitrage_monitor_state
          SET status = 'error', last_error = ?, next_run_at = ?, updated_at = ?
          WHERE id = 1`,
-      ).bind(
-        error instanceof Error ? error.message : "Unknown monitor error",
-        new Date(Date.now() + INTERVAL_MS).toISOString(),
-        new Date().toISOString(),
-      ).run();
+      )
+        .bind(
+          error instanceof Error ? error.message : "Unknown monitor error",
+          new Date(Date.now() + INTERVAL_MS).toISOString(),
+          new Date().toISOString(),
+        )
+        .run();
       await this.ctx.storage.setAlarm(Date.now() + INTERVAL_MS);
     }
   }

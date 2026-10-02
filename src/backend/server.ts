@@ -525,7 +525,10 @@ async function handleApiArbitrageScan(
     const marketUrl = new URL("/p2p", "http://127.0.0.1");
     if (coin) marketUrl.searchParams.set("coin", coin);
     const result = await fetchAllMarketPages(marketUrl);
-    const scan = scanArbitrage(result.offers, { maxCapitalFiat, minMarginPercent: 5 });
+    const scan = scanArbitrage(result.offers, {
+      maxCapitalFiat,
+      minMarginPercent: 5,
+    });
 
     sendJson(response, 200, {
       mode: "read-only",

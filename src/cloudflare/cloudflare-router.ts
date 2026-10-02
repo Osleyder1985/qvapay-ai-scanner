@@ -152,7 +152,12 @@ export async function handleApi(
   const accountResponse = await handleAccountRoutes(request, env, url, json);
   if (accountResponse) return accountResponse;
 
-  const arbitrageMonitorResponse = await handleArbitrageMonitorRoutes(request, env, url, json);
+  const arbitrageMonitorResponse = await handleArbitrageMonitorRoutes(
+    request,
+    env,
+    url,
+    json,
+  );
   if (arbitrageMonitorResponse) return arbitrageMonitorResponse;
 
   const arbitrageResponse = await handleArbitrageRoutes(

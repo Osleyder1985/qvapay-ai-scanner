@@ -93,12 +93,27 @@ export async function runArbitrageMonitorRoute(
   minMarginPercent: number,
   coin: string,
 ): Promise<Response> {
-  const request = new Request(`https://internal/api/arbitrage/scan?minMarginPercent=${encodeURIComponent(minMarginPercent)}&coin=${encodeURIComponent(coin)}`);
-  return (await handleArbitrageRoutes(request, env, new URL(request.url), jsonResponse)) ?? new Response(JSON.stringify({ error: "ARBITRAGE_ROUTE_NOT_FOUND" }), { status: 500 });
+  const request = new Request(
+    `https://internal/api/arbitrage/scan?minMarginPercent=${encodeURIComponent(minMarginPercent)}&coin=${encodeURIComponent(coin)}`,
+  );
+  return (
+    (await handleArbitrageRoutes(
+      request,
+      env,
+      new URL(request.url),
+      jsonResponse,
+    )) ??
+    new Response(JSON.stringify({ error: "ARBITRAGE_ROUTE_NOT_FOUND" }), {
+      status: 500,
+    })
+  );
 }
 
 function jsonResponse(payload: unknown, status = 200): Response {
-  return new Response(JSON.stringify(payload), { status, headers: { "Content-Type": "application/json; charset=utf-8" } });
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { "Content-Type": "application/json; charset=utf-8" },
+  });
 }
 
 export async function handleArbitrageRoutes(
@@ -116,7 +131,10 @@ export async function handleArbitrageRoutes(
   );
 
   if (!Number.isFinite(minMarginPercent) || minMarginPercent < 0) {
-    return json({ error: "minMarginPercent debe ser un número no negativo." }, 400);
+    return json(
+      { error: "minMarginPercent debe ser un número no negativo." },
+      400,
+    );
   }
 
   try {
@@ -169,13 +187,15 @@ export async function handleArbitrageRoutes(
       )
       .map((offer) => {
         const amount = Number(offer.amount);
-        const available = offer.available_amount == null
-          ? amount
-          : Number(offer.available_amount);
+        const available =
+          offer.available_amount == null
+            ? amount
+            : Number(offer.available_amount);
         const receive = Number(offer.receive);
         const rate = amount > 0 ? receive / amount : NaN;
         const targetRate = rate * (1 + minMarginPercent / 100);
-        const quantity = Number.isFinite(available) && available > 0 ? available : 0;
+        const quantity =
+          Number.isFinite(available) && available > 0 ? available : 0;
         const capital = quantity * rate;
         const targetProceeds = quantity * targetRate;
         return {
@@ -189,14 +209,18 @@ export async function handleArbitrageRoutes(
           targetSaleRate: targetRate,
           targetSaleProceedsFiat: targetProceeds,
           projectedGrossProfitFiat: targetProceeds - capital,
-          projectedGrossMarginPercent: capital > 0 ? ((targetProceeds - capital) / capital) * 100 : 0,
+          projectedGrossMarginPercent:
+            capital > 0 ? ((targetProceeds - capital) / capital) * 100 : 0,
           offerKind: offer.offer_kind ?? null,
           orderMinQusd: offer.order_min ?? null,
           orderMaxQusd: offer.order_max ?? null,
           updatedAt: offer.updated_at ?? offer.created_at ?? null,
         };
       })
-      .filter((offer) => Number.isFinite(offer.purchaseRate) && offer.purchaseRate > 0)
+      .filter(
+        (offer) =>
+          Number.isFinite(offer.purchaseRate) && offer.purchaseRate > 0,
+      )
       .sort((a, b) => a.purchaseRate - b.purchaseRate);
 
     return json({

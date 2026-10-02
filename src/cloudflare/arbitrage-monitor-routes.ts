@@ -9,8 +9,13 @@
 import { monitorState } from "./arbitrage-monitor.js";
 import type { D1Database } from "./d1.js";
 
-interface DurableObjectStub { fetch(request: Request): Promise<Response>; }
-interface DurableObjectNamespaceLike { idFromName(name: string): unknown; get(id: unknown): DurableObjectStub; }
+interface DurableObjectStub {
+  fetch(request: Request): Promise<Response>;
+}
+interface DurableObjectNamespaceLike {
+  idFromName(name: string): unknown;
+  get(id: unknown): DurableObjectStub;
+}
 
 interface Env {
   DB: D1Database;
@@ -36,7 +41,14 @@ export async function handleArbitrageMonitorRoutes(
     const current = await monitorState(env.DB);
     let payload: Record<string, unknown> = {};
     if (current.state?.payload_json) {
-      try { payload = JSON.parse(current.state.payload_json) as Record<string, unknown>; } catch { payload = {}; }
+      try {
+        payload = JSON.parse(current.state.payload_json) as Record<
+          string,
+          unknown
+        >;
+      } catch {
+        payload = {};
+      }
     }
     return json({
       mode: "read-only",
@@ -60,21 +72,32 @@ export async function handleArbitrageMonitorRoutes(
 
   if (request.method !== "POST") return null;
 
-  const body = await request.json() as Record<string, unknown>;
+  const body = (await request.json()) as Record<string, unknown>;
   const margin = Number(body.minMarginPercent ?? 5);
-  const coin = String(body.coin ?? "BANK_CUP").trim().toUpperCase();
-  if (!Number.isFinite(margin) || margin < 0) return json({ error: "minMarginPercent inválido." }, 400);
-  if (!/^[A-Z0-9_]{2,32}$/.test(coin)) return json({ error: "coin inválida." }, 400);
+  const coin = String(body.coin ?? "BANK_CUP")
+    .trim()
+    .toUpperCase();
+  if (!Number.isFinite(margin) || margin < 0)
+    return json({ error: "minMarginPercent inválido." }, 400);
+  if (!/^[A-Z0-9_]{2,32}$/.test(coin))
+    return json({ error: "coin inválida." }, 400);
 
   const now = new Date().toISOString();
   await env.DB.prepare(
     `UPDATE arbitrage_monitor_config
      SET min_margin_percent = ?, coin = ?, enabled = 1, updated_at = ?
      WHERE id = 1`,
-  ).bind(margin, coin, now).run();
+  )
+    .bind(margin, coin, now)
+    .run();
 
   await stub(env).fetch(new Request("https://internal/start"));
-  return json({ ok: true, minMarginPercent: margin, coin, nextRunAt: new Date().toISOString() });
+  return json({
+    ok: true,
+    minMarginPercent: margin,
+    coin,
+    nextRunAt: new Date().toISOString(),
+  });
 }
 
 export async function bootstrapArbitrageMonitor(env: Env): Promise<void> {
