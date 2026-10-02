@@ -231,7 +231,9 @@ export function scanArbitrage(
       grossFiat: sellProceedsFiat,
     });
     const feesKnown = buyFeeFiat !== null && sellFeeFiat !== null;
-    const totalFeesFiat = feesKnown ? buyFeeFiat + sellFeeFiat : null;
+    const totalFeesFiat = feesKnown
+      ? (buyFeeFiat as number) + (sellFeeFiat as number)
+      : null;
     const netProfitFiat =
       totalFeesFiat === null ? null : grossProfitFiat - totalFeesFiat;
     const netMarginPercent =
