@@ -103,7 +103,7 @@ function reconciliationEvent(
   if (!event) return null;
 
   return {
-    eventId: `reconciliation:${event}:${uuid}`,
+    eventId: `${event}:${uuid}`,
     offerUuid: uuid,
     event,
     status,
