@@ -107,10 +107,9 @@ async function auditMonitor(env: AiAuditEnv) {
   let payload: Record<string, unknown> = {};
   if (current.state?.payload_json) {
     try {
-      payload = JSON.parse(current.state.payload_json) as Record<
-        string,
-        unknown
-      >;
+      payload = JSON.parse(
+        current.state.payload_json,
+      ) as Record<string, unknown>;
     } catch {
       payload = {};
     }
@@ -151,10 +150,9 @@ async function auditArbitrage(env: AiAuditEnv) {
   let payload: Record<string, unknown> = {};
   if (current.state?.payload_json) {
     try {
-      payload = JSON.parse(current.state.payload_json) as Record<
-        string,
-        unknown
-      >;
+      payload = JSON.parse(
+        current.state.payload_json,
+      ) as Record<string, unknown>;
     } catch {
       payload = {};
     }
