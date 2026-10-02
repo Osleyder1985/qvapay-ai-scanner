@@ -8,6 +8,14 @@ import {
   type D1PreparedStatement,
 } from "../cloudflare/d1.js";
 
+function failedBatch<T>(): Array<
+  { success: boolean; meta: { changes: number } } & T
+> {
+  return [{ success: false, meta: { changes: 0 } }] as Array<
+    { success: boolean; meta: { changes: number } } & T
+  >;
+}
+
 function statement(result: unknown): D1PreparedStatement {
   return {
     bind: () => statement(result),
@@ -162,11 +170,7 @@ test("D1 market event persistence refreshes repeated event IDs by observation ti
 test("D1 market event persistence fails when D1 reports a batch error", async () => {
   const db: D1Database = {
     prepare: () => statement([]),
-    batch: async <T>() =>
-      [{ success: false, meta: { changes: 0 } }] as Array<{
-        success: boolean;
-        meta: { changes: number };
-      } & T>,
+    batch: failedBatch,
   };
 
   await assert.rejects(
