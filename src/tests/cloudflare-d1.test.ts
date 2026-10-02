@@ -109,8 +109,8 @@ test("D1 market event persistence uses deterministic newest-observation upsert",
     },
   ]);
 
-  assert.match(queries[0] ?? "", /ON CONFLICT\(dedupe_key\) DO UPDATE SET/);
-  assert.match(queries[0] ?? "", /excluded\.observed_at > market_events\.observed_at/);
+  assert.ok(queries[0]?.includes("ON CONFLICT(dedupe_key) DO UPDATE SET"));
+  assert.ok(queries[0]?.includes("excluded.observed_at > market_events.observed_at"));
 });
 
 test("D1 market event persistence chunks large batches", async () => {
