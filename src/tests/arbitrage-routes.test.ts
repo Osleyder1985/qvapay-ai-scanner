@@ -52,7 +52,7 @@ test("expone el escaneo de arbitraje como lectura y construye una oportunidad re
   try {
     const response = await handleArbitrageRoutes(
       new Request(
-        "https://example.workers.dev/api/arbitrage/scan?maxCapitalFiat=900&maxAgeMs=86400000",
+        "https://example.workers.dev/api/arbitrage/scan?minMarginPercent=10",
       ),
       {
         DB: {} as never,
@@ -60,7 +60,7 @@ test("expone el escaneo de arbitraje como lectura y construye una oportunidad re
         QVAPAY_APP_SECRET: "test-secret",
       },
       new URL(
-        "https://example.workers.dev/api/arbitrage/scan?maxCapitalFiat=900&maxAgeMs=86400000",
+        "https://example.workers.dev/api/arbitrage/scan?minMarginPercent=10",
       ),
       (payload, status = 200) =>
         new Response(JSON.stringify(payload), { status }),
@@ -91,7 +91,7 @@ test("expone el escaneo de arbitraje como lectura y construye una oportunidad re
   }
 });
 
-test("valida el capital antes de consultar QvaPay", async () => {
+test("valida el margen mínimo antes de consultar QvaPay", async () => {
   const originalFetch = globalThis.fetch;
   let calls = 0;
   globalThis.fetch = async () => {
@@ -108,7 +108,7 @@ test("valida el capital antes de consultar QvaPay", async () => {
         QVAPAY_APP_SECRET: "test-secret",
       },
       new URL(
-        "https://example.workers.dev/api/arbitrage/scan?maxCapitalFiat=0",
+        "https://example.workers.dev/api/arbitrage/scan?minMarginPercent=-1",
       ),
       (payload, status = 200) =>
         new Response(JSON.stringify(payload), { status }),
