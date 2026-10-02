@@ -22,11 +22,13 @@ import { handleDiagnosticsRoutes } from "./diagnostics-routes.js";
 import { handleAutoApplyRoutes } from "./auto-apply-routes.js";
 import { handleArbitrageHistoryRoutes } from "./arbitrage-history-routes.js";
 import { handleArbitrageRoutes } from "./arbitrage-routes.js";
-interface DurableObjectNamespaceLike { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> }; }
-
 import { ingestArbitrageWebhook } from "./arbitrage-event-ingestion.js";
 import { handleArbitrageMonitorRoutes } from "./arbitrage-monitor-routes.js";
 
+interface DurableObjectNamespaceLike {
+  idFromName(name: string): unknown;
+  get(id: unknown): { fetch(request: Request): Promise<Response> };
+}
 
 export interface WorkerEnv {
   DB: D1Database;
