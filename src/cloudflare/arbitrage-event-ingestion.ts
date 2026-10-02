@@ -205,7 +205,7 @@ export async function ingestArbitrageWebhook(
   db: D1Database,
   feedSecret: string | undefined,
 ): Promise<Response> {
-  const rawBody = await request.text();
+  const contentLength = Number(request.headers.get("content-length") ?? "0");\n  const maxBodyBytes = 256 * 1024;\n  if (contentLength > maxBodyBytes) {\n    return new Response(JSON.stringify({ error: "Cuerpo de webhook demasiado grande." }), {\n      status: 413,\n      headers: { "Content-Type": "application/json; charset=utf-8" },\n    });\n  }\n\n  const rawBody = await request.text();\n  if (new TextEncoder().encode(rawBody).byteLength > maxBodyBytes) {\n    return new Response(JSON.stringify({ error: "Cuerpo de webhook demasiado grande." }), {\n      status: 413,\n      headers: { "Content-Type": "application/json; charset=utf-8" },\n    });\n  }
   const valid = await verifyFeedSignature(
     rawBody,
     request.headers.get("x-qvapay-signature"),
