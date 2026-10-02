@@ -24,7 +24,8 @@ jobs:
           AI_AUDITOR_TOKEN: ${{ secrets.AI_AUDITOR_TOKEN }}
           AI_AUDITOR_BASE_URL: https://qvapay-ai-scanner.osleyder-gonzalez1985.workers.dev
         run: |
-          set -u
+          set -eu
+          failed=0
           mkdir -p audit-report
           endpoints="health monitor arbitrage database runtime"
           for endpoint in $endpoints; do
@@ -33,9 +34,13 @@ jobs:
               --header "Accept: application/json" \
               --output "audit-report/${endpoint}.json" \
               "${AI_AUDITOR_BASE_URL}/api/ai-audit/${endpoint}" \
-              || true
+              || failed=1
           done
           unset AI_AUDITOR_TOKEN
+          if [ "${failed}" -ne 0 ]; then
+            echo "One or more AI Auditor diagnostics endpoints failed." >&2
+            exit 1
+          fi
           printf '%s\n' 'AI Auditor diagnostics collected from read-only endpoints.' > audit-report/README.txt
 
       - name: Upload diagnostic report
