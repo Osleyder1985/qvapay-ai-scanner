@@ -131,11 +131,7 @@ export async function auditHealth(env: AiAuditEnv): Promise<Record<string, unkno
   const alarm = await doAlarm(env);
 
   return {
-    ok:
-      database.ok &&
-      monitor.state !== null &&
-      monitor.state.status !== "error" &&
-      alarm !== null,
+    ok: database.ok && monitor.state !== null && monitor.state.status !== "error" && alarm !== null,
     readOnly: true,
     service: "qvapay-ai-scanner-worker",
     checks: {
