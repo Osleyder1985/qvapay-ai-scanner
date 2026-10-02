@@ -260,8 +260,7 @@ export function completedTradesFromEvents(
     }))
     .sort(
       (a, b) =>
-        new Date(a.completedAt).getTime() -
-          new Date(b.completedAt).getTime() ||
+        new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime() ||
         a.offerUuid.localeCompare(b.offerUuid),
     );
 }
