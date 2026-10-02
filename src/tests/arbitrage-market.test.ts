@@ -38,8 +38,86 @@ test("normaliza una oferta válida sin aplicar sustituciones implícitas", () =>
     amountQusd: 10,
     availableQusd: 8,
     rate: 100,
+    offerKind: "flexible",
+    orderMinQusd: null,
+    orderMaxQusd: null,
     observedAt: "2026-10-01T23:59:00.000Z",
   });
+});
+
+
+test("usa el monto completo de una oferta fija cuando available_amount es null", () => {
+  const result = normalizeArbitrageOffer(
+    offer({
+      type: "sell",
+      amount: 10,
+      available_amount: null,
+      receive: 1000,
+      offer_kind: "fixed",
+    }),
+  );
+
+  assert.equal(result?.offerKind, "fixed");
+  assert.equal(result?.availableQusd, 10);
+});
+
+test("respeta los límites de orden de ofertas flexibles", () => {
+  const result = scanArbitrage(
+    [
+      offer({
+        uuid: "acquire",
+        type: "sell",
+        amount: 100,
+        available_amount: 100,
+        receive: 9000,
+        offer_kind: "flexible",
+        order_min: 25,
+        order_max: 60,
+      }),
+      offer({
+        uuid: "exit",
+        type: "buy",
+        amount: 100,
+        available_amount: 100,
+        receive: 10000,
+        offer_kind: "flexible",
+        order_min: 30,
+        order_max: 50,
+      }),
+    ],
+    { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 10_000 },
+  );
+
+  assert.equal(result.opportunities[0]?.quantityQusd, 50);
+});
+
+test("rechaza una oportunidad cuando el capital no alcanza el mínimo de ambas órdenes", () => {
+  const result = scanArbitrage(
+    [
+      offer({
+        uuid: "acquire",
+        type: "sell",
+        amount: 100,
+        available_amount: 100,
+        receive: 9000,
+        offer_kind: "flexible",
+        order_min: 50,
+      }),
+      offer({
+        uuid: "exit",
+        type: "buy",
+        amount: 100,
+        available_amount: 100,
+        receive: 10000,
+        offer_kind: "flexible",
+        order_min: 50,
+      }),
+    ],
+    { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 450 },
+  );
+
+  assert.equal(result.opportunities.length, 0);
+  assert.equal(result.rejected.insufficientLiquidity, 1);
 });
 
 test("rechaza una oferta sin liquidez explícita", () => {
