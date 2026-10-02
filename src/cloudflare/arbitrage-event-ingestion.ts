@@ -130,7 +130,7 @@ function reconciliationEvents(
   if (stringValue(operation.created_at)) {
     events.push({
       ...base,
-      eventId: "created:" + uuid,
+      eventId: "reconciliation:created:" + uuid,
       event: "created",
       eventAt: operation.created_at,
     });
@@ -138,7 +138,7 @@ function reconciliationEvents(
 
   events.push({
     ...base,
-    eventId: event + ":" + uuid,
+    eventId: "reconciliation:" + event + ":" + uuid,
     event,
     eventAt: operation.updated_at ?? operation.created_at,
   });
