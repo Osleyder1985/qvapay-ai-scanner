@@ -433,6 +433,9 @@ export async function appendMarketEvents(
         ),
     );
     const results = await db.batch(statements);
+    if (results.some((result) => result.success !== true)) {
+      throw new Error("D1 market event batch persistence failed.");
+    }
     inserted += results.reduce(
       (count, result) => count + Number(result.meta?.changes ?? 0),
       0,
