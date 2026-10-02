@@ -64,21 +64,21 @@ test("empareja únicamente ofertas de la misma moneda", () => {
   assert.equal(result.opportunities.length, 0);
 });
 
-test("elige BUY más barato y SELL más caro dentro de la misma moneda", () => {
+test("elige la adquisición SELL más barata y la salida BUY más cara dentro de la misma moneda", () => {
   const result = scanArbitrage(
     [
-      offer({ uuid: "buy-expensive", type: "buy", receive: 1200 }),
-      offer({ uuid: "buy-cheap", type: "buy", receive: 900 }),
-      offer({ uuid: "sell-low", type: "sell", receive: 1300 }),
-      offer({ uuid: "sell-high", type: "sell", receive: 1500 }),
+      offer({ uuid: "acquire-expensive", type: "sell", receive: 1200 }),
+      offer({ uuid: "acquire-cheap", type: "sell", receive: 900 }),
+      offer({ uuid: "exit-low", type: "buy", receive: 1300 }),
+      offer({ uuid: "exit-high", type: "buy", receive: 1500 }),
     ],
     { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 10_000 },
   );
 
   assert.equal(result.opportunities.length, 1);
   const opportunity = result.opportunities[0]!;
-  assert.equal(opportunity.buyOfferUuid, "buy-cheap");
-  assert.equal(opportunity.sellOfferUuid, "sell-high");
+  assert.equal(opportunity.acquisitionOfferUuid, "acquire-cheap");
+  assert.equal(opportunity.exitOfferUuid, "exit-high");
   assert.equal(opportunity.buyRate, 90);
   assert.equal(opportunity.sellRate, 150);
 });
@@ -187,8 +187,8 @@ test("calcula beneficio neto sólo cuando ambas comisiones están disponibles", 
 
   const withoutFees = scanArbitrage(
     [
-      offer({ uuid: "buy", type: "buy", receive: 900 }),
-      offer({ uuid: "sell", type: "sell", receive: 1000 }),
+      offer({ uuid: "acquire", type: "sell", receive: 900 }),
+      offer({ uuid: "exit", type: "buy", receive: 1000 }),
     ],
     { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 900 },
   );
