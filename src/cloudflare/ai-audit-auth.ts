@@ -71,7 +71,9 @@ async function authorize(
   }
 
   const suppliedHash = await sha256Hex(token);
-  if (!constantTimeEqual(suppliedHash, expectedTokenHash.trim().toLowerCase())) {
+  if (
+    !constantTimeEqual(suppliedHash, expectedTokenHash.trim().toLowerCase())
+  ) {
     return { ok: false, status: 401, error: "Credenciales inválidas." };
   }
 
