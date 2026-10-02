@@ -216,10 +216,7 @@ export function scanArbitrage(
           continue;
         }
 
-        const liquidityQusd = Math.min(
-          buy.availableQusd,
-          sell.availableQusd,
-        );
+        const liquidityQusd = Math.min(buy.availableQusd, sell.availableQusd);
         const capitalLimitedQusd = options.maxCapitalFiat / buy.rate;
         const quantityQusd = Math.min(liquidityQusd, capitalLimitedQusd);
 
@@ -278,9 +275,7 @@ export function scanArbitrage(
           netMarginPercent,
           feesStatus: feesKnown ? "known" : "unknown",
           observedAt:
-            buy.observedAt < sell.observedAt
-              ? buy.observedAt
-              : sell.observedAt,
+            buy.observedAt < sell.observedAt ? buy.observedAt : sell.observedAt,
           stale: false,
         };
         const score = netProfitFiat ?? grossProfitFiat;
