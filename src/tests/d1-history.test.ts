@@ -13,7 +13,9 @@ test("market history returns newest points first", async () => {
       return statement;
     },
     async run<T = unknown>() {
-      return { success: true } as { success: boolean; meta?: { changes?: number } } & T;
+      return {
+        success: true,
+      } as { success: boolean; meta?: { changes?: number } } & T;
     },
     async all<T = Record<string, unknown>>() {
       return {
