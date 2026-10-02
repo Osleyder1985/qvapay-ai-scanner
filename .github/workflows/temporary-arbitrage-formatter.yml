@@ -1,0 +1,21 @@
+name: Temporary Arbitrage Formatter
+
+on:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prettier --write src/tests/arbitrage-market.test.ts
+      - name: Print formatted file
+        run: cat src/tests/arbitrage-market.test.ts
