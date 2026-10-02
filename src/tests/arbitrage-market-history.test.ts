@@ -137,7 +137,7 @@ test("conserva la creación más antigua aunque llegue después otra observació
 
   const result = deduplicateMarketEvents([later, earlier]);
   assert.equal(result.length, 1);
-  assert.equal(result[0]?.eventAt, "2026-10-02T10:00:00.000Z");
+  assert.equal(result[0]?.eventAt, "2026-10-02T10:00:00Z");
 });
 
 test("deduplica un completed aunque webhook y stream usen event IDs distintos", () => {
