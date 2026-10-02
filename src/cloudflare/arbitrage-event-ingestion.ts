@@ -65,11 +65,17 @@ function feedRawEvent(
 
   const uuid = stringValue(data.uuid);
   const sentAt = timestampValue(envelope.sent_at);
+  const createdAt = timestampValue(data.created_at);
   const updatedAt = timestampValue(data.updated_at);
   if (!uuid) return null;
 
+  const eventAt =
+    eventName.toLowerCase().replace(/^p2p\\./, "") === "created"
+      ? createdAt ?? updatedAt ?? sentAt
+      : updatedAt ?? createdAt ?? sentAt;
+
   return {
-    eventId: `${eventName}:${uuid}`,
+    eventId: eventName + ":" + uuid,
     offerUuid: uuid,
     event: eventName,
     status: data.status,
@@ -78,13 +84,15 @@ function feedRawEvent(
     amount: data.amount,
     availableAmount: data.available_amount,
     receive: data.receive,
-    createdAt: data.created_at,
+    createdAt,
     updatedAt,
-    // updated_at representa el estado de la oferta; sent_at es el instante de entrega.
-    eventAt: updatedAt ?? sentAt,
+    // Para "created" se conserva el inicio real; para estados posteriores
+    // se prioriza la actualización del estado y luego la creación como fallback.
+    eventAt,
     observedAt,
     source,
   };
+}
 }
 
 function reconciliationEvents(
