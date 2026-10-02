@@ -98,7 +98,7 @@ export async function handleArbitrageRoutes(
   }
 
   const minMarginPercent = Number(
-    url.searchParams.get("minMarginPercent") ?? "1",
+    url.searchParams.get("minMarginPercent") ?? "5",
   );
 
   if (!Number.isFinite(minMarginPercent) || minMarginPercent < 0) {

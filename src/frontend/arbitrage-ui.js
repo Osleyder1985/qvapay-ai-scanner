@@ -100,7 +100,7 @@ function runArbitrageDemo() {
   const result = {
     mode: "demo",
     executionEnabled: false,
-    minMarginPercent: 1,
+    minMarginPercent: 5,
     coin: "BANK_CUP",
     coverage: { fetched: 2, total: 2, pagesFetched: 1, truncated: false },
     opportunities: [{
