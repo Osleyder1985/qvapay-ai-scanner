@@ -45,12 +45,8 @@ export class ArbitrageMonitor {
 
   async alarm(): Promise<void> {
     try {
-      const result = await runArbitrageMonitor(this.env.DB, this.env);
-      if (result.ok) {
-        await this.ctx.storage.setAlarm(Date.now() + INTERVAL_MS);
-      } else {
-        await this.ctx.storage.setAlarm(Date.now() + INTERVAL_MS);
-      }
+      await runArbitrageMonitor(this.env.DB, this.env);
+      await this.ctx.storage.setAlarm(Date.now() + INTERVAL_MS);
     } catch (error) {
       await this.env.DB.prepare(
         `UPDATE arbitrage_monitor_state
