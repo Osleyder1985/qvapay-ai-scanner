@@ -1,7 +1,7 @@
 name: Temporary Arbitrage Formatter
 
 on:
-  push:
+  pull_request:
 
 permissions:
   contents: read
