@@ -173,6 +173,10 @@ test("D1 analytics query scopes completed operations by coin and window", async 
   await listMarketEventsForAnalytics(db, "bank_cup", 500);
 
   assert.ok(queries[0]?.includes("event = 'completed'"));
+  assert.ok(queries[0]?.includes("amount > 0"));
+  assert.ok(queries[0]?.includes("receive > 0"));
+  assert.ok(queries[0]?.includes("rate > 0"));
+  assert.ok(queries[0]?.includes("ABS(rate - (receive / amount))"));
   assert.ok(queries[0]?.includes("GROUP BY offer_uuid"));
   assert.ok(queries[0]?.includes("ORDER BY MAX(event_at) DESC"));
   assert.ok(queries[0]?.includes("LIMIT ?"));
