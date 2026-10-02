@@ -491,6 +491,11 @@ export async function listMarketEventsForAnalytics(
              AND amount IS NOT NULL
              AND receive IS NOT NULL
              AND rate IS NOT NULL
+             AND amount > 0
+             AND receive > 0
+             AND rate > 0
+             AND ABS(rate - (receive / amount)) <=
+                 MAX(ABS(rate), ABS(receive / amount), 1) * 1e-9
            GROUP BY offer_uuid
            ORDER BY MAX(event_at) DESC, MAX(observed_at) DESC
            LIMIT ?
