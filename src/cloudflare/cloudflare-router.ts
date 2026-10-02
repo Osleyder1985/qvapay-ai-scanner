@@ -201,7 +201,8 @@ export async function routeRequest(
     if (
       !publicWebhook &&
       url.pathname !== "/api/health" &&
-      !url.pathname.startsWith("/api/auth/")
+      !url.pathname.startsWith("/api/auth/") &&
+      !url.pathname.startsWith("/api/ai-audit/")
     ) {
       const session = await requireSession(
         request,
@@ -213,6 +214,7 @@ export async function routeRequest(
     if (
       !publicWebhook &&
       url.pathname !== "/api/health" &&
+      !url.pathname.startsWith("/api/ai-audit/") &&
       requiresSameOrigin(request) &&
       !isSameOrigin(request)
     ) {
