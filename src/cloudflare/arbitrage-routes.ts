@@ -6,12 +6,19 @@
  * @status active
  */
 
-import {\n  scanArbitrage,\n  type RawArbitrageOffer,\n} from "../backend/arbitrage-market.js";
+import {
+  scanArbitrage,
+  type RawArbitrageOffer,
+} from "../backend/arbitrage-market.js";
 import {
   parseQvaPayP2PCollection,
   type QvaPayRecord,
 } from "./qvapay-contracts.js";
-import {\n  qvapay,\n  readQvaPayPayload,\n  type QvaPayHttpEnv,\n} from "./qvapay-http.js";
+import {
+  qvapay,
+  readQvaPayPayload,
+  type QvaPayHttpEnv,
+} from "./qvapay-http.js";
 import type { D1Database } from "./d1.js";
 
 interface ArbitrageEnv extends QvaPayHttpEnv {
@@ -90,7 +97,9 @@ export async function handleArbitrageRoutes(
     return null;
   }
 
-  const maxCapitalFiat = Number(\n    url.searchParams.get("maxCapitalFiat") ?? "1000",\n  );
+  const maxCapitalFiat = Number(
+    url.searchParams.get("maxCapitalFiat") ?? "1000",
+  );
   const maxAgeMs = Number(url.searchParams.get("maxAgeMs") ?? "30000");
 
   if (!Number.isFinite(maxCapitalFiat) || maxCapitalFiat <= 0) {
@@ -122,7 +131,10 @@ export async function handleArbitrageRoutes(
 
       const pageRecords = records(payload);
       if (!parseQvaPayP2PCollection(payload, 0, MAX_PAGE_SIZE)) {
-        return json(\n          { error: "Respuesta P2P incompatible con el contrato." },\n          502,\n        );
+        return json(
+          { error: "Respuesta P2P incompatible con el contrato." },
+          502,
+        );
       }
 
       offers.push(...pageRecords);
