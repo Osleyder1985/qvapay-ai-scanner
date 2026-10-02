@@ -189,6 +189,7 @@ export async function handleArbitrageRoutes(
           targetSaleRate: targetRate,
           targetSaleProceedsFiat: targetProceeds,
           projectedGrossProfitFiat: targetProceeds - capital,
+          projectedGrossMarginPercent: capital > 0 ? ((targetProceeds - capital) / capital) * 100 : 0,
           offerKind: offer.offer_kind ?? null,
           orderMinQusd: offer.order_min ?? null,
           orderMaxQusd: offer.order_max ?? null,
