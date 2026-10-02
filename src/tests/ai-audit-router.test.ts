@@ -8,7 +8,10 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { routeRequest, type WorkerEnv } from "../cloudflare/cloudflare-router.js";
+import {
+  routeRequest,
+  type WorkerEnv,
+} from "../cloudflare/cloudflare-router.js";
 
 function env(): WorkerEnv {
   return {
