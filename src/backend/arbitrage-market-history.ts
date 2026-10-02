@@ -291,10 +291,25 @@ export function calculateCurrencyAnalytics(
   const completedIds = new Set(completed.map((trade) => trade.offerUuid));
   const cancelledCount = 0;
   const terminalCount = completedIds.size;
-  const rates = completed.map((trade) => trade.rate).sort((a, b) => a - b);
-  const volume = completed.reduce((sum, trade) => sum + trade.amount, 0);
+  const rates = completed
+    .map((trade) => trade.rate)
+    .filter((rate) => Number.isFinite(rate) && rate > 0)
+    .sort((a, b) => a - b);
+  const volume = completed.reduce(
+    (sum, trade) =>
+      Number.isFinite(trade.amount) && trade.amount > 0
+        ? sum + trade.amount
+        : sum,
+    0,
+  );
   const weightedValue = completed.reduce(
-    (sum, trade) => sum + trade.rate * trade.amount,
+    (sum, trade) =>
+      Number.isFinite(trade.rate) &&
+      trade.rate > 0 &&
+      Number.isFinite(trade.amount) &&
+      trade.amount > 0
+        ? sum + trade.rate * trade.amount
+        : sum,
     0,
   );
   const completionTimes = completed
