@@ -113,6 +113,11 @@ test("D1 market event persistence uses deterministic newest-observation upsert",
   assert.ok(
     queries[0]?.includes("excluded.observed_at > market_events.observed_at"),
   );
+  assert.ok(
+    queries[0]?.includes(
+      "excluded.event_id <> market_events.event_id",
+    ),
+  );
 });
 
 test("D1 market event persistence chunks large batches", async () => {
