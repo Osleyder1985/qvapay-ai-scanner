@@ -313,6 +313,32 @@ test("la ventana cuenta operaciones únicas y válidas", () => {
   assert.equal(result.maxRate, 1000);
 });
 
+test("rechaza silenciosamente métricas numéricas inválidas", () => {
+  const result = calculateCurrencyAnalytics(
+    [
+      event({
+        offerUuid: "valid",
+        amount: 2,
+        receive: 200,
+        rate: 100,
+      }),
+      event({
+        offerUuid: "invalid",
+        amount: Number.NaN,
+        receive: Number.NaN,
+        rate: Number.NaN,
+      }),
+    ],
+    "BANK_CUP",
+  );
+
+  assert.equal(result.completedCount, 2);
+  assert.equal(result.minRate, 100);
+  assert.equal(result.maxRate, 100);
+  assert.equal(result.vwap, 100);
+  assert.equal(result.tradedVolumeQusd, 2);
+});
+
 test("calcula mediana, percentiles y VWAP", () => {
   const result = calculateCurrencyAnalytics(
     [
