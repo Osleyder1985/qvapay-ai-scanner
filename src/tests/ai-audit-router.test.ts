@@ -6,18 +6,25 @@
  * @status active
  */
 
-import test from "node:test";
 import assert from "node:assert/strict";
-import { routeRequest, type WorkerEnv } from "../cloudflare/cloudflare-router.js";
+import test from "node:test";
+import {
+  routeRequest,
+  type WorkerEnv,
+} from "../cloudflare/cloudflare-router.js";
 
 function env(): WorkerEnv {
   return {
     DB: {
       prepare() {
-        throw new Error("D1 no debe ser consultado para una credencial AI Auditor inválida.");
+        throw new Error(
+          "D1 no debe ser consultado para una credencial AI Auditor inválida.",
+        );
       },
       batch() {
-        throw new Error("D1 no debe ser consultado para una credencial AI Auditor inválida.");
+        throw new Error(
+          "D1 no debe ser consultado para una credencial AI Auditor inválida.",
+        );
       },
     },
     ASSETS: { fetch: async () => new Response("assets") },

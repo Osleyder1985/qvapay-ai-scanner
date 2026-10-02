@@ -6,9 +6,9 @@
  * @status active
  */
 
-import { d1Health, type D1Database } from "./d1.js";
-import { monitorState } from "./arbitrage-monitor.js";
 import { authorizeAiAuditor } from "./ai-audit-auth.js";
+import { monitorState } from "./arbitrage-monitor.js";
+import { d1Health, type D1Database } from "./d1.js";
 
 interface DurableObjectStub {
   fetch(request: Request): Promise<Response>;
@@ -36,12 +36,17 @@ type JsonResponse = (
   headers?: Record<string, string>,
 ) => Response;
 
-function auditError(json: JsonResponse, status: number, error: string): Response {
-  const headers = status === 405
-    ? { Allow: "GET" }
-    : status === 429
-      ? { "Retry-After": "60" }
-      : {};
+function auditError(
+  json: JsonResponse,
+  status: number,
+  error: string,
+): Response {
+  const headers =
+    status === 405
+      ? { Allow: "GET" }
+      : status === 429
+        ? { "Retry-After": "60" }
+        : {};
   return json(
     {
       ok: false,
@@ -75,7 +80,7 @@ async function auditHealth(env: AiAuditEnv): Promise<Record<string, unknown>> {
     service: "qvapay-ai-scanner-worker",
     checks: {
       worker: { ok: true },
-      database: database,
+      database,
       durableObject: { ok: alarm !== null, nextAlarmAt: alarm },
       arbitrageMonitor: {
         ok: monitor.state?.status !== "error",
@@ -102,7 +107,10 @@ async function auditMonitor(env: AiAuditEnv) {
   let payload: Record<string, unknown> = {};
   if (current.state?.payload_json) {
     try {
-      payload = JSON.parse(current.state.payload_json) as Record<string, unknown>;
+      payload = JSON.parse(current.state.payload_json) as Record<
+        string,
+        unknown
+      >;
     } catch {
       payload = {};
     }
@@ -143,7 +151,10 @@ async function auditArbitrage(env: AiAuditEnv) {
   let payload: Record<string, unknown> = {};
   if (current.state?.payload_json) {
     try {
-      payload = JSON.parse(current.state.payload_json) as Record<string, unknown>;
+      payload = JSON.parse(current.state.payload_json) as Record<
+        string,
+        unknown
+      >;
     } catch {
       payload = {};
     }
@@ -193,10 +204,11 @@ export async function handleAiAuditRoutes(
     }
 
     if (url.pathname === "/api/ai-audit/database") {
+      const database = await d1Health(env.DB);
       return json({
-        ok: (await d1Health(env.DB)).ok,
+        ok: database.ok,
         readOnly: true,
-        database: await d1Health(env.DB),
+        database,
       });
     }
 
