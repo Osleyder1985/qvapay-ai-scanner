@@ -89,7 +89,10 @@ test("deduplica el mismo evento sin eliminar eventos distintos de la misma ofert
     event: "cancelled",
     status: "cancelled",
   });
-  assert.equal(\n    deduplicateMarketEvents([first, duplicate, cancelled]).length,\n    2,\n  );
+  assert.equal(
+    deduplicateMarketEvents([first, duplicate, cancelled]).length,
+    2,
+  );
 });
 
 test("mantiene las monedas completamente separadas", () => {
@@ -127,9 +130,27 @@ test("usa por defecto las últimas 100 operaciones completadas", () => {
 test("calcula mediana, percentiles y VWAP", () => {
   const result = calculateCurrencyAnalytics(
     [
-      event({\n        offerUuid: "a",\n        dedupeKey: "a",\n        amount: 1,\n        rate: 100,\n        receive: 100,\n      }),
-      event({\n        offerUuid: "b",\n        dedupeKey: "b",\n        amount: 2,\n        rate: 200,\n        receive: 400,\n      }),
-      event({\n        offerUuid: "c",\n        dedupeKey: "c",\n        amount: 1,\n        rate: 300,\n        receive: 300,\n      }),
+      event({
+        offerUuid: "a",
+        dedupeKey: "a",
+        amount: 1,
+        rate: 100,
+        receive: 100,
+      }),
+      event({
+        offerUuid: "b",
+        dedupeKey: "b",
+        amount: 2,
+        rate: 200,
+        receive: 400,
+      }),
+      event({
+        offerUuid: "c",
+        dedupeKey: "c",
+        amount: 1,
+        rate: 300,
+        receive: 300,
+      }),
     ],
     "BANK_CUP",
   );
