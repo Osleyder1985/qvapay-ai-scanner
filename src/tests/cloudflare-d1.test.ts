@@ -27,6 +27,7 @@ test("D1 health reports the required runtime tables", async () => {
         { name: "auto_apply_config" },
         { name: "finance_ledger" },
         { name: "market_history" },
+        { name: "market_events" },
         { name: "operations_ledger" },
       ]),
     batch: async () => [],
@@ -39,6 +40,7 @@ test("D1 health reports the required runtime tables", async () => {
     "auto_apply_config",
     "finance_ledger",
     "market_history",
+    "market_events",
     "operations_ledger",
   ]);
 });
