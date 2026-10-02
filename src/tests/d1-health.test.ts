@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { d1Health, type D1Database, type D1PreparedStatement } from "../cloudflare/d1.js";
+import {
+  d1Health,
+  type D1Database,
+  type D1PreparedStatement,
+} from "../cloudflare/d1.js";
 
 function statement(results: Array<{ name: string }>): D1PreparedStatement {
   return {
