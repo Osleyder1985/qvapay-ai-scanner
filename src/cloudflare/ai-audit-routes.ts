@@ -37,6 +37,11 @@ type JsonResponse = (
 ) => Response;
 
 function auditError(json: JsonResponse, status: number, error: string): Response {
+  const headers = status === 405
+    ? { Allow: "GET" }
+    : status === 429
+      ? { "Retry-After": "60" }
+      : {};
   return json(
     {
       ok: false,
@@ -45,6 +50,7 @@ function auditError(json: JsonResponse, status: number, error: string): Response
       service: "ai-auditor",
     },
     status,
+    headers,
   );
 }
 
