@@ -33,3 +33,5 @@ jobs:
           fi
           git commit -m "style: format arbitrage monitor files"
           git push origin HEAD:feat/server-side-arbitrage-monitor
+
+# formatting bootstrap
