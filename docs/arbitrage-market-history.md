@@ -4,7 +4,7 @@
 
 This module records observed QvaPay P2P lifecycle events and derives execution statistics independently for each currency.
 
-The historical window is a **view**, not the storage limit. The default analytical window is the latest 100 completed operations per coin.
+The historical window is a **view**, not the storage limit. The default analytical window is the latest 100 terminal operations per coin (`completed` or `cancelled`). Price statistics use the completed operations present in that terminal window.
 
 ## Lifecycle
 
@@ -75,7 +75,7 @@ For each currency, the deterministic analytics layer exposes:
 - p10/p25/p50/p75/p90;
 - VWAP weighted by QUSD quantity;
 - traded QUSD volume;
-- completion/cancellation rates over observed terminal offers;
+- completion/cancellation rates over the same terminal-operation window;
 - average time from `created` to `completed`;
 - newest event/observation timestamps;
 - stale-data flag.
