@@ -156,9 +156,7 @@ export async function handleArbitrageRoutes(
 
       if (!upstream.ok) {
         const upstreamError =
-          payload &&
-          typeof payload === "object" &&
-          !Array.isArray(payload)
+          payload && typeof payload === "object" && !Array.isArray(payload)
             ? (payload as Record<string, unknown>)
             : {};
         const detail =
