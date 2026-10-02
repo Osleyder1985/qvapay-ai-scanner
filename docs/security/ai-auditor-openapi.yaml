@@ -1,0 +1,51 @@
+openapi: 3.0.3
+info:
+  title: QvaPay AI Scanner - AI Auditor API
+  version: 1.0.0
+  description: Read-only diagnostic API for an external technical auditor.
+servers:
+  - url: https://qvapay-ai-scanner.osleyder-gonzalez1985.workers.dev
+security:
+  - aiAuditor: []
+paths:
+  /api/ai-audit/health:
+    get:
+      summary: Composite service health
+      responses:
+        "200":
+          description: Diagnostic health response
+        "401":
+          description: Invalid or missing auditor credentials
+        "503":
+          description: Auditor or diagnostic service unavailable
+  /api/ai-audit/monitor:
+    get:
+      summary: Persisted arbitrage monitor state
+      responses:
+        "200":
+          description: Monitor state and snapshot counters
+  /api/ai-audit/arbitrage:
+    get:
+      summary: Persisted arbitrage snapshot
+      responses:
+        "200":
+          description: Read-only arbitrage data
+  /api/ai-audit/database:
+    get:
+      summary: D1 health
+      responses:
+        "200":
+          description: D1 health
+  /api/ai-audit/runtime:
+    get:
+      summary: Non-secret runtime metadata
+      responses:
+        "200":
+          description: Runtime metadata
+components:
+  securitySchemes:
+    aiAuditor:
+      type: http
+      scheme: bearer
+      bearerFormat: AI-AUDITOR-TOKEN
+      description: High-entropy token whose SHA-256 digest is stored in Cloudflare as AI_AUDITOR_TOKEN_HASH.
