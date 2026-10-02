@@ -435,6 +435,53 @@ test("no cuenta una operación incompleta como ejecución", () => {
   assert.equal(trades.length, 0);
 });
 
+test("ignora tiempos de finalización negativos por timestamps inconsistentes", () => {
+  const result = calculateCurrencyAnalytics(
+    [
+      event({
+        offerUuid: "negative",
+        dedupeKey: "created-negative",
+        event: "created",
+        eventAt: "2026-10-02T12:00:00Z",
+      }),
+      event({
+        offerUuid: "negative",
+        dedupeKey: "completed-negative",
+        eventAt: "2026-10-02T11:00:00Z",
+      }),
+      event({
+        offerUuid: "valid",
+        dedupeKey: "created-valid",
+        event: "created",
+        eventAt: "2026-10-02T10:00:00Z",
+      }),
+      event({
+        offerUuid: "valid",
+        dedupeKey: "completed-valid",
+        eventAt: "2026-10-02T11:00:00Z",
+      }),
+    ],
+    "BANK_CUP",
+  );
+  assert.equal(result.completedCount, 2);
+  assert.equal(result.averageTimeToCompletionMs, 60 * 60 * 1000);
+});
+
+test("omite el tiempo de finalización cuando falta el evento created", () => {
+  const result = calculateCurrencyAnalytics(
+    [
+      event({
+        offerUuid: "without-created",
+        dedupeKey: "completed-only",
+        eventAt: "2026-10-02T11:00:00Z",
+      }),
+    ],
+    "BANK_CUP",
+  );
+  assert.equal(result.completedCount, 1);
+  assert.equal(result.averageTimeToCompletionMs, null);
+});
+
 test("calcula tiempo medio hasta completar", () => {
   const result = calculateCurrencyAnalytics(
     [
