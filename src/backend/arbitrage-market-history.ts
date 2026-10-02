@@ -179,7 +179,12 @@ export function deduplicateMarketEvents(
 ): NormalizedMarketEvent[] {
   const seen = new Set<string>();
   const result: NormalizedMarketEvent[] = [];
-  for (const event of events) {
+  const ordered = [...events].sort(
+    (a, b) =>
+      new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime() ||
+      new Date(a.observedAt).getTime() - new Date(b.observedAt).getTime(),
+  );
+  for (const event of ordered) {
     const lifecycleKey = stableKey([event.offerUuid, event.event]);
     if (seen.has(lifecycleKey)) continue;
     seen.add(lifecycleKey);
