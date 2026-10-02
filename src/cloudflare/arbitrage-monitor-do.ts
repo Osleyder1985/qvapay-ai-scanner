@@ -63,5 +63,4 @@ export class ArbitrageMonitor {
       await this.ctx.storage.setAlarm(Date.now() + INTERVAL_MS);
     }
   }
-
 }
