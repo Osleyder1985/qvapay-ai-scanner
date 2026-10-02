@@ -163,7 +163,8 @@ export class FinanceLedgerStore {
   private normalizeLoaded(value: FinanceLedgerEntry): FinanceLedgerEntry {
     const gross = Number(value.grossAmountQusd);
     const fee = value.feeQusd === null ? null : Number(value.feeQusd);
-    const net = value.netAmountQusd === null ? null : Number(value.netAmountQusd);
+    const net =
+      value.netAmountQusd === null ? null : Number(value.netAmountQusd);
     const settlementTolerance = Math.max(Math.abs(gross), 1) * 1e-9;
     const settlementValid =
       Number.isFinite(gross) &&
