@@ -453,6 +453,9 @@ export async function listMarketEventsForAnalytics(
            FROM market_events
            WHERE coin = ?
              AND event = 'completed'
+             AND amount IS NOT NULL
+             AND receive IS NOT NULL
+             AND rate IS NOT NULL
            GROUP BY offer_uuid
            ORDER BY MAX(event_at) DESC, MAX(observed_at) DESC
            LIMIT ?
