@@ -7,7 +7,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { FinanceLedgerStore } from "../backend/finance-ledger.js";
 
@@ -111,8 +111,7 @@ test("finance ledger neutralizes malformed persisted settlement values", async (
   const previous = process.env.FINANCE_LEDGER_PATH;
   process.env.FINANCE_LEDGER_PATH = path;
   try {
-    await import("node:fs/promises").then(({ writeFile }) =>
-      writeFile(
+    await writeFile(
         path,
         JSON.stringify([
           {
@@ -132,8 +131,7 @@ test("finance ledger neutralizes malformed persisted settlement values", async (
           },
         ]),
         "utf8",
-      ),
-    );
+      );
     const store = new FinanceLedgerStore();
     await store.initialize();
     const [entry] = store.list();
