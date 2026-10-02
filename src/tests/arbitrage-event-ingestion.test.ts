@@ -72,7 +72,7 @@ test("acepta webhook firmado y persiste el evento normalizado", async () => {
   const db = mockDatabase();
   const body = JSON.stringify({
     event: "p2p.completed",
-    sent_at: "2026-10-02T12:00:00.000Z",
+    sent_at: "2026-10-02T12:01:00.000Z",
     data: {
       uuid: "offer-1",
       type: "sell",
@@ -99,6 +99,7 @@ test("acepta webhook firmado y persiste el evento normalizado", async () => {
   assert.equal(response.status, 202);
   assert.equal(db.stored.length, 1);
   assert.equal(db.stored[0]?.[0], "p2p.completed:offer-1");
+  assert.equal(db.stored[0]?.[11], "2026-10-02T12:00:00.000Z");
 });
 
 test("reconciliación conserva estados terminales y omite estados no soportados", async () => {
