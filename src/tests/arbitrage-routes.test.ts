@@ -52,7 +52,7 @@ test("expone el escaneo de arbitraje como lectura y construye una oportunidad re
   try {
     const response = await handleArbitrageRoutes(
       new Request(
-        "https://example.workers.dev/api/arbitrage/scan?maxCapitalFiat=900&maxAgeMs=120000",
+        "https://example.workers.dev/api/arbitrage/scan?maxCapitalFiat=900&maxAgeMs=86400000",
       ),
       {
         DB: {} as never,
@@ -60,7 +60,7 @@ test("expone el escaneo de arbitraje como lectura y construye una oportunidad re
         QVAPAY_APP_SECRET: "test-secret",
       },
       new URL(
-        "https://example.workers.dev/api/arbitrage/scan?maxCapitalFiat=900&maxAgeMs=120000",
+        "https://example.workers.dev/api/arbitrage/scan?maxCapitalFiat=900&maxAgeMs=86400000",
       ),
       (payload, status = 200) =>
         new Response(JSON.stringify(payload), { status }),
