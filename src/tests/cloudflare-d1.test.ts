@@ -85,9 +85,11 @@ test("D1 market event persistence chunks large batches", async () => {
   const batchSizes: number[] = [];
   const db: D1Database = {
     prepare: () => statement([]),
-    batch: async (statements) => {
+    batch: async <T>(statements) => {
       batchSizes.push(statements.length);
-      return statements.map(() => ({ success: true, meta: { changes: 1 } }));
+      return statements.map(
+        () => ({ success: true, meta: { changes: 1 } }) as { success: boolean; meta: { changes: number } } & T,
+      );
     },
   };
 
