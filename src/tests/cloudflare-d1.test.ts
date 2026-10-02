@@ -152,14 +152,10 @@ test("D1 market event persistence refreshes repeated event IDs by observation ti
   ]);
 
   assert.ok(
-    queries[0]?.includes(
-      "excluded.observed_at > market_events.observed_at",
-    ),
+    queries[0]?.includes("excluded.observed_at > market_events.observed_at"),
   );
   assert.ok(
-    queries[0]?.includes(
-      "excluded.observed_at = market_events.observed_at",
-    ),
+    queries[0]?.includes("excluded.observed_at = market_events.observed_at"),
   );
 });
 
