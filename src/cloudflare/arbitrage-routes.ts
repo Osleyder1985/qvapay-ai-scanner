@@ -87,6 +87,20 @@ function errorStatus(error: unknown): number {
 /**
  * Executes the read-only arbitrage scan against the authenticated QvaPay market.
  */
+
+export async function runArbitrageMonitorRoute(
+  env: ArbitrageEnv,
+  minMarginPercent: number,
+  coin: string,
+): Promise<Response> {
+  const request = new Request(`https://internal/api/arbitrage/scan?minMarginPercent=${encodeURIComponent(minMarginPercent)}&coin=${encodeURIComponent(coin)}`);
+  return (await handleArbitrageRoutes(request, env, new URL(request.url), jsonResponse)) ?? new Response(JSON.stringify({ error: "ARBITRAGE_ROUTE_NOT_FOUND" }), { status: 500 });
+}
+
+function jsonResponse(payload: unknown, status = 200): Response {
+  return new Response(JSON.stringify(payload), { status, headers: { "Content-Type": "application/json; charset=utf-8" } });
+}
+
 export async function handleArbitrageRoutes(
   request: Request,
   env: ArbitrageEnv,
