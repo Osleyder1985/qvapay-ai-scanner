@@ -65,12 +65,17 @@ export async function handleArbitrageHistoryRoutes(
   const coin = url.searchParams.get("coin")?.trim().toUpperCase() ?? "";
   if (!coin) return json({ error: "coin es obligatorio." }, 400);
 
-  const windowSize = Math.min(
-    Math.max(Number(url.searchParams.get("window") ?? "500"), 1),
-    1000,
-  );
-  if (!Number.isInteger(windowSize)) {
-    return json({ error: "window debe ser un entero positivo." }, 400);
+  const rawWindow = url.searchParams.get("window");
+  const windowSize = rawWindow === null ? 500 : Number(rawWindow);
+  if (
+    !Number.isInteger(windowSize) ||
+    windowSize < 1 ||
+    windowSize > 1000
+  ) {
+    return json(
+      { error: "window debe ser un entero positivo entre 1 y 1000." },
+      400,
+    );
   }
 
   const rows = await listMarketEventsForAnalytics(env.DB, coin, windowSize);
