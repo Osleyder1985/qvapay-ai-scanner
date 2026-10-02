@@ -87,18 +87,18 @@ test("limita la cantidad por liquidez y capital", () => {
   const result = scanArbitrage(
     [
       offer({
-        uuid: "buy",
-        type: "buy",
+        uuid: "acquire",
+        type: "sell",
         amount: 20,
         available_amount: 20,
         receive: 2000,
       }),
       offer({
-        uuid: "sell",
-        type: "sell",
+        uuid: "exit",
+        type: "buy",
         amount: 5,
         available_amount: 5,
-        receive: 600,
+        receive: 750,
       }),
     ],
     { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 500 },
@@ -107,22 +107,22 @@ test("limita la cantidad por liquidez y capital", () => {
   const opportunity = result.opportunities[0]!;
   assert.equal(opportunity.quantityQusd, 5);
   assert.equal(opportunity.capitalRequiredFiat, 500);
-  assert.equal(opportunity.grossProfitFiat, 100);
-  assert.equal(opportunity.grossMarginPercent, 20);
+  assert.equal(opportunity.grossProfitFiat, 250);
+  assert.equal(opportunity.grossMarginPercent, 50);
 });
 
 test("calcula beneficio neto sólo cuando ambas comisiones están disponibles", () => {
   const withFees = scanArbitrage(
     [
       offer({
-        uuid: "buy",
-        type: "buy",
+        uuid: "acquire",
+        type: "sell",
         available_amount: 10,
         receive: 900,
       }),
       offer({
-        uuid: "sell",
-        type: "sell",
+        uuid: "exit",
+        type: "buy",
         available_amount: 10,
         receive: 1000,
       }),
@@ -157,8 +157,8 @@ test("calcula beneficio neto sólo cuando ambas comisiones están disponibles", 
 test("rechaza pares con spread cero o negativo", () => {
   const result = scanArbitrage(
     [
-      offer({ uuid: "buy", type: "buy", receive: 1000 }),
-      offer({ uuid: "sell", type: "sell", receive: 1000 }),
+      offer({ uuid: "acquire", type: "sell", receive: 1000 }),
+      offer({ uuid: "exit", type: "buy", receive: 1000 }),
     ],
     { now: NOW, maxAgeMs: 120_000, maxCapitalFiat: 10_000 },
   );
