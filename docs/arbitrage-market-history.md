@@ -84,7 +84,9 @@ The default completed-trade window is 500 valid completed operations. A differen
 
 ## Data integrity
 
-Events are deduplicated by a stable event/offer identity. An identical lifecycle event observed through SSE and webhook therefore does not create a second analytical trade.
+Events are deduplicated by a stable event/offer identity. An identical lifecycle event observed through SSE, webhook, or reconciliation therefore does not create a second analytical trade.
+
+Canonical selection is deterministic: the `created` lifecycle keeps the earliest event timestamp (with the latest observation as a tie-breaker), while later lifecycle states keep the most recently observed payload. This prevents a delayed reconciliation record from replacing the original creation time, while allowing a newer completed observation to correct the financial payload used by the analytics.
 
 Incomplete lifecycle states are not executions. Only an explicit `completed` event with valid amount, receive and rate contributes to completed-trade statistics.
 
