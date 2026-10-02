@@ -112,3 +112,18 @@ It must not:
 - deploy Workers;
 - manage Cloudflare resources.
 
+
+## CI runtime bridge
+
+For controlled runtime verification, the repository includes a manual-only GitHub Actions workflow:
+
+- `.github/workflows/ai-audit-runtime.yml`
+- trigger: `workflow_dispatch` only;
+- required GitHub Actions secret: `AI_AUDITOR_TOKEN`;
+- the workflow calls only the five GET-only AI Auditor endpoints;
+- the token is passed only as an HTTP Authorization header and is not written to the artifact;
+- the resulting JSON diagnostics are uploaded as a short-lived artifact (`3` days).
+
+This bridge does not grant deployment, GitHub, or Cloudflare administration to the auditor identity. It only makes the already-authorized read-only runtime diagnostics available through the repository's controlled CI boundary.
+
+Configure the same raw token whose SHA-256 digest is stored in Cloudflare as `AI_AUDITOR_TOKEN_HASH`. Never put the raw token in repository files, workflow YAML, issues, PR comments, or artifacts.
