@@ -266,7 +266,11 @@ export async function handleArbitrageRoutes(
     });
   } catch (error) {
     return json(
-      { error: "No se pudo completar el escaneo de arbitraje." },
+      {
+        error: "No se pudo completar el escaneo de arbitraje.",
+        code: error instanceof Error ? error.message : "UNKNOWN_SCAN_ERROR",
+        detail: error instanceof Error ? error.message : String(error),
+      },
       errorStatus(error),
     );
   }
