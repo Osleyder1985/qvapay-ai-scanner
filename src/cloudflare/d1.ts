@@ -433,7 +433,6 @@ export async function listMarketEvents(
   return result.results;
 }
 
-
 export async function listMarketEventsForAnalytics(
   db: D1Database,
   coin: string,
