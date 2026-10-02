@@ -33,6 +33,18 @@ jobs:
           node -e "const p=require('./package.json'); const range=p.engines?.node; if (range !== '>=22') { console.error('Expected package.json engines.node to be >=22; found:', range); process.exit(1); } if (Number(process.versions.node.split('.')[0]) < 22) { console.error('CI Node.js runtime is below the supported major version:', process.versions.node); process.exit(1); }"
       - name: Verify source documentation language
         run: node scripts/check-source-language.mjs
+      - name: Prepare formatted files for repair
+        run: npx prettier --write src/backend/arbitrage-market-history.ts src/cloudflare/arbitrage-event-ingestion.ts src/cloudflare/d1.ts src/tests/arbitrage-event-ingestion.test.ts src/tests/arbitrage-market-history.test.ts
+      - name: Upload formatted files
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-146-formatted-files
+          path: |
+            src/backend/arbitrage-market-history.ts
+            src/cloudflare/arbitrage-event-ingestion.ts
+            src/cloudflare/d1.ts
+            src/tests/arbitrage-event-ingestion.test.ts
+            src/tests/arbitrage-market-history.test.ts
       - name: Run quality gates
         run: npm run quality
 
