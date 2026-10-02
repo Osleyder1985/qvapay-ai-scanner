@@ -80,6 +80,39 @@ test("D1 market history query normalizes stored numeric fields", async () => {
   ]);
 });
 
+test("D1 market event persistence uses deterministic newest-observation upsert", async () => {
+  const queries: string[] = [];
+  const db: D1Database = {
+    prepare: (query) => {
+      queries.push(query);
+      return statement([]);
+    },
+    batch: async () => [],
+  };
+
+  await appendMarketEvents(db, [
+    {
+      dedupeKey: "offer-1|completed",
+      eventId: "event-1",
+      offerUuid: "offer-1",
+      event: "completed",
+      status: "completed",
+      side: "sell",
+      coin: "BANK_CUP",
+      amount: 10,
+      availableAmount: 0,
+      receive: 12000,
+      rate: 1200,
+      eventAt: "2026-10-02T12:00:00.000Z",
+      observedAt: "2026-10-02T12:00:01.000Z",
+      source: "webhook",
+    },
+  ]);
+
+  assert.match(queries[0] ?? "", /ON CONFLICT\(dedupe_key\) DO UPDATE SET/);
+  assert.match(queries[0] ?? "", /excluded\.observed_at > market_events\.observed_at/);
+});
+
 test("D1 market event persistence chunks large batches", async () => {
   const batchSizes: number[] = [];
   const db: D1Database = {
