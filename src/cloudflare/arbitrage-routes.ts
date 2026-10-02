@@ -61,6 +61,9 @@ function marketQuery(url: URL): URLSearchParams {
   // The arbitrage monitor only needs acquisition offers (SELL). Filtering at QvaPay
   // prevents us from downloading unrelated BUY offers and wasting the API rate budget.
   params.set("type", "sell");
+  // QvaPay defines best_rate=desc as best-first for SELL offers.
+  params.set("orderBy", "best_rate");
+  params.set("orderType", "desc");
   if (coin) params.set("coin", coin);
   return params;
 }
