@@ -8,7 +8,10 @@
 
 import { handleArbitrageRoutes } from "./arbitrage-routes.js";
 import { type D1Database } from "./d1.js";
-import { json } from "./cloudflare-router.js";
+
+function monitorJson(payload: unknown, status = 200): Response {
+  return new Response(JSON.stringify(payload), { status, headers: { "Content-Type": "application/json; charset=utf-8" } });
+}
 import type { QvaPayHttpEnv } from "./qvapay-http.js";
 
 export interface ArbitrageMonitorEnv extends QvaPayHttpEnv {
@@ -168,7 +171,7 @@ export async function runArbitrageMonitor(
     `https://internal/api/arbitrage/scan?minMarginPercent=${encodeURIComponent(config.minMarginPercent)}&coin=${encodeURIComponent(config.coin)}`,
     { method: "GET" },
   );
-  const response = await handleArbitrageRoutes(request, env, new URL(request.url), json);
+  const response = await handleArbitrageRoutes(request, env, new URL(request.url), monitorJson);
   if (!response) throw new Error("ARBITRAGE_ROUTE_NOT_FOUND");
   const payload = await response.json() as Record<string, unknown>;
 
