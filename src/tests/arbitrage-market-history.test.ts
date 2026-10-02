@@ -539,6 +539,36 @@ test("calcula tiempo medio hasta completar", () => {
   assert.equal(result.averageTimeToCompletionMs, 45 * 60 * 1000);
 });
 
+test("preserva available_amount nulo y acepta cero explícito", () => {
+  const missing = normalizeMarketEvent({
+    offerUuid: "fixed-offer",
+    event: "p2p.created",
+    status: "open",
+    coin: "BANK_CUP",
+    amount: "10",
+    receive: "10000",
+    availableAmount: null,
+    source: "webhook",
+    eventAt: "2026-10-02T11:00:00Z",
+  });
+  assert.ok(missing);
+  assert.equal(missing.availableAmount, null);
+
+  const zero = normalizeMarketEvent({
+    offerUuid: "flexible-offer",
+    event: "p2p.created",
+    status: "open",
+    coin: "BANK_CUP",
+    amount: "10",
+    receive: "10000",
+    availableAmount: "0",
+    source: "webhook",
+    eventAt: "2026-10-02T11:00:00Z",
+  });
+  assert.ok(zero);
+  assert.equal(zero.availableAmount, 0);
+});
+
 test("mantiene unknown cuando faltan cantidad o receive", () => {
   const result = normalizeMarketEvent({
     offerUuid: "missing",
