@@ -558,7 +558,6 @@ async function handleApiArbitrageScan(
   }
 }
 
-
 /**
  * Implementa la operación handleApiP2POffer de este módulo.
  * @param response Entrada utilizada por la operation.
