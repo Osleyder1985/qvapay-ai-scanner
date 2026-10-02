@@ -36,7 +36,7 @@ type JsonResponse = (
   headers?: Record<string, string>,
 ) => Response;
 
-function sanitizeObjectArray(value: unknown, allowedKeys: readonly string[]): Record<string, unknown>[] {
+export function sanitizeObjectArray(value: unknown, allowedKeys: readonly string[]): Record<string, unknown>[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
     if (!item || typeof item !== "object" || Array.isArray(item)) return [];
