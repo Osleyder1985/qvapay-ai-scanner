@@ -145,7 +145,7 @@ export async function handleApi(
   const accountResponse = await handleAccountRoutes(request, env, url, json);
   if (accountResponse) return accountResponse;
 
-  const arbitrageResponse = await handleArbitrageRoutes(request, env, url, json);
+  const arbitrageResponse = await handleArbitrageRoutes(\n    request,\n    env,\n    url,\n    json,\n  );
   if (arbitrageResponse) return arbitrageResponse;
 
   const arbitrageHistoryResponse = await handleArbitrageHistoryRoutes(
