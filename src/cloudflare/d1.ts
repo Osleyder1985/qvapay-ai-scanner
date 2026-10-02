@@ -312,6 +312,14 @@ export async function recordFinanceSettlement(
   ) {
     return false;
   }
+
+  const settlementTolerance = Math.max(Math.abs(gross), 1) * 1e-9;
+  if (fee > gross + settlementTolerance || net > gross + settlementTolerance) {
+    return false;
+  }
+  if (Math.abs(gross - (net + fee)) > settlementTolerance) {
+    return false;
+  }
   const result = await db
     .prepare(
       `UPDATE finance_ledger
