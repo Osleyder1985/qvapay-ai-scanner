@@ -87,10 +87,10 @@ test(
     const first = event({ dedupeKey: "same" });
     const duplicate = event({ dedupeKey: "same", source: "webhook" });
     const cancelled = event({
-    dedupeKey: "cancel",
-    event: "cancelled",
-    status: "cancelled",
-  });
+      dedupeKey: "cancel",
+      event: "cancelled",
+      status: "cancelled",
+    });
     assert.equal(
       deduplicateMarketEvents([first, duplicate, cancelled]).length,
       2,
@@ -191,7 +191,12 @@ test("no cuenta una operación incompleta como ejecución", () => {
       event: "created",
       rate: 1200,
     }),
-    event({ offerUuid: "paid", dedupeKey: "paid", event: "paid", rate: 1300 }),
+    event({
+      offerUuid: "paid",
+      dedupeKey: "paid",
+      event: "paid",
+      rate: 1300,
+    }),
   ];
   const trades = completedTradesFromEvents(events);
   assert.equal(trades.length, 0);
