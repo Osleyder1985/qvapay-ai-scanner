@@ -436,9 +436,9 @@ export async function listMarketEvents(
 export async function listMarketEventsForAnalytics(
   db: D1Database,
   coin: string,
-  terminalLimit = 100,
+  completedLimit = 500,
 ): Promise<MarketEventRow[]> {
-  const safeLimit = Math.min(Math.max(Math.trunc(terminalLimit), 1), 1000);
+  const safeLimit = Math.min(Math.max(Math.trunc(completedLimit), 1), 1000);
   const normalizedCoin = coin.trim().toUpperCase();
   if (!normalizedCoin) return [];
 
@@ -452,7 +452,7 @@ export async function listMarketEventsForAnalytics(
            SELECT offer_uuid
            FROM market_events
            WHERE coin = ?
-             AND event IN ('completed', 'cancelled')
+             AND event = 'completed'
            GROUP BY offer_uuid
            ORDER BY MAX(event_at) DESC, MAX(observed_at) DESC
            LIMIT ?
