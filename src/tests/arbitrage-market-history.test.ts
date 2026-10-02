@@ -95,6 +95,51 @@ test("deduplica el mismo lifecycle entre webhook y reconciliación", () => {
   assert.equal(deduplicateMarketEvents([webhook, reconciliation]).length, 1);
 });
 
+test("conserva el payload completado de la observación más reciente", () => {
+  const older = event({
+    offerUuid: "canonical",
+    observedAt: "2026-10-02T11:00:01Z",
+    amount: 10,
+    receive: 10000,
+    rate: 1000,
+    source: "stream",
+  });
+  const newer = event({
+    offerUuid: "canonical",
+    observedAt: "2026-10-02T11:05:01Z",
+    amount: 10,
+    receive: 10500,
+    rate: 1050,
+    source: "reconciliation",
+  });
+
+  const result = deduplicateMarketEvents([newer, older]);
+  assert.equal(result.length, 1);
+  assert.equal(result[0]?.rate, 1050);
+  assert.equal(result[0]?.receive, 10500);
+});
+
+test("conserva la creación más antigua aunque llegue después otra observación", () => {
+  const later = event({
+    offerUuid: "created-canonical",
+    event: "created",
+    status: "open",
+    eventAt: "2026-10-02T11:00:00Z",
+    observedAt: "2026-10-02T11:00:01Z",
+  });
+  const earlier = event({
+    offerUuid: "created-canonical",
+    event: "created",
+    status: "open",
+    eventAt: "2026-10-02T10:00:00Z",
+    observedAt: "2026-10-02T11:05:01Z",
+  });
+
+  const result = deduplicateMarketEvents([later, earlier]);
+  assert.equal(result.length, 1);
+  assert.equal(result[0]?.eventAt, "2026-10-02T10:00:00.000Z");
+});
+
 test("deduplica un completed aunque webhook y stream usen event IDs distintos", () => {
   const webhook = event({
     offerUuid: "same-offer",
