@@ -39,8 +39,8 @@ test("D1 health reports the required runtime tables", async () => {
   assert.deepEqual(health.tables, [
     "auto_apply_config",
     "finance_ledger",
-    "market_history",
     "market_events",
+    "market_history",
     "operations_ledger",
   ]);
 });
