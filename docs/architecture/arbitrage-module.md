@@ -2,79 +2,54 @@
 
 ## Propósito
 
-El módulo detecta oportunidades potenciales entre ofertas P2P abiertas de una misma moneda y construye una propuesta de ciclo:
+El módulo analiza el mercado P2P de QvaPay y construye simulaciones de arbitraje sin ejecutar operaciones. La arquitectura separa motor matemático, adquisición de mercado, monitor persistente y presentación.
 
-1. adquirir QUSD tomando una oferta `SELL`;
-2. proponer la salida tomando una oferta `BUY`;
-3. calcular cantidad, capital requerido y beneficio bruto;
-4. mostrar la propuesta sin ejecutar ninguna operación.
+## Semántica
 
-El módulo actual es **exclusivamente de lectura**.
+SELL significa adquirir QUSD pagando la moneda cotizada. BUY significa vender QUSD y recibir la moneda cotizada. El aislamiento por coin es obligatorio.
 
-## Semántica de QvaPay
+## Motor
 
-En el mercado P2P de QvaPay:
+El motor normaliza ofertas, valida tipos y cantidades, respeta liquidez y límites de orden y calcula oportunidades dentro de la misma moneda.
 
-- `SELL`: el usuario que toma la oferta compra QUSD pagando la moneda.
-- `BUY`: el usuario que toma la oferta vende QUSD y recibe la moneda.
+La lógica vigente no utiliza maxAgeMs como criterio del monitor. Las ofertas no se descartan únicamente por antigüedad.
 
-Por tanto, para nuestro arbitraje:
+## Monitor server-side
 
-`SELL barato -> adquisición`
-`BUY caro -> salida`
+1. ArbitrageMonitor recibe/activa una alarma.
+2. Consulta el mercado P2P mediante el Worker.
+3. El análisis normaliza y calcula la simulación.
+4. Se genera el snapshot.
+5. D1 persiste configuración, estado y payload.
+6. El monitor programa la siguiente alarma aproximadamente 10 segundos después.
+7. El frontend consulta el snapshot persistido.
 
-## Flujo
+El navegador no inicia el escaneo.
 
-El endpoint `GET /api/arbitrage/scan` consulta el mercado público a través del backend, normaliza las ofertas y evalúa todos los pares válidos dentro de cada moneda.
+## Simulación
 
-Parámetros:
+La configuración actual expone moneda y margen mínimo, predeterminado 5%.
 
-- `maxCapitalFiat`: capital máximo que el ciclo puede utilizar.
-- `maxAgeMs`: antigüedad máxima de una oferta.
-- `coin`: filtro opcional de moneda.
+Para cada SELL compatible se calcula cantidad QUSD, tasa de compra, capital requerido, tasa objetivo, retorno, ganancia bruta y margen bruto.
 
-El motor rechaza datos inválidos, ofertas obsoletas y timestamps futuros. La cantidad propuesta queda limitada por la liquidez disponible en ambos lados y por el capital máximo.
+## API
 
-Cuando existen varios pares rentables, se selecciona el que maximiza el beneficio estimado; si las comisiones están configuradas, se utiliza el beneficio neto como criterio.
+- GET /api/arbitrage/scan
+- GET /api/arbitrage/monitor
+- POST /api/arbitrage/monitor
 
-## Seguridad
+El monitor es explícitamente de solo lectura.
 
-El endpoint no llama a:
+## Persistencia
 
-- `POST /p2p/:uuid/apply`;
-- `POST /p2p/create`;
-- `POST /p2p/:uuid/paid`;
-- `POST /p2p/:uuid/received`;
-- `POST /p2p/:uuid/cancel`.
+La migración 0006_arbitrage_monitor.sql crea arbitrage_monitor_config y arbitrage_monitor_state. payload_json conserva el último resultado serializado. Ante errores transitorios se conserva el payload anterior.
 
-La interfaz identifica explícitamente el modo como `SOLO LECTURA`.
+## Scheduling
 
-## Estado actual
+Cloudflare Cron se utiliza para garantizar el arranque del Durable Object al menos una vez por minuto. La frecuencia de 10 segundos la proporciona Durable Object Alarm, no Cron.
 
-### Funciona
+El calendario lógico por defecto es 24/7. Los campos de horario existen en D1 para una etapa posterior.
 
-- lectura del mercado real;
-- separación por moneda;
-- detección de adquisición y salida;
-- evaluación de todos los pares;
-- control de antigüedad;
-- control de liquidez;
-- límite de capital;
-- cálculo de beneficio bruto;
-- identificación de las dos ofertas que formarían el ciclo;
-- simulación visual sin dinero real;
-- pruebas deterministas del motor.
+## Limitaciones
 
-### Todavía no ejecuta
-
-- aplicar automáticamente a la oferta de adquisición;
-- reservar simultáneamente las dos puntas;
-- crear una oferta de venta propia;
-- confirmar pagos;
-- confirmar recepción;
-- gestionar escrow;
-- garantizar que la segunda oferta siga disponible después de adquirir la primera;
-- modelar comisiones reales de cada lado si no se suministra un modelo de tarifas;
-- ejecutar un ciclo atómico de arbitraje.
-
-Estas limitaciones son intencionales en esta etapa: la primera versión debe demostrar detección y propuesta antes de habilitar cualquier movimiento de fondos.
+La consulta tiene cobertura máxima configurada; D1 recibe escrituras frecuentes; las comisiones no se inventan; y una tasa objetivo no reserva ni garantiza una oferta de salida.
