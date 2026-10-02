@@ -105,3 +105,46 @@ test("finance ledger rejects inconsistent settlements", async () => {
   }
 });
 
+test("finance ledger neutralizes malformed persisted settlement values", async () => {
+  const dir = await mkdtemp(join(process.cwd(), "tmp-finance-loaded-"));
+  const path = join(dir, "ledger.json");
+  const previous = process.env.FINANCE_LEDGER_PATH;
+  process.env.FINANCE_LEDGER_PATH = path;
+  try {
+    await import("node:fs/promises").then(({ writeFile }) =>
+      writeFile(
+        path,
+        JSON.stringify([
+          {
+            uuid: "loaded-1",
+            status: "completed",
+            type: "buy",
+            coin: "BANK_CUP",
+            amount: 10,
+            receive: 100,
+            createdAt: "2026-10-01T00:00:00.000Z",
+            updatedAt: "2026-10-01T00:00:00.000Z",
+            recordedAt: "2026-10-01T00:00:00.000Z",
+            grossAmountQusd: 100,
+            feeQusd: 20,
+            netAmountQusd: 70,
+            feeSource: "qvapay_received",
+          },
+        ]),
+        "utf8",
+      ),
+    );
+    const store = new FinanceLedgerStore();
+    await store.initialize();
+    const [entry] = store.list();
+    assert.equal(entry.grossAmountQusd, 10);
+    assert.equal(entry.feeQusd, null);
+    assert.equal(entry.netAmountQusd, null);
+    assert.equal(entry.feeSource, "unknown");
+  } finally {
+    if (previous === undefined) delete process.env.FINANCE_LEDGER_PATH;
+    else process.env.FINANCE_LEDGER_PATH = previous;
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
