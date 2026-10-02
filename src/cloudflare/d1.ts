@@ -403,7 +403,6 @@ export async function appendMarketEvents(
                  excluded.event_at < market_events.event_at
                  OR (excluded.event_at = market_events.event_at
                      AND excluded.observed_at > market_events.observed_at)
-                 OR excluded.observed_at > market_events.observed_at
                )
              )
              OR (
