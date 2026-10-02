@@ -146,8 +146,7 @@ export function normalizeMarketEvent(
   const amount = positive(raw.amount);
   const availableAmount = positive(raw.availableAmount);
   const receive = positive(raw.receive);
-  const rate =
-    amount !== null && receive !== null ? receive / amount : null;
+  const rate = amount !== null && receive !== null ? receive / amount : null;
 
   const eventId = text(raw.eventId) || null;
   const dedupeKey = stableKey([
