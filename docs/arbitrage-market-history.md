@@ -84,7 +84,7 @@ The default completed-trade window is 500 valid completed operations. A differen
 
 ## Data integrity
 
-Events are deduplicated by a stable event/offer identity. An identical lifecycle event observed through SSE, webhook, or reconciliation therefore does not create a second analytical trade.
+Events are deduplicated by a stable event/offer identity. An identical lifecycle event observed through SSE, webhook, or reconciliation therefore does not create a second analytical trade. D1 applies the same canonicalization rule on every write, so a delayed older observation cannot overwrite a newer persisted observation.
 
 Canonical selection is deterministic: the `created` lifecycle keeps the earliest event timestamp (with the latest observation as a tie-breaker), while later lifecycle states keep the most recently observed payload. This prevents a delayed reconciliation record from replacing the original creation time, while allowing a newer completed observation to correct the financial payload used by the analytics.
 
