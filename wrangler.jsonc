@@ -35,6 +35,9 @@
     }
   ],
   "previews": {},
+  "vars": {
+    "AI_AUDITOR_BUILD_SHA": "local"
+  },
   "observability": {
     "enabled": true
   }
