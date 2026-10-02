@@ -75,7 +75,7 @@ For each currency, the deterministic analytics layer exposes:
 - p10/p25/p50/p75/p90;
 - VWAP weighted by QUSD quantity;
 - traded QUSD volume;
-- completion rate for the selected completed-operation window; cancellation rate is intentionally not calculated because cancelled operations are excluded from the sample;
+- completion rate for the selected completed-operation window (100% by construction when the sample is non-empty); cancellation rate is intentionally not calculated because cancelled operations are excluded from the sample;
 - average time from `created` to `completed`;
 - newest event/observation timestamps;
 - stale-data flag.
