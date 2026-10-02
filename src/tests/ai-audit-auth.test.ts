@@ -6,9 +6,12 @@
  * @status active
  */
 
-import test from "node:test";
 import assert from "node:assert/strict";
-import { authorizeAiAuditor, hashAiAuditorToken } from "../cloudflare/ai-audit-auth.js";
+import test from "node:test";
+import {
+  authorizeAiAuditor,
+  hashAiAuditorToken,
+} from "../cloudflare/ai-audit-auth.js";
 
 const token = "test-ai-auditor-token";
 
