@@ -83,6 +83,26 @@ test("rechaza webhook con cuerpo sobredimensionado", async () => {
   assert.equal(db.stored.length, 0);
 });
 
+test("rechaza webhook sobredimensionado en streaming", async () => {
+  const db = mockDatabase();
+  const oversized = new Uint8Array(256 * 1024 + 1);
+  const response = await ingestArbitrageWebhook(
+    new Request("https://scanner.example/api/arbitrage/webhook", {
+      method: "POST",
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(oversized);
+          controller.close();
+        },
+      }),
+    }),
+    db as never,
+    "secret",
+  );
+  assert.equal(response.status, 413);
+  assert.equal(db.stored.length, 0);
+});
+
 test("acepta webhook firmado y persiste el evento normalizado", async () => {
   const db = mockDatabase();
   const body = JSON.stringify({
