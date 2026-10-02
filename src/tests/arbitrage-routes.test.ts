@@ -52,7 +52,7 @@ test("expone el escaneo de arbitraje como lectura y construye una oportunidad re
   try {
     const response = await handleArbitrageRoutes(
       new Request(
-        "https://example.workers.dev/api/arbitrage/scan?minMarginPercent=10",
+        "https://example.workers.dev/api/arbitrage/scan?minMarginPercent=5&coin=BANK_CUP",
       ),
       {
         DB: {} as never,
@@ -60,7 +60,7 @@ test("expone el escaneo de arbitraje como lectura y construye una oportunidad re
         QVAPAY_APP_SECRET: "test-secret",
       },
       new URL(
-        "https://example.workers.dev/api/arbitrage/scan?minMarginPercent=10",
+        "https://example.workers.dev/api/arbitrage/scan?minMarginPercent=5&coin=BANK_CUP",
       ),
       (payload, status = 200) =>
         new Response(JSON.stringify(payload), { status }),
@@ -76,6 +76,13 @@ test("expone el escaneo de arbitraje como lectura y construye una oportunidad re
         exitOfferUuid: string;
         quantityQusd: number;
       }>;
+      marketOffers: Array<{
+        uuid: string;
+        coin: string;
+        purchaseRate: number;
+        targetSaleRate: number;
+        projectedGrossProfitFiat: number;
+      }>;
     };
 
     assert.equal(body.mode, "read-only");
@@ -84,6 +91,12 @@ test("expone el escaneo de arbitraje como lectura y construye una oportunidad re
     assert.equal(body.opportunities[0]?.acquisitionOfferUuid, "acquire");
     assert.equal(body.opportunities[0]?.exitOfferUuid, "exit");
     assert.equal(body.opportunities[0]?.quantityQusd, 10);
+    assert.equal(body.marketOffers.length, 1);
+    assert.equal(body.marketOffers[0]?.uuid, "acquire");
+    assert.equal(body.marketOffers[0]?.coin, "BANK_CUP");
+    assert.equal(body.marketOffers[0]?.purchaseRate, 90);
+    assert.equal(body.marketOffers[0]?.targetSaleRate, 94.5);
+    assert.equal(body.marketOffers[0]?.projectedGrossProfitFiat, 45);
     assert.equal(requests.length, 1);
     assert.match(requests[0] ?? "", /\/p2p\?/);
   } finally {

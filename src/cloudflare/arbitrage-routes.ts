@@ -146,6 +146,44 @@ export async function handleArbitrageRoutes(
       minMarginPercent,
     });
 
+    const selectedCoin = (base.get("coin") ?? "").toUpperCase();
+    const marketOffers = offers
+      .filter(
+        (offer) =>
+          String(offer.type).toLowerCase() === "sell" &&
+          (!selectedCoin || String(offer.coin).toUpperCase() === selectedCoin),
+      )
+      .map((offer) => {
+        const amount = Number(offer.amount);
+        const available = offer.available_amount == null
+          ? amount
+          : Number(offer.available_amount);
+        const receive = Number(offer.receive);
+        const rate = amount > 0 ? receive / amount : NaN;
+        const targetRate = rate * (1 + minMarginPercent / 100);
+        const quantity = Number.isFinite(available) && available > 0 ? available : 0;
+        const capital = quantity * rate;
+        const targetProceeds = quantity * targetRate;
+        return {
+          uuid: offer.uuid,
+          coin: offer.coin,
+          type: offer.type,
+          amountQusd: amount,
+          availableQusd: quantity,
+          purchaseRate: rate,
+          capitalRequiredFiat: capital,
+          targetSaleRate: targetRate,
+          targetSaleProceedsFiat: targetProceeds,
+          projectedGrossProfitFiat: targetProceeds - capital,
+          offerKind: offer.offer_kind ?? null,
+          orderMinQusd: offer.order_min ?? null,
+          orderMaxQusd: offer.order_max ?? null,
+          updatedAt: offer.updated_at ?? offer.created_at ?? null,
+        };
+      })
+      .filter((offer) => Number.isFinite(offer.purchaseRate) && offer.purchaseRate > 0)
+      .sort((a, b) => a.purchaseRate - b.purchaseRate);
+
     return json({
       mode: "read-only",
       executionEnabled: false,
@@ -153,6 +191,13 @@ export async function handleArbitrageRoutes(
       coin: base.get("coin") ?? "",
       opportunities: result.opportunities,
       rejected: result.rejected,
+      marketOffers,
+      marketSimulation: {
+        coin: selectedCoin,
+        type: "sell",
+        minMarginPercent,
+        scannedAt: new Date().toISOString(),
+      },
       coverage: {
         fetched: offers.length,
         total,
