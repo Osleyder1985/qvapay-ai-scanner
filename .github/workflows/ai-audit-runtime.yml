@@ -29,7 +29,7 @@ jobs:
           mkdir -p audit-report
           endpoints="health monitor arbitrage database runtime"
           for endpoint in $endpoints; do
-            curl --silent --show-error --location \
+            curl --silent --show-error --fail-with-body --location \
               --header "Authorization: Bearer ${AI_AUDITOR_TOKEN}" \
               --header "Accept: application/json" \
               --output "audit-report/${endpoint}.json" \
