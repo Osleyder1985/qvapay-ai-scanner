@@ -8,6 +8,7 @@
 
 import { handleArbitrageRoutes } from "./arbitrage-routes.js";
 import { type D1Database } from "./d1.js";
+import type { QvaPayHttpEnv } from "./qvapay-http.js";
 
 function monitorJson(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
@@ -15,7 +16,6 @@ function monitorJson(payload: unknown, status = 200): Response {
     headers: { "Content-Type": "application/json; charset=utf-8" },
   });
 }
-import type { QvaPayHttpEnv } from "./qvapay-http.js";
 
 export interface ArbitrageMonitorEnv extends QvaPayHttpEnv {
   DB: D1Database;
