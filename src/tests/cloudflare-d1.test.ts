@@ -163,9 +163,10 @@ test("D1 market event persistence fails when D1 reports a batch error", async ()
   const db: D1Database = {
     prepare: () => statement([]),
     batch: async <T>() =>
-      [
-        { success: false, meta: { changes: 0 } },
-      ] as Array<{ success: boolean; meta: { changes: number } } & T>,
+      [{ success: false, meta: { changes: 0 } }] as Array<{
+        success: boolean;
+        meta: { changes: number };
+      } & T>,
   };
 
   await assert.rejects(
