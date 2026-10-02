@@ -52,7 +52,10 @@ test("rechaza una oferta sin liquidez explícita", () => {
 });
 
 test("rechaza una oferta cuya liquidez supera el monto declarado", () => {
-  assert.equal(normalizeArbitrageOffer(offer({ available_amount: 11 })), null);
+  assert.equal(
+    normalizeArbitrageOffer(offer({ available_amount: 11 })),
+    null,
+  );
 });
 
 test("empareja únicamente ofertas de la misma moneda", () => {
