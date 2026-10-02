@@ -27,6 +27,7 @@ import {
   reconcileCompletedIds,
 } from "./finance-reconciliation.js";
 import { OperationsLedgerStore } from "./operations-ledger.js";
+import { securityHeaders } from "./security-headers.js";
 
 const frontendDir = process.env.DASHBOARD_FRONTEND_DIR
   ? resolve(process.env.DASHBOARD_FRONTEND_DIR)
@@ -75,6 +76,7 @@ function sendJson(
   const body = JSON.stringify(payload);
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
+    ...securityHeaders(),
     "Cache-Control": "no-store",
     "Content-Length": Buffer.byteLength(body),
   });
@@ -110,6 +112,7 @@ async function sendFile(response: ServerResponse, path: string): Promise<void> {
     const body = await readFile(path);
     response.writeHead(200, {
       "Content-Type": contentType(path),
+      ...securityHeaders(),
       "Cache-Control": "no-store",
       "Content-Length": body.byteLength,
     });
