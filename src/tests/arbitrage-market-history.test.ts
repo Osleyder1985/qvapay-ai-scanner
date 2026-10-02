@@ -236,6 +236,41 @@ test("usa por defecto las últimas 500 operaciones completadas", () => {
   assert.equal(result.maxRate, 1504);
 });
 
+test("la ventana cuenta operaciones únicas y válidas", () => {
+  const result = calculateCurrencyAnalytics(
+    [
+      event({
+        offerUuid: "invalid",
+        dedupeKey: "invalid",
+        amount: null,
+        receive: null,
+        rate: null,
+        eventAt: "2026-10-02T10:00:00Z",
+      }),
+      event({
+        offerUuid: "duplicate",
+        dedupeKey: "duplicate",
+        eventAt: "2026-10-02T11:00:00Z",
+      }),
+      event({
+        offerUuid: "duplicate",
+        dedupeKey: "duplicate-2",
+        eventAt: "2026-10-02T11:01:00Z",
+      }),
+      event({
+        offerUuid: "valid",
+        dedupeKey: "valid",
+        eventAt: "2026-10-02T12:00:00Z",
+      }),
+    ],
+    "BANK_CUP",
+    { windowSize: 2 },
+  );
+  assert.equal(result.completedCount, 2);
+  assert.equal(result.minRate, 1000);
+  assert.equal(result.maxRate, 1000);
+});
+
 test("calcula mediana, percentiles y VWAP", () => {
   const result = calculateCurrencyAnalytics(
     [
