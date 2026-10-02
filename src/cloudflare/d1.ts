@@ -363,36 +363,42 @@ export async function appendMarketEvents(
   }>,
 ): Promise<number> {
   if (!events.length) return 0;
-  const statements = events.map((event) =>
-    db
-      .prepare(
-        `INSERT OR IGNORE INTO market_events
-         (dedupe_key, event_id, offer_uuid, event, status, side, coin,
-          amount, available_amount, receive, rate, event_at, observed_at, source)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .bind(
-        event.dedupeKey,
-        event.eventId,
-        event.offerUuid,
-        event.event,
-        event.status,
-        event.side,
-        event.coin,
-        event.amount,
-        event.availableAmount,
-        event.receive,
-        event.rate,
-        event.eventAt,
-        event.observedAt,
-        event.source,
-      ),
-  );
-  const results = await db.batch(statements);
-  return results.reduce(
-    (count, result) => count + Number(result.meta?.changes ?? 0),
-    0,
-  );
+  const BATCH_SIZE = 250;
+  let inserted = 0;
+  for (let offset = 0; offset < events.length; offset += BATCH_SIZE) {
+    const chunk = events.slice(offset, offset + BATCH_SIZE);
+    const statements = chunk.map((event) =>
+      db
+        .prepare(
+          `INSERT OR IGNORE INTO market_events
+           (dedupe_key, event_id, offer_uuid, event, status, side, coin,
+            amount, available_amount, receive, rate, event_at, observed_at, source)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+          event.dedupeKey,
+          event.eventId,
+          event.offerUuid,
+          event.event,
+          event.status,
+          event.side,
+          event.coin,
+          event.amount,
+          event.availableAmount,
+          event.receive,
+          event.rate,
+          event.eventAt,
+          event.observedAt,
+          event.source,
+        ),
+    );
+    const results = await db.batch(statements);
+    inserted += results.reduce(
+      (count, result) => count + Number(result.meta?.changes ?? 0),
+      0,
+    );
+  }
+  return inserted;
 }
 
 export async function listMarketEvents(
