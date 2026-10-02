@@ -176,4 +176,3 @@ test("finance ledger neutralizes malformed persisted settlement values", async (
     await rm(dir, { recursive: true, force: true });
   }
 });
-
