@@ -36,6 +36,59 @@ type JsonResponse = (
   headers?: Record<string, string>,
 ) => Response;
 
+export function sanitizeObjectArray(value: unknown, allowedKeys: readonly string[]): Record<string, unknown>[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const source = item as Record<string, unknown>;
+    const safe: Record<string, unknown> = {};
+    for (const key of allowedKeys) {
+      if (key in source) safe[key] = source[key];
+    }
+    return [safe];
+  });
+}
+
+const MARKET_OFFER_AUDIT_KEYS = [
+  "uuid",
+  "coin",
+  "type",
+  "amountQusd",
+  "availableQusd",
+  "purchaseRate",
+  "capitalRequiredFiat",
+  "targetSaleRate",
+  "targetSaleProceedsFiat",
+  "projectedGrossProfitFiat",
+  "projectedGrossMarginPercent",
+  "offerKind",
+  "orderMinQusd",
+  "orderMaxQusd",
+  "updatedAt",
+] as const;
+
+const OPPORTUNITY_AUDIT_KEYS = [
+  "coin",
+  "buyOfferUuid",
+  "sellOfferUuid",
+  "acquisitionOfferUuid",
+  "exitOfferUuid",
+  "buyRate",
+  "sellRate",
+  "quantityQusd",
+  "capitalRequiredFiat",
+  "grossProfitFiat",
+  "grossMarginPercent",
+  "buyFeeFiat",
+  "sellFeeFiat",
+  "totalFeesFiat",
+  "netProfitFiat",
+  "netMarginPercent",
+  "feesStatus",
+  "observedAt",
+  "stale",
+] as const;
+
 function auditError(
   json: JsonResponse,
   status: number,
@@ -167,12 +220,14 @@ async function auditArbitrage(env: AiAuditEnv) {
     minMarginPercent: current.config.minMarginPercent,
     scannedAt: current.state?.scanned_at ?? null,
     coverage: payload.coverage ?? null,
-    marketOffers: Array.isArray(payload.marketOffers)
-      ? payload.marketOffers
-      : [],
-    opportunities: Array.isArray(payload.opportunities)
-      ? payload.opportunities
-      : [],
+    marketOffers: sanitizeObjectArray(
+      payload.marketOffers,
+      MARKET_OFFER_AUDIT_KEYS,
+    ),
+    opportunities: sanitizeObjectArray(
+      payload.opportunities,
+      OPPORTUNITY_AUDIT_KEYS,
+    ),
     marketSimulation: payload.marketSimulation ?? null,
   };
 }
