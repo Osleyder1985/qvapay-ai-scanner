@@ -80,7 +80,7 @@ function feedRawEvent(
     receive: data.receive,
     createdAt: data.created_at,
     updatedAt,
-    eventAt: sentAt ?? updatedAt,
+    // updated_at representa el estado de la oferta; sent_at es el instante de entrega.\n    eventAt: updatedAt ?? sentAt,
     observedAt,
     source,
   };
