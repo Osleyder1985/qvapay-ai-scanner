@@ -125,13 +125,19 @@ async function doAlarm(env: AiAuditEnv): Promise<number | null> {
   return typeof payload.alarm === "number" ? payload.alarm : null;
 }
 
-async function auditHealth(env: AiAuditEnv): Promise<Record<string, unknown>> {
+export async function auditHealth(
+  env: AiAuditEnv,
+): Promise<Record<string, unknown>> {
   const database = await d1Health(env.DB);
   const monitor = await monitorState(env.DB);
   const alarm = await doAlarm(env);
 
   return {
-    ok: database.ok && monitor.state?.status !== "error",
+    ok:
+      database.ok &&
+      monitor.state !== null &&
+      monitor.state.status !== "error" &&
+      alarm !== null,
     readOnly: true,
     service: "qvapay-ai-scanner-worker",
     checks: {
