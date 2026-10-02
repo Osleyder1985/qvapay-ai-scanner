@@ -217,7 +217,10 @@ export async function runArbitrageMonitor(
 
   if (!response.ok) {
     const detail = typeof payload.detail === "string" ? payload.detail : null;
-    const upstreamStatus = typeof payload.upstreamStatus === "number" ? payload.upstreamStatus : response.status;
+    const upstreamStatus =
+      typeof payload.upstreamStatus === "number"
+        ? payload.upstreamStatus
+        : response.status;
     const message = detail
       ? `QvaPay HTTP ${upstreamStatus}: ${detail}`
       : String(payload.error ?? `HTTP ${response.status}`);
