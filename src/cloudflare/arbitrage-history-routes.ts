@@ -15,8 +15,10 @@ import {
   calculateCurrencyAnalytics,
   type NormalizedMarketEvent,
 } from "../backend/arbitrage-market-history.js";
+import { reconcileArbitrageHistory } from "./arbitrage-event-ingestion.js";
+import type { QvaPayHttpEnv } from "./qvapay-http.js";
 
-interface RouteEnv {
+interface RouteEnv extends QvaPayHttpEnv {
   DB: D1Database;
 }
 
@@ -49,6 +51,14 @@ export async function handleArbitrageHistoryRoutes(
   url: URL,
   json: Json,
 ): Promise<Response | null> {
+  if (
+    request.method === "POST" &&
+    url.pathname === "/api/arbitrage/reconcile"
+  ) {
+    const result = await reconcileArbitrageHistory(env);
+    return json(result, 200);
+  }
+
   if (request.method !== "GET") return null;
   if (url.pathname !== "/api/arbitrage/history") return null;
 
