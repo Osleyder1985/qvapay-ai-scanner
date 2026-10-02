@@ -276,12 +276,14 @@ export function calculateCurrencyAnalytics(
     .sort()
     .at(-1);
   const nowMs = (options.now ?? new Date()).getTime();
-  const newestMs = newest ? new Date(newest).getTime() : NaN;
+  const newestObservedMs = newestObserved
+    ? new Date(newestObserved).getTime()
+    : NaN;
   const stale =
     options.maxAgeMs !== undefined &&
     Number.isFinite(nowMs) &&
-    Number.isFinite(newestMs)
-      ? nowMs - newestMs > options.maxAgeMs
+    Number.isFinite(newestObservedMs)
+      ? nowMs - newestObservedMs > options.maxAgeMs
       : false;
 
   const terminalCount = terminalIds.size;
