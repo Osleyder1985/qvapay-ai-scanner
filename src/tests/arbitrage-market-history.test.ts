@@ -278,6 +278,32 @@ test("usa por defecto las últimas 500 operaciones completadas", () => {
   assert.equal(result.maxRate, 1504);
 });
 
+test("resuelve empates de timestamp de forma determinista", () => {
+  const result = calculateCurrencyAnalytics(
+    [
+      event({
+        offerUuid: "z-offer",
+        dedupeKey: "z",
+        eventAt: "2026-10-02T12:00:00Z",
+        observedAt: "2026-10-02T12:00:01Z",
+      }),
+      event({
+        offerUuid: "a-offer",
+        dedupeKey: "a",
+        eventAt: "2026-10-02T12:00:00Z",
+        observedAt: "2026-10-02T12:00:01Z",
+        rate: 2000,
+        receive: 20000,
+        amount: 10,
+      }),
+    ],
+    "BANK_CUP",
+    { windowSize: 1 },
+  );
+  assert.equal(result.completedCount, 1);
+  assert.equal(result.minRate, 1000);
+});
+
 test("la ventana cuenta operaciones únicas y válidas", () => {
   const result = calculateCurrencyAnalytics(
     [
