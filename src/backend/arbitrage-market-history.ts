@@ -237,28 +237,25 @@ export function calculateCurrencyAnalytics(
   const all = deduplicateMarketEvents(events).filter(
     (event) => event.coin === normalizedCoin,
   );
-  const terminalEvents = all
-    .filter(
-      (event) =>
-        event.event === "completed" || event.event === "cancelled",
-    )
+  const completedEvents = all
+    .filter((event) => event.event === "completed")
     .sort(
       (a, b) =>
         new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime(),
     );
-  const terminalWindow = terminalEvents.slice(-windowSize);
-  const completed = completedTradesFromEvents(terminalWindow);
-  const completedIds = new Set(completed.map((trade) => trade.offerUuid));
-  const cancelledIds = new Set(
-    terminalWindow
-      .filter((event) => event.event === "cancelled")
-      .map((event) => event.offerUuid),
+  const completedWindow = completedEvents.slice(-windowSize);
+  const completedOfferIds = new Set(
+    completedWindow.map((event) => event.offerUuid),
   );
-  const cancelledCount = cancelledIds.size;
-  const terminalIds = new Set([
-    ...completedIds,
-    ...cancelledIds,
-  ]);
+  const windowEvents = all.filter((event) =>
+    completedOfferIds.has(event.offerUuid),
+  );
+  const completed = completedTradesFromEvents(windowEvents).filter((trade) =>
+    completedOfferIds.has(trade.offerUuid),
+  );
+  const completedIds = new Set(completed.map((trade) => trade.offerUuid));
+  const cancelledCount = 0;
+  const terminalCount = completedIds.size;
   const rates = completed.map((trade) => trade.rate).sort((a, b) => a - b);
   const volume = completed.reduce((sum, trade) => sum + trade.amount, 0);
   const weightedValue = completed.reduce(
@@ -303,7 +300,6 @@ export function calculateCurrencyAnalytics(
       ? nowMs - newestObservedMs > options.maxAgeMs
       : false;
 
-  const terminalCount = terminalIds.size;
   return {
     coin: normalizedCoin,
     windowSize,
@@ -312,8 +308,7 @@ export function calculateCurrencyAnalytics(
     terminalCount,
     completionRatePercent:
       terminalCount > 0 ? (completedIds.size / terminalCount) * 100 : null,
-    cancellationRatePercent:
-      terminalCount > 0 ? (cancelledCount / terminalCount) * 100 : null,
+    cancellationRatePercent: null,
     minRate: rates.at(0) ?? null,
     maxRate: rates.at(-1) ?? null,
     meanRate:
