@@ -95,6 +95,74 @@ test("deduplica el mismo lifecycle entre webhook y reconciliación", () => {
   assert.equal(deduplicateMarketEvents([webhook, reconciliation]).length, 1);
 });
 
+test("deduplica un completed aunque webhook y stream usen event IDs distintos", () => {
+  const webhook = event({
+    offerUuid: "same-offer",
+    dedupeKey: "ignored-webhook-id",
+    eventId: "webhook-evt-1",
+  });
+  const stream = event({
+    offerUuid: "same-offer",
+    dedupeKey: "ignored-stream-id",
+    eventId: "stream-evt-9",
+    source: "stream",
+  });
+  assert.equal(deduplicateMarketEvents([webhook, stream]).length, 1);
+});
+
+test("aplica windowSize a operaciones terminales y mantiene tasas coherentes", () => {
+  const events = [
+    event({ offerUuid: "old-done", dedupeKey: "old-done", eventAt: "2026-10-01T10:00:00Z" }),
+    event({
+      offerUuid: "old-cancel",
+      dedupeKey: "old-cancel",
+      event: "cancelled",
+      status: "cancelled",
+      eventAt: "2026-10-01T11:00:00Z",
+    }),
+    event({ offerUuid: "new-done", dedupeKey: "new-done", eventAt: "2026-10-02T11:00:00Z" }),
+    event({
+      offerUuid: "new-cancel",
+      dedupeKey: "new-cancel",
+      event: "cancelled",
+      status: "cancelled",
+      eventAt: "2026-10-02T11:30:00Z",
+    }),
+  ];
+  const result = calculateCurrencyAnalytics(events, "BANK_CUP", { windowSize: 2 });
+  assert.equal(result.completedCount, 1);
+  assert.equal(result.cancelledCount, 1);
+  assert.equal(result.terminalCount, 2);
+  assert.equal(result.completionRatePercent, 50);
+  assert.equal(result.cancellationRatePercent, 50);
+});
+
+test("usa la creación más antigua para calcular el tiempo de finalización", () => {
+  const result = calculateCurrencyAnalytics(
+    [
+      event({
+        offerUuid: "ordered",
+        dedupeKey: "completed",
+        eventAt: "2026-10-02T11:00:00Z",
+      }),
+      event({
+        offerUuid: "ordered",
+        dedupeKey: "created-late",
+        event: "created",
+        eventAt: "2026-10-02T10:30:00Z",
+      }),
+      event({
+        offerUuid: "ordered",
+        dedupeKey: "created-early",
+        event: "created",
+        eventAt: "2026-10-02T10:00:00Z",
+      }),
+    ],
+    "BANK_CUP",
+  );
+  assert.equal(result.averageTimeToCompletionMs, 60 * 60 * 1000);
+});
+
 test("rechaza estados desconocidos y no infiere completed", () => {
   assert.equal(
     normalizeMarketEvent(
