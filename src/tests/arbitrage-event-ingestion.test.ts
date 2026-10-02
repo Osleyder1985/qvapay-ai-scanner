@@ -235,4 +235,3 @@ test("reconciliación continúa cuando la API omite total", async () => {
   assert.equal(result.pagesFetched, 2);
   assert.equal(result.truncated, false);
 });
-
