@@ -324,3 +324,101 @@ export async function recordFinanceSettlement(
     .run();
   return Number(result.meta?.changes ?? 0) > 0;
 }
+
+export interface MarketEventRow {
+  dedupe_key: string;
+  event_id: string | null;
+  offer_uuid: string;
+  event: string;
+  status: string | null;
+  side: string | null;
+  coin: string;
+  amount: number | null;
+  available_amount: number | null;
+  receive: number | null;
+  rate: number | null;
+  event_at: string;
+  observed_at: string;
+  source: string;
+}
+
+export async function appendMarketEvents(
+  db: D1Database,
+  events: Array<{
+    dedupeKey: string;
+    eventId: string | null;
+    offerUuid: string;
+    event: string;
+    status: string | null;
+    side: string | null;
+    coin: string;
+    amount: number | null;
+    availableAmount: number | null;
+    receive: number | null;
+    rate: number | null;
+    eventAt: string;
+    observedAt: string;
+    source: string;
+  }>,
+): Promise<number> {
+  if (!events.length) return 0;
+  const statements = events.map((event) =>
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO market_events
+         (dedupe_key, event_id, offer_uuid, event, status, side, coin,
+          amount, available_amount, receive, rate, event_at, observed_at, source)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        event.dedupeKey,
+        event.eventId,
+        event.offerUuid,
+        event.event,
+        event.status,
+        event.side,
+        event.coin,
+        event.amount,
+        event.availableAmount,
+        event.receive,
+        event.rate,
+        event.eventAt,
+        event.observedAt,
+        event.source,
+      ),
+  );
+  const results = await db.batch(statements);
+  return results.length;
+}
+
+export async function listMarketEvents(
+  db: D1Database,
+  coin?: string,
+  limit = 1000,
+): Promise<MarketEventRow[]> {
+  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 10000);
+  const normalizedCoin = coin?.trim().toUpperCase();
+  const result = normalizedCoin
+    ? await db
+        .prepare(
+          `SELECT dedupe_key, event_id, offer_uuid, event, status, side, coin,
+                  amount, available_amount, receive, rate, event_at, observed_at, source
+           FROM market_events
+           WHERE coin = ?
+           ORDER BY event_at ASC, observed_at ASC
+           LIMIT ?`,
+        )
+        .bind(normalizedCoin, safeLimit)
+        .all<MarketEventRow>()
+    : await db
+        .prepare(
+          `SELECT dedupe_key, event_id, offer_uuid, event, status, side, coin,
+                  amount, available_amount, receive, rate, event_at, observed_at, source
+           FROM market_events
+           ORDER BY event_at ASC, observed_at ASC
+           LIMIT ?`,
+        )
+        .bind(safeLimit)
+        .all<MarketEventRow>();
+  return result.results;
+}
