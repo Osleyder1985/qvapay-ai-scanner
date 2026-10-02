@@ -126,7 +126,9 @@ test("limita la cantidad por liquidez y capital", () => {
   assert.equal(opportunity.grossMarginPercent, 20);
 });
 
-test("calcula beneficio neto sólo cuando ambas comisiones están disponibles", () => {
+test(
+  "calcula beneficio neto sólo cuando ambas comisiones están disponibles",
+  () => {
   const withFees = scanArbitrage(
     [
       offer({ uuid: "buy", type: "buy", receive: 900 }),
@@ -194,7 +196,9 @@ test("excluye ofertas obsoletas y ofertas con timestamp futuro", () => {
   assert.equal(result.rejected.staleOffers, 2);
 });
 
-test("separa monedas incluso cuando sus tasas hacen parecer rentable el cruce", () => {
+test(
+  "separa monedas incluso cuando sus tasas hacen parecer rentable el cruce",
+  () => {
   const result = scanArbitrage(
     [
       offer({
