@@ -65,6 +65,39 @@ test("normaliza eventos p2p.* y conserva timestamps y source", () => {
   assert.equal(result?.source, "webhook");
 });
 
+test("deduplica el mismo lifecycle entre webhook y reconciliación", () => {
+  const webhook = normalizeMarketEvent({
+    eventId: "p2p.completed:offer-1",
+    offerUuid: "offer-1",
+    event: "p2p.completed",
+    status: "completed",
+    type: "sell",
+    coin: "BANK_CUP",
+    amount: 10,
+    receive: 10000,
+    eventAt: "2026-10-02T11:00:00Z",
+    source: "webhook",
+  });
+  const reconciliation = normalizeMarketEvent({
+    eventId: "p2p.completed:offer-1",
+    offerUuid: "offer-1",
+    event: "completed",
+    status: "completed",
+    type: "sell",
+    coin: "BANK_CUP",
+    amount: 10,
+    receive: 10000,
+    eventAt: "2026-10-02T11:01:00Z",
+    source: "reconciliation",
+  });
+  assert.ok(webhook);
+  assert.ok(reconciliation);
+  assert.equal(
+    deduplicateMarketEvents([webhook, reconciliation]).length,
+    1,
+  );
+});
+
 test("rechaza estados desconocidos y no infiere completed", () => {
   assert.equal(
     normalizeMarketEvent(
