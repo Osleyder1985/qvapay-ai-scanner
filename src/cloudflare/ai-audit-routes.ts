@@ -36,7 +36,11 @@ type JsonResponse = (
   headers?: Record<string, string>,
 ) => Response;
 
-function auditError(json: JsonResponse, status: number, error: string): Response {
+function auditError(
+  json: JsonResponse,
+  status: number,
+  error: string,
+): Response {
   const headers =
     status === 405
       ? { Allow: "GET" }
