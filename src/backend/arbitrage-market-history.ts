@@ -233,7 +233,7 @@ export function calculateCurrencyAnalytics(
   options: { windowSize?: number; now?: Date; maxAgeMs?: number } = {},
 ): CurrencyExecutionAnalytics {
   const normalizedCoin = coin.trim().toUpperCase();
-  const windowSize = Math.max(1, Math.trunc(options.windowSize ?? 100));
+  const windowSize = Math.max(1, Math.trunc(options.windowSize ?? 500));
   const all = deduplicateMarketEvents(events).filter(
     (event) => event.coin === normalizedCoin,
   );
