@@ -66,7 +66,7 @@ export async function handleArbitrageHistoryRoutes(
   if (!coin) return json({ error: "coin es obligatorio." }, 400);
 
   const windowSize = Math.min(
-    Math.max(Number(url.searchParams.get("window") ?? "100"), 1),
+    Math.max(Number(url.searchParams.get("window") ?? "500"), 1),
     1000,
   );
   if (!Number.isInteger(windowSize)) {
