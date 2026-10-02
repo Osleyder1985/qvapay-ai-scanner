@@ -332,9 +332,33 @@ test("rechaza silenciosamente métricas numéricas inválidas", () => {
     "BANK_CUP",
   );
 
-  assert.equal(result.completedCount, 2);
+  assert.equal(result.completedCount, 1);
   assert.equal(result.minRate, 100);
   assert.equal(result.maxRate, 100);
+  assert.equal(result.vwap, 100);
+  assert.equal(result.tradedVolumeQusd, 2);
+});
+
+test("excluye operaciones completadas con rate inconsistente", () => {
+  const result = calculateCurrencyAnalytics(
+    [
+      event({
+        offerUuid: "valid",
+        amount: 2,
+        receive: 200,
+        rate: 100,
+      }),
+      event({
+        offerUuid: "inconsistent",
+        amount: 2,
+        receive: 200,
+        rate: 101,
+      }),
+    ],
+    "BANK_CUP",
+  );
+
+  assert.equal(result.completedCount, 1);
   assert.equal(result.vwap, 100);
   assert.equal(result.tradedVolumeQusd, 2);
 });
