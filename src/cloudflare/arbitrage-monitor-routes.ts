@@ -6,10 +6,7 @@
  * @status active
  */
 
-import {
-  monitorState,
-  type ArbitrageMonitorEnv,
-} from "./arbitrage-monitor.js";
+import { monitorState, type ArbitrageMonitorEnv } from "./arbitrage-monitor.js";
 import {
   logInternalError,
   publicError,
@@ -88,7 +85,10 @@ export async function handleArbitrageMonitorRoutes(
       let payload: Record<string, unknown> = {};
       if (current.state?.payload_json) {
         try {
-          payload = JSON.parse(current.state.payload_json) as Record<string, unknown>;
+          payload = JSON.parse(current.state.payload_json) as Record<
+            string,
+            unknown
+          >;
         } catch {
           payload = {};
         }
@@ -145,7 +145,9 @@ export async function handleArbitrageMonitorRoutes(
         ? null
         : Number(body.minSellRate);
     const cupBudget = Number(body.cupBudget ?? 0);
-    const coin = String(body.coin ?? "BANK_CUP").trim().toUpperCase();
+    const coin = String(body.coin ?? "BANK_CUP")
+      .trim()
+      .toUpperCase();
     if (!Number.isFinite(margin) || margin < 0) {
       return json({ error: "minMarginPercent inválido." }, 400);
     }
