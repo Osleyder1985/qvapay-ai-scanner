@@ -84,6 +84,15 @@ jobs:
           npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-before.json
           node -e 'const fs=require("node:fs"); const d=JSON.parse(fs.readFileSync("deployment-before.json","utf8")); const a=(d.versions??[]).filter(v=>Number(v?.percentage)===100).map(v=>v?.version_id).filter(Boolean); if(a.length>1) throw new Error("Expected at most one active 100% version before deployment."); fs.writeFileSync("cloudflare-previous-version.txt",(a[0]??"")+"\n"); console.log("Previous active version:",a[0]??"none");'
 
+      - name: Verify Cloudflare production secret bindings
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx wrangler secret list --name qvapay-ai-scanner > cloudflare-secret-list.json
+          node -e 'const fs=require("node:fs"); const d=JSON.parse(fs.readFileSync("cloudflare-secret-list.json","utf8")); const names=(Array.isArray(d)?d:d?.secrets??[]).map(s=>s?.name).filter(Boolean); for (const required of ["AUTH_USERNAME","AUTH_PASSWORD"]) if (!names.includes(required)) throw new Error("Required Cloudflare production secret is missing: "+required); console.log("Required authentication secret names are present in Cloudflare.");'
+
       - name: Deploy Worker with Wrangler
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
