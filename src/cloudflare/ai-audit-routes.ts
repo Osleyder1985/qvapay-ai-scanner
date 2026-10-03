@@ -130,7 +130,7 @@ async function ensureAlarm(env: AiAuditEnv): Promise<number | null> {
   if (current !== null) return current;
   const id = env.ARBITRAGE_MONITOR.idFromName("global");
   const response = await env.ARBITRAGE_MONITOR.get(id).fetch(
-    new Request("https://internal/start"),
+    new Request("https://internal/run-now"),
   );
   if (!response.ok) return null;
   return Date.now() + 10_000;
