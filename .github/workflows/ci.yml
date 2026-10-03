@@ -36,12 +36,6 @@ jobs:
       - name: Run quality gates
         run: npm run quality
 
-      - name: Show Prettier normalization for account contract test
-        if: failure()
-        run: |
-          npx prettier --write src/tests/qvapay-account-contract.test.ts
-          git diff -- src/tests/qvapay-account-contract.test.ts
-
   cloudflare-runtime-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 10
