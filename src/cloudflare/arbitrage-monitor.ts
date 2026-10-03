@@ -384,7 +384,9 @@ export async function runArbitrageMonitor(
     status: "running",
     scanId,
     scannedAt,
-    nextRunAt: new Date(Date.now() + config.intervalSeconds * 1000).toISOString(),
+    nextRunAt: new Date(
+      Date.now() + config.intervalSeconds * 1000,
+    ).toISOString(),
     lastSuccessAt: scannedAt,
     lastError: null,
     payloadJson: JSON.stringify(payload),
