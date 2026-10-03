@@ -379,6 +379,10 @@ export async function appendMarketEvents(
     eventAt: string;
     observedAt: string;
     source: string;
+    sourceEventAt: string | null;
+    sourceObservedAt: string | null;
+    timestampQuality: string;
+    quarantined: boolean;
   }>,
 ): Promise<number> {
   if (!events.length) return 0;
@@ -391,8 +395,9 @@ export async function appendMarketEvents(
         .prepare(
           `INSERT INTO market_events
            (dedupe_key, event_id, offer_uuid, event, status, side, coin,
-            amount, available_amount, receive, rate, event_at, observed_at, source)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            amount, available_amount, receive, rate, event_at, observed_at, source,
+            source_event_at, source_observed_at, timestamp_quality, quarantined)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(dedupe_key) DO UPDATE SET
              event_id = excluded.event_id,
              status = excluded.status,
@@ -404,7 +409,11 @@ export async function appendMarketEvents(
              rate = excluded.rate,
              event_at = excluded.event_at,
              observed_at = excluded.observed_at,
-             source = excluded.source
+             source = excluded.source,
+             source_event_at = excluded.source_event_at,
+             source_observed_at = excluded.source_observed_at,
+             timestamp_quality = excluded.timestamp_quality,
+             quarantined = excluded.quarantined
            WHERE (
              (
                market_events.event = 'created'
@@ -439,6 +448,10 @@ export async function appendMarketEvents(
           event.eventAt,
           event.observedAt,
           event.source,
+          event.sourceEventAt,
+          event.sourceObservedAt,
+          event.timestampQuality,
+          event.quarantined ? 1 : 0,
         ),
     );
     const results = await db.batch(statements);
@@ -464,7 +477,8 @@ export async function listMarketEvents(
     ? await db
         .prepare(
           `SELECT dedupe_key, event_id, offer_uuid, event, status, side, coin,
-                  amount, available_amount, receive, rate, event_at, observed_at, source
+                  amount, available_amount, receive, rate, event_at, observed_at, source,
+                  source_event_at, source_observed_at, timestamp_quality, quarantined
            FROM market_events
            WHERE coin = ?
            ORDER BY event_at DESC, observed_at DESC
