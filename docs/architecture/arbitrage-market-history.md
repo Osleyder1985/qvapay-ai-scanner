@@ -99,6 +99,14 @@ El webhook requiere:
 
 El límite de cuerpo se aplica también durante la lectura del stream para evitar aceptar primero un payload sobredimensionado y validarlo después.
 
+## Calidad de evidencia
+
+Cada estadística de precio de referencia incluye un bloque `quality` determinista. `sampleCount` es el número de operaciones completadas candidatas del lado; `usableSampleCount` son las que pasan la validación de cantidad, receive y rate. Las diferencias se contabilizan como `invalidFieldExcludedCount` y `excludedSampleCount`.
+
+`staleObservationCount` cuenta observaciones cuyo `observedAt` excede `maxAgeMs`; no se inventa una probabilidad de confianza. `lifecycleCompleteCount` cuenta operaciones terminales válidas que sustentan la estadística. `outlierExcludedCount` permanece en cero mientras no exista una política explícita de exclusión de outliers. `firstEventAt`, `lastEventAt` y `timeSpanMs` describen la cobertura temporal y `belowMinimumSample` marca muestras inferiores al `minimumSampleCount` configurado (10 por defecto).
+
+Los metadatos describen calidad y cobertura de evidencia; no constituyen una probabilidad ni un score de confianza estadística. Los datos incompletos se conservan en el diagnóstico mediante los contadores de exclusión y no se mezclan entre monedas.
+
 ## Precio de referencia por lado
 
 `referencePrices.buy` y `referencePrices.sell` se calculan únicamente con operaciones completadas válidas de la misma moneda y lado. Los eventos con otro lado o sin lado no se mezclan en estas estadísticas.
