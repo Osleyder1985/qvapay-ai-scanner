@@ -504,15 +504,7 @@ export async function listMarketEventsForAnalytics(
            SELECT offer_uuid
            FROM market_events
            WHERE coin = ?
-             AND event = 'completed'
-             AND amount IS NOT NULL
-             AND receive IS NOT NULL
-             AND rate IS NOT NULL
-             AND amount > 0
-             AND receive > 0
-             AND rate > 0
-             AND ABS(rate - (receive / amount)) <=
-                 MAX(ABS(rate), ABS(receive / amount), 1) * 1e-9
+             AND event IN ('completed', 'cancelled')
            GROUP BY offer_uuid
            ORDER BY MAX(event_at) DESC, MAX(observed_at) DESC, offer_uuid ASC
            LIMIT ?
