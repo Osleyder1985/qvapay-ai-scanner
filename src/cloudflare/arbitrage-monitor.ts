@@ -188,6 +188,39 @@ export async function ensureArbitrageMonitorSchema(
   }
 }
 
+export async function ensureArbitrageExecutionConfigColumns(
+  db: D1Database,
+): Promise<void> {
+  const columns = await db
+    .prepare('PRAGMA table_info("arbitrage_monitor_config")')
+    .all<{ name: string }>();
+  const existingColumns = new Set(
+    columns.results.map((column) => String(column.name)),
+  );
+  const missing = [
+    [
+      "auto_enabled",
+      "ALTER TABLE arbitrage_monitor_config ADD COLUMN auto_enabled INTEGER NOT NULL DEFAULT 0",
+    ],
+    [
+      "max_buy_rate",
+      "ALTER TABLE arbitrage_monitor_config ADD COLUMN max_buy_rate REAL",
+    ],
+    [
+      "min_sell_rate",
+      "ALTER TABLE arbitrage_monitor_config ADD COLUMN min_sell_rate REAL",
+    ],
+    [
+      "cup_budget",
+      "ALTER TABLE arbitrage_monitor_config ADD COLUMN cup_budget REAL NOT NULL DEFAULT 0",
+    ],
+  ] as const;
+  for (const [column, statement] of missing) {
+    if (existingColumns.has(column)) continue;
+    await db.prepare(statement).run();
+  }
+}
+
 async function readConfig(db: D1Database): Promise<MonitorConfig> {
   let row: MonitorRow | null;
   try {
