@@ -127,7 +127,6 @@ test("reconciliation output is deterministic across input order", () => {
   assert.deepEqual(second, first);
 });
 
-
 test("emits machine-readable gap categories with source IDs and timestamps", () => {
   const report = reconcileLayerState({
     events: [event("event-only")],
@@ -141,7 +140,13 @@ test("emits machine-readable gap categories with source IDs and timestamps", () 
         },
       },
     ],
-    finance: [{ uuid: "finance-only", status: "completed", timestamp: "2026-10-02T12:05:00.000Z" }],
+    finance: [
+      {
+        uuid: "finance-only",
+        status: "completed",
+        timestamp: "2026-10-02T12:05:00.000Z",
+      },
+    ],
     marketHistory: [],
     now: "2026-10-02T12:20:00.000Z",
   });
@@ -191,7 +196,9 @@ test("detects conflicting operation identity", () => {
   });
 
   assert.deepEqual(
-    report.discrepancies.filter((item) => item.category === "conflicting_identity"),
+    report.discrepancies.filter(
+      (item) => item.category === "conflicting_identity",
+    ),
     [
       {
         category: "conflicting_identity",
@@ -220,7 +227,9 @@ test("detects duplicate identities without mutating source layers", () => {
   const second = reconcileLayerState(input);
 
   assert.equal(
-    first.discrepancies.filter((item) => item.category === "duplicate_identity").length,
+    first.discrepancies.filter(
+      (item) => item.category === "duplicate_identity",
+    ).length,
     2,
   );
   assert.deepEqual(second, first);
