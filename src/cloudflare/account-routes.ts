@@ -14,23 +14,12 @@ import {
   type QvaPayHttpEnv,
 } from "./qvapay-http.js";
 
-type JsonRecord = Record<string, unknown>;
 type JsonResponse = (payload: unknown, status?: number) => Response;
 
 function errorStatus(error: unknown): number {
   return error instanceof Error && error.message.includes("QVAPAY_")
     ? 500
     : 502;
-}
-
-function upstreamMessage(payload: unknown): string | null {
-  if (!payload || typeof payload !== "object") return null;
-  const record = payload as JsonRecord;
-  for (const key of ["error", "message", "detail", "reason"]) {
-    const value = record[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
-  }
-  return null;
 }
 
 /**
@@ -57,27 +46,6 @@ export async function handleAccountRoutes(
         balancePayload,
       });
 
-      const balanceRecord =
-        balancePayload && typeof balancePayload === "object"
-          ? (balancePayload as JsonRecord)
-          : null;
-      const valueType = (value: unknown): string => {
-        if (value === null) return "null";
-        if (Array.isArray(value)) return "array";
-        return typeof value;
-      };
-      const balanceDiagnostics = {
-        payloadType: valueType(balancePayload),
-        payloadKeys: balanceRecord
-          ? Object.keys(balanceRecord).slice(0, 50)
-          : [],
-        balanceFieldType: valueType(balanceRecord?.balance),
-        balanceFieldPresent: Object.prototype.hasOwnProperty.call(
-          balanceRecord ?? {},
-          "balance",
-        ),
-      };
-
       return json({
         account: {
           balanceUsd: contract.balanceUsd,
@@ -97,7 +65,6 @@ export async function handleAccountRoutes(
           balanceError: contract.balanceError
             ? { httpStatus: balance.status, message: contract.balanceError }
             : null,
-          balanceDiagnostics,
           integrationOk: contract.ok,
           integrationStatus: contract.integrationStatus,
           fetchedAt: new Date().toISOString(),
@@ -115,10 +82,6 @@ export async function handleAccountRoutes(
     try {
       const upstream = await qvapay(env, "/v2/info", { method: "POST" });
       const payload = await readQvaPayPayload(upstream);
-      const record =
-        payload && typeof payload === "object" && !Array.isArray(payload)
-          ? (payload as JsonRecord)
-          : null;
       const identity = parseQvaPayApplicationIdentity(payload);
 
       return json(
