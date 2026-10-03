@@ -189,7 +189,7 @@ async function auditMonitor(env: AiAuditEnv) {
     }
   }
 
-  const alarm = await doAlarm(env);
+  const alarm = await ensureAlarm(env);
   const marketOffers = Array.isArray(payload.marketOffers)
     ? payload.marketOffers
     : [];
