@@ -518,10 +518,12 @@ export async function listMarketEventsForAnalytics(
               amount, available_amount, receive, rate, event_at, observed_at, source
        FROM market_events
        WHERE coin = ?
+         AND quarantined = 0
          AND offer_uuid IN (
            SELECT offer_uuid
            FROM market_events
            WHERE coin = ?
+             AND quarantined = 0
              AND event IN ('completed', 'cancelled')
            GROUP BY offer_uuid
            ORDER BY MAX(event_at) DESC, MAX(observed_at) DESC, offer_uuid ASC
