@@ -6,10 +6,7 @@
  * @status active
  */
 
-import {
-  parseQvaPayUserIdentity,
-  type QvaPayUserIdentity,
-} from "./qvapay-user.js";
+import { parseQvaPayApplicationIdentity } from "./qvapay-identity.js";
 import { parseQvaPayBalance } from "./qvapay-balance.js";
 
 export type QvaPayAccountIntegrationStatus = "verified" | "degraded" | "failed";
@@ -24,7 +21,7 @@ export interface QvaPayAccountUpstream {
 export interface QvaPayAccountContract {
   ok: boolean;
   integrationStatus: QvaPayAccountIntegrationStatus;
-  user: QvaPayUserIdentity | null;
+  user: ReturnType<typeof parseQvaPayApplicationIdentity>;
   balanceUsd: number | null;
   identityValid: boolean;
   balanceValid: boolean;
@@ -46,7 +43,7 @@ export function evaluateQvaPayAccountContract(
 ): QvaPayAccountContract {
   const identity =
     upstream.identityStatus >= 200 && upstream.identityStatus < 300
-      ? parseQvaPayUserIdentity(upstream.identityPayload)
+      ? parseQvaPayApplicationIdentity(upstream.identityPayload)
       : null;
   const balance =
     upstream.balanceStatus >= 200 && upstream.balanceStatus < 300
