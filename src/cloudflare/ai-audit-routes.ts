@@ -315,6 +315,7 @@ export async function handleAiAuditRoutes(
           payload = {};
         }
       }
+      const persistedNextRunAt = current.state?.next_run_at ?? null;
       const alarmNextRunAt =
         typeof alarm === "number" && Number.isFinite(alarm)
           ? new Date(alarm).toISOString()
@@ -328,11 +329,12 @@ export async function handleAiAuditRoutes(
           status: current.state?.status ?? "starting",
           scanId: current.state?.scan_id ?? null,
           scannedAt: current.state?.scanned_at ?? null,
-          nextRunAt: alarmNextRunAt,
+          nextRunAt: persistedNextRunAt,
           lastSuccessAt: current.state?.last_success_at ?? null,
           lastError: current.state?.last_error ?? null,
           updatedAt: current.state?.updated_at ?? null,
         },
+        durableObject: { nextAlarmAt: alarmNextRunAt },
         snapshot: {
           marketOffers: Array.isArray(payload.marketOffers)
             ? payload.marketOffers.length
