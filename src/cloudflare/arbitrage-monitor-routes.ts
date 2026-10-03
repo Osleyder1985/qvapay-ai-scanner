@@ -55,28 +55,22 @@ function stub(env: Env) {
 
 async function ensureMonitorProgress(env: Env) {
   const current = await monitorState(env.DB);
-  const alarmResponse = await stub(env).fetch(
-    new Request("https://internal/status"),
-  );
-  if (alarmResponse.ok) {
-    const alarmPayload = (await alarmResponse.json()) as { alarm?: unknown };
-    if (typeof alarmPayload.alarm === "number") return current;
-  }
-
+  const now = Date.now();
   const nextRunAt = current.state?.next_run_at
     ? Date.parse(current.state.next_run_at)
     : Number.NaN;
-  const intervalMs = current.config.intervalSeconds * 1000;
-  if (
-    Number.isFinite(nextRunAt) &&
-    nextRunAt > Date.now() &&
-    nextRunAt <= Date.now() + intervalMs
-  ) {
-    return current;
+  const hasFreshSchedule = Number.isFinite(nextRunAt) && nextRunAt > now;
+
+  // A read must never postpone the Durable Object alarm. The old implementation
+  // called /start on every GET, which reset the alarm continuously while the UI
+  // polled every second; that could freeze the scanner and the countdown.
+  if (!hasFreshSchedule || !current.state?.scanned_at) {
+    await runArbitrageMonitor(env.DB, env);
+    return monitorState(env.DB);
   }
 
-  await runArbitrageMonitor(env.DB, env);
-  return monitorState(env.DB);
+  await stub(env).fetch(new Request("https://internal/start"));
+  return current;
 }
 
 function operationalError(
@@ -102,7 +96,7 @@ export async function handleArbitrageMonitorRoutes(
     try {
       const current = await ensureMonitorProgress(env);
       try {
-        await stub(env).fetch(new Request("https://internal/start"));
+        await stub(env).fetch(new Request("https://internal/run-now"));
       } catch {
         // Keep the state endpoint readable even if the Durable Object is temporarily unavailable.
       }
