@@ -45,7 +45,7 @@ function drawArbitrageMarket() {
   box.innerHTML =
     '<div class="table-wrap arbitrage-table-wrap"><table class="market-table arbitrage-table">' +
     '<thead><tr>' +
-    '<th>Oferta</th><th>QUSD disponible</th><th>Tasa QUSD/CUP</th><th>Capital CUP</th>' +
+    '<th>Oferta</th><th>QUSD de la oferta</th><th>Tasa QUSD/CUP</th><th>Capital CUP requerido</th>' +
     '<th>Venta objetivo · QUSD/CUP</th><th>Retorno CUP</th><th>Ganancia CUP</th><th>Margen</th><th>Acción</th>' +
     '</tr></thead><tbody>' +
     offers.map((offer) => {
@@ -57,9 +57,9 @@ function drawArbitrageMarket() {
         : 'Sin límite adicional';
       return '<tr>' +
         '<td><span class="type ' + esc(String(offer.type || 'sell').toLowerCase()) + '">' + esc(String(offer.type || 'sell').toUpperCase()) + '</span><small>' + esc(offer.uuid) + '</small></td>' +
-        '<td><strong>' + arbitrageMoney(offer.availableQusd) + '</strong><small>' + esc(limitText) + '</small></td>' +
+        '<td><strong>' + arbitrageMoney(offer.availableQusd) + ' QUSD</strong><small>' + esc(String(offer.offerKind || "fixed").toUpperCase()) + ' · ' + esc(limitText) + '</small></td>' +
         '<td><strong>' + arbitrageMoney(offer.purchaseRate) + '</strong><small>CUP por 1 QUSD</small></td>' +
-        '<td><strong>' + arbitrageMoney(offer.capitalRequiredFiat) + '</strong><small>CUP</small></td>' +
+        '<td><strong>' + arbitrageMoney(offer.capitalRequiredFiat) + '</strong><small>CUP para tomar la oferta</small></td>' +
         '<td><strong class="arbitrage-target">' + arbitrageMoney(offer.targetSaleRate) + '</strong><small>+' + margin.toFixed(2) + '% objetivo</small></td>' +
         '<td><strong>' + arbitrageMoney(offer.targetSaleProceedsFiat) + '</strong><small>CUP</small></td>' +
         '<td><strong class="arbitrage-profit">+' + arbitrageMoney(offer.projectedGrossProfitFiat) + '</strong><small>CUP</small></td>' +
