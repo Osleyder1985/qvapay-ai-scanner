@@ -82,6 +82,7 @@ export async function ensureArbitrageMonitorSchema(
     !names.has("market_events")
   ) {
     const results = await db.batch([
+      db.prepare(
     db.prepare(
       `CREATE TABLE IF NOT EXISTS arbitrage_monitor_config (
         id INTEGER PRIMARY KEY CHECK (id = 1),
