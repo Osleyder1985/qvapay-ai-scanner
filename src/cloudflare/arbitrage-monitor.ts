@@ -428,9 +428,12 @@ export async function runArbitrageMonitor(
     message: "Ejecución automática desactivada.",
   };
   if (config.autoEnabled) {
-    const offers = Array.isArray(payload.marketOffers)
-      ? payload.marketOffers
-      : [];
+    const offers = [
+      ...(Array.isArray(payload.marketOffers) ? payload.marketOffers : []),
+      ...(Array.isArray(payload.marketBuyOffers)
+        ? payload.marketBuyOffers
+        : []),
+    ];
     execution = await executeArbitrageCandidates(
       db,
       env,
