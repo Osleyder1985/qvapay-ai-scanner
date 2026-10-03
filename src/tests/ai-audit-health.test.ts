@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { auditHealth } from "../cloudflare/ai-audit-routes.js";
+import { monitorState } from "../cloudflare/arbitrage-monitor.js";
 import type { D1Database, D1PreparedStatement } from "../cloudflare/d1.js";
 
 function statement(
@@ -8,7 +9,9 @@ function statement(
   tables: Array<{ name: string }>,
   config: Record<string, unknown>,
   state: Record<string, unknown> | null,
+  queries?: string[],
 ): D1PreparedStatement {
+  queries?.push(query);
   return {
     bind() {
       return this;
@@ -28,7 +31,7 @@ function statement(
   } as unknown as D1PreparedStatement;
 }
 
-function env(state: Record<string, unknown> | null) {
+function env(state: Record<string, unknown> | null, queries: string[] = []) {
   const tables = [
     "arbitrage_monitor_config",
     "arbitrage_monitor_state",
@@ -50,7 +53,7 @@ function env(state: Record<string, unknown> | null) {
   };
   const db: D1Database = {
     prepare(query) {
-      return statement(query, tables, config, state);
+      return statement(query, tables, config, state, queries);
     },
     async batch() {
       return [];
@@ -86,4 +89,30 @@ test("AI Auditor health bootstraps the Durable Object when it has no alarm", asy
     }),
   );
   assert.equal(result.ok, false);
+});
+
+
+test("AI Auditor health and monitor state are strictly read-only", async () => {
+  const queries: string[] = [];
+  const environment = env(
+    {
+      status: "running",
+      scan_id: "scan-1",
+      scanned_at: "2026-10-02T20:00:00.000Z",
+      next_run_at: "2026-10-02T20:00:10.000Z",
+      last_success_at: "2026-10-02T20:00:00.000Z",
+      last_error: null,
+      payload_json: "{}",
+      updated_at: "2026-10-02T20:00:00.000Z",
+    },
+    queries,
+  );
+
+  await auditHealth(environment);
+  await monitorState(environment.DB);
+
+  assert.ok(queries.length > 0);
+  assert.ok(
+    queries.every((query) => !/\\b(CREATE|ALTER|DROP|REINDEX|VACUUM)\\b/i.test(query)),
+  );
 });
