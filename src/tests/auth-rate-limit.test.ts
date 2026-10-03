@@ -120,7 +120,7 @@ function request(ip: string): Request {
   });
 }
 
-test("allows four failures and blocks the fifth within the window", async () => {
+test(\n  "allows four failures and blocks the fifth within the window",\n  async () => {
   const db = fakeDatabase();
   const base = new Date("2026-10-03T04:00:00.000Z");
 
