@@ -580,9 +580,24 @@ components:
         outlierExcludedCount: { type: integer, minimum: 0 }
         minimumSampleSize: { type: integer, minimum: 1 }
         belowMinimumSample: { type: boolean }
+    CurrencyReferencePriceQuality:
+      type: object
+      required: [sampleCount, usableSampleCount, invalidFieldExcludedCount, staleObservationCount, lifecycleCompleteCount, outlierExcludedCount, excludedSampleCount, firstEventAt, lastEventAt, timeSpanMs, belowMinimumSample]
+      properties:
+        sampleCount: { type: integer, minimum: 0 }
+        usableSampleCount: { type: integer, minimum: 0 }
+        invalidFieldExcludedCount: { type: integer, minimum: 0 }
+        staleObservationCount: { type: integer, minimum: 0 }
+        lifecycleCompleteCount: { type: integer, minimum: 0 }
+        outlierExcludedCount: { type: integer, minimum: 0 }
+        excludedSampleCount: { type: integer, minimum: 0 }
+        firstEventAt: { type: string, format: date-time, nullable: true }
+        lastEventAt: { type: string, format: date-time, nullable: true }
+        timeSpanMs: { type: integer, minimum: 0, nullable: true }
+        belowMinimumSample: { type: boolean }
     CurrencyReferencePriceStatistics:
       type: object
-      required: [sampleCount, tradedVolumeQusd, minRate, maxRate, meanRate, medianRate, percentiles, vwap, newestEventAt, newestObservedAt, stale]
+      required: [sampleCount, tradedVolumeQusd, minRate, maxRate, meanRate, medianRate, percentiles, vwap, newestEventAt, newestObservedAt, stale, quality]
       properties:
         sampleCount: { type: integer, minimum: 0 }
         tradedVolumeQusd: { type: number, minimum: 0 }
