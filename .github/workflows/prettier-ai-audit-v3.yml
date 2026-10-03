@@ -1,0 +1,18 @@
+name: Temporary Prettier diagnostic ai audit
+on:
+  push:
+    branches:
+      - tmp/prettier-ai-audit-v3
+jobs:
+  format-diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: |
+          npx prettier --write src/cloudflare/ai-audit-routes.ts
+          git diff -- src/cloudflare/ai-audit-routes.ts
