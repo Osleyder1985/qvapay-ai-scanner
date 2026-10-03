@@ -15,7 +15,8 @@ export type PublicErrorCode =
   | "AUTH_SESSION_CREATE_FAILED"
   | "MONITOR_STATE_READ_FAILED"
   | "MONITOR_CONFIG_ROW_MISSING"
-  | "MONITOR_CONFIG_WRITE_FAILED";
+  | "MONITOR_CONFIG_WRITE_FAILED"
+  | "MONITOR_RUN_FAILED";
 
 const PUBLIC_MESSAGES: Record<PublicErrorCode, string> = {
   INTERNAL_ERROR: "No se pudo completar la solicitud.",
@@ -27,6 +28,7 @@ const PUBLIC_MESSAGES: Record<PublicErrorCode, string> = {
   MONITOR_STATE_READ_FAILED: "No se pudo consultar el estado del monitor.",
   MONITOR_CONFIG_ROW_MISSING: "La configuración del monitor no está disponible.",
   MONITOR_CONFIG_WRITE_FAILED: "No se pudo actualizar la configuración del monitor.",
+  MONITOR_RUN_FAILED: "El monitor no pudo completar el ciclo de ejecución.",
 };
 
 export function publicError(
