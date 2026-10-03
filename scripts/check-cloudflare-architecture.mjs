@@ -38,15 +38,15 @@ for (const required of [
 }
 
 const monitorDo = read("src/cloudflare/arbitrage-monitor-do.ts");
-if (!monitorDo.includes("export class ArbitrageMonitor")) {
-  failures.push("ArbitrageMonitor no está definido en su único adaptador Durable Object.");
+if (!monitorDo.includes("export class ArbitrageMonitorV2")) {
+  failures.push("ArbitrageMonitorV2 no está definido en su único adaptador Durable Object.");
 }
 
 const monitorBindingMatch = wranglerSource.match(
   /["']?name["']?\s*:\s*["']ARBITRAGE_MONITOR["'][^}]*["']?class_name["']?\s*:\s*["']([^"']+)["']/s,
 );
-if (monitorBindingMatch?.[1] !== "ArbitrageMonitor") {
-  failures.push("El binding ARBITRAGE_MONITOR no apunta a ArbitrageMonitor.");
+if (monitorBindingMatch?.[1] !== "ArbitrageMonitorV2") {
+  failures.push("El binding ARBITRAGE_MONITOR no apunta a ArbitrageMonitorV2.");
 }
 
 if (failures.length) {
