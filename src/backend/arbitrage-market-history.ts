@@ -60,6 +60,24 @@ export interface CompletedTrade {
   completedAt: string;
 }
 
+export interface CurrencyReferencePriceStatistics {
+  sampleCount: number;
+  tradedVolumeQusd: number;
+  minRate: number | null;
+  maxRate: number | null;
+  meanRate: number | null;
+  medianRate: number | null;
+  percentiles: Record<string, number | null>;
+  vwap: number | null;
+  newestEventAt: string | null;
+  newestObservedAt: string | null;
+  stale: boolean;
+  referencePrices: {
+    buy: CurrencyReferencePriceStatistics | null;
+    sell: CurrencyReferencePriceStatistics | null;
+  };
+}
+
 export interface CurrencyExecutionAnalytics {
   coin: string;
   windowSize: number;
@@ -299,6 +317,76 @@ function percentile(sorted: number[], p: number): number | null {
   return lower === upper ? low : low + (high - low) * (position - lower);
 }
 
+function referencePriceStatistics(
+  trades: CompletedTrade[],
+  now: Date,
+  maxAgeMs?: number,
+): CurrencyReferencePriceStatistics | null {
+  if (!trades.length) return null;
+
+  const rates = trades
+    .map((trade) => trade.rate)
+    .filter((rate) => Number.isFinite(rate) && rate > 0)
+    .sort((a, b) => a - b);
+  const volume = trades.reduce(
+    (sum, trade) =>
+      Number.isFinite(trade.amount) && trade.amount > 0
+        ? sum + trade.amount
+        : sum,
+    0,
+  );
+  const weightedValue = trades.reduce(
+    (sum, trade) =>
+      Number.isFinite(trade.rate) &&
+      trade.rate > 0 &&
+      Number.isFinite(trade.amount) &&
+      trade.amount > 0
+        ? sum + trade.rate * trade.amount
+        : sum,
+    0,
+  );
+  const newestEventAt = trades
+    .map((trade) => trade.completedAt)
+    .sort()
+    .at(-1);
+  const newestObservedAt = trades
+    .map((trade) => trade.completedAt)
+    .sort()
+    .at(-1);
+  const newestObservedMs = newestObservedAt
+    ? new Date(newestObservedAt).getTime()
+    : NaN;
+  const nowMs = now.getTime();
+
+  return {
+    sampleCount: trades.length,
+    tradedVolumeQusd: volume,
+    minRate: rates.at(0) ?? null,
+    maxRate: rates.at(-1) ?? null,
+    meanRate:
+      rates.length > 0
+        ? rates.reduce((sum, rate) => sum + rate, 0) / rates.length
+        : null,
+    medianRate: percentile(rates, 0.5),
+    percentiles: {
+      p10: percentile(rates, 0.1),
+      p25: percentile(rates, 0.25),
+      p50: percentile(rates, 0.5),
+      p75: percentile(rates, 0.75),
+      p90: percentile(rates, 0.9),
+    },
+    vwap: volume > 0 ? weightedValue / volume : null,
+    newestEventAt: newestEventAt ?? null,
+    newestObservedAt: newestObservedAt ?? null,
+    stale:
+      maxAgeMs !== undefined &&
+      Number.isFinite(nowMs) &&
+      Number.isFinite(newestObservedMs)
+        ? nowMs - newestObservedMs > maxAgeMs
+        : false,
+  };
+}
+
 export function reconcileMarketEventLifecycle(
   events: NormalizedMarketEvent[],
 ): MarketLifecycleResolution {
@@ -501,6 +589,19 @@ export function calculateCurrencyAnalytics(
     Number.isFinite(newestObservedMs)
       ? nowMs - newestObservedMs > options.maxAgeMs
       : false;
+  const referenceNow = options.now ?? new Date();
+  const referencePrices = {
+    buy: referencePriceStatistics(
+      completed.filter((trade) => trade.side === "buy"),
+      referenceNow,
+      options.maxAgeMs,
+    ),
+    sell: referencePriceStatistics(
+      completed.filter((trade) => trade.side === "sell"),
+      referenceNow,
+      options.maxAgeMs,
+    ),
+  };
 
   return {
     coin: normalizedCoin,
@@ -536,5 +637,6 @@ export function calculateCurrencyAnalytics(
     newestEventAt: newest ?? null,
     newestObservedAt: newestObserved ?? null,
     stale,
+    referencePrices,
   };
 }
