@@ -36,7 +36,7 @@ const MONITOR_ERROR_CODES = new Set<PublicErrorCode>([
   "MONITOR_CONFIG_WRITE_FAILED",
 ]);
 
-function sanitizeMonitorError(value: unknown): PublicErrorCode | null {
+export function sanitizeMonitorError(value: unknown): PublicErrorCode | null {
   const code = typeof value === "string" ? value : "";
   return MONITOR_ERROR_CODES.has(code as PublicErrorCode)
     ? (code as PublicErrorCode)
