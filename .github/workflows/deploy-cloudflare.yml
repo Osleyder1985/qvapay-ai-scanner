@@ -63,6 +63,16 @@ jobs:
 
           const expectedSha = process.env.GITHUB_SHA;
           const status = JSON.parse(fs.readFileSync("deployment-status.json", "utf8"));
+          const buildCheck = JSON.parse(
+            fs.readFileSync("cloudflare-build-check.json", "utf8"),
+          );
+          const check = buildCheck?.check_runs?.[0];
+
+          if (!check || check.head_sha !== expectedSha || check.conclusion !== "success") {
+            throw new Error(
+              `Cloudflare Workers Build check is not a successful build for GitHub commit ${expectedSha}.`,
+            );
+          }
 
           const activeVersions = (status?.versions ?? [])
             .filter((entry) => Number(entry?.percentage) === 100)
@@ -75,14 +85,12 @@ jobs:
             );
           }
 
-          const message =
-            status?.annotations?.["workers/message"] ??
-            status?.message ??
-            "";
+          const summary = String(check.output?.summary ?? "");
+          const versionMatch = summary.match(/Version ID:\s*([0-9a-f-]{36})/i);
 
-          if (!String(message).includes(expectedSha)) {
+          if (!versionMatch || versionMatch[1] !== activeVersions[0]) {
             throw new Error(
-              `Cloudflare deployment ${status?.id ?? "unknown"} is not traceable to GitHub commit ${expectedSha}; message=${JSON.stringify(message)}.`,
+              `Cloudflare active version ${activeVersions[0]} does not match the version reported by the successful build check.`,
             );
           }
 
@@ -93,13 +101,16 @@ jobs:
               `github_commit=${expectedSha}`,
               `cloudflare_deployment_id=${status?.id ?? ""}`,
               `cloudflare_active_version_id=${activeVersions[0]}`,
-              `cloudflare_deployment_message=${message}`,
+              `cloudflare_build_id=${check.external_id ?? ""}`,
+              `cloudflare_build_url=${check.details_url ?? ""}`,
+              `cloudflare_check_head_sha=${check.head_sha}`,
+              `cloudflare_check_conclusion=${check.conclusion}`,
               "",
             ].join("\n"),
           );
 
           console.log(
-            `Verified Cloudflare deployment ${status?.id ?? "unknown"} for GitHub commit ${expectedSha}; active version ${activeVersions[0]}.`,
+            `Verified Cloudflare build ${check.external_id ?? "unknown"} for GitHub commit ${expectedSha}; active version ${activeVersions[0]} matches the build-reported version.`,
           );
           NODE
 
