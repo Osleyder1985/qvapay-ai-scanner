@@ -91,17 +91,15 @@ jobs:
             "deployment-evidence.txt",
             [
               `github_commit=${expectedSha}`,
-              `cloudflare_build_id=${buildId}`,
-              `cloudflare_build_url=${buildUrl}`,
-              `cloudflare_check_head_sha=${check.head_sha}`,
-              `cloudflare_check_conclusion=${check.conclusion}`,
-              `cloudflare_active_version_id=${activeVersionIds[0]}`,
+              `cloudflare_deployment_id=${status?.id ?? ""}`,
+              `cloudflare_active_version_id=${activeVersions[0]}`,
+              `cloudflare_deployment_message=${message}`,
               "",
             ].join("\n"),
           );
 
           console.log(
-            `Verified Cloudflare production build ${buildId} for GitHub commit ${expectedSha}; active version ${activeVersionIds[0]}.`,
+            `Verified Cloudflare deployment ${status?.id ?? "unknown"} for GitHub commit ${expectedSha}; active version ${activeVersions[0]}.`,
           );
           NODE
 
