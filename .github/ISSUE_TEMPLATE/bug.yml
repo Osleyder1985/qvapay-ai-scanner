@@ -1,0 +1,39 @@
+name: Bug
+description: Reportar un comportamiento incorrecto, regresión o riesgo verificable.
+title: "fix: "
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objetivo
+      description: Comportamiento correcto esperado.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproducción y evidencia
+      description: Pasos, entorno, logs y evidencia observable.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impacto y riesgo
+      description: Consecuencia técnica, operativa o de seguridad.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Criterios de aceptación
+      description: Condiciones verificables de cierre.
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Pruebas y trazabilidad
+      description: Tests, CI, documentación y evidencia de producción cuando aplique.
+    validations:
+      required: true

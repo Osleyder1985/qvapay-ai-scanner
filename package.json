@@ -21,7 +21,8 @@
     "d1:migrate:remote": "npx wrangler d1 migrations apply qvapay-ai-scanner --remote",
     "smoke:cloudflare": "node scripts/cloudflare-auth-smoke.mjs",
     "smoke:cloudflare:local": "node scripts/cloudflare-local-runtime-smoke.mjs",
-    "security:generate-ai-auditor-token": "node scripts/generate-ai-auditor-token.mjs"
+    "security:generate-ai-auditor-token": "node scripts/generate-ai-auditor-token.mjs",
+    "governance:check": "node scripts/check-repository-governance.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

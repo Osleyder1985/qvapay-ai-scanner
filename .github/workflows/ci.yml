@@ -35,6 +35,8 @@ jobs:
         run: node scripts/check-source-language.mjs
       - name: Run quality gates
         run: npm run quality
+      - name: Run repository governance checks
+        run: npm run governance:check
 
   cloudflare-runtime-smoke:
     runs-on: ubuntu-latest
