@@ -22,6 +22,7 @@ function statement(
     },
     async first() {
       if (query.includes("arbitrage_monitor_config")) return config;
+      if (query.includes("arbitrage_execution_config")) return executionConfig;
       if (query.includes("arbitrage_monitor_state")) return state;
       return null;
     },
@@ -45,11 +46,18 @@ function env(state: Record<string, unknown> | null, queries: string[] = []) {
     enabled: 1,
     min_margin_percent: 5,
     coin: "BANK_CUP",
+    interval_seconds: 10,
     schedule_enabled: 0,
     timezone: "UTC",
     start_local: null,
     end_local: null,
     active_days_json: "[1,2,3,4,5,6,7]",
+  };
+  const executionConfig = {
+    auto_enabled: 0,
+    max_buy_rate: null,
+    min_sell_rate: null,
+    cup_budget: 0,
   };
   const db: D1Database = {
     prepare(query) {
