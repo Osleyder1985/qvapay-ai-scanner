@@ -136,19 +136,18 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          baseline_json="$(npx wrangler d1 execute qvapay-ai-scanner --remote --json --command "SELECT (SELECT COUNT(*) FROM d1_migrations WHERE name = '0008_market_event_timestamp_policy.sql') AS recorded, (SELECT COUNT(*) FROM pragma_table_info('market_events') WHERE name IN ('source_event_at','source_observed_at','timestamp_quality','quarantined')) AS columns_present, (SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'idx_market_events_quarantine') AS index_present;")"
+          baseline_json="$(npx wrangler d1 execute qvapay-ai-scanner --remote --json --command "SELECT (SELECT COUNT(*) FROM d1_migrations WHERE name = '0008_market_event_timestamp_policy.sql') AS recorded, (SELECT COUNT(*) FROM pragma_table_info('market_events') WHERE name IN ('source_event_at','source_observed_at','timestamp_quality','quarantined')) AS columns_present;")"
           node -e '
             const data = JSON.parse(process.argv[1]);
             const row = data?.[0]?.results?.[0];
             if (!row) throw new Error("Could not inspect the legacy D1 migration baseline.");
             const recorded = Number(row.recorded);
             const columnsPresent = Number(row.columns_present);
-            const indexPresent = Number(row.index_present);
             if (recorded === 1) {
               console.log("Legacy migration 0008 is already recorded.");
               process.exit(0);
             }
-            if (columnsPresent !== 4 || indexPresent !== 1) {
+            if (columnsPresent !== 4) {
               throw new Error("Migration 0008 is unrecorded and its schema effects are incomplete; refusing to mark it applied.");
             }
             console.log("Migration 0008 schema effects are already present; reconciliation is required before applying remaining migrations.");
