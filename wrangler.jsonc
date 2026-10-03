@@ -19,7 +19,7 @@
     "bindings": [
       {
         "name": "ARBITRAGE_MONITOR",
-        "class_name": "ArbitrageMonitor"
+        "class_name": "ArbitrageMonitorV2"
       }
     ]
   },
@@ -27,6 +27,10 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["ArbitrageMonitor"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["ArbitrageMonitorV2"]
     }
   ],
   "d1_databases": [
