@@ -91,7 +91,6 @@ test("AI Auditor health bootstraps the Durable Object when it has no alarm", asy
   assert.equal(result.ok, false);
 });
 
-
 test("AI Auditor health and monitor state are strictly read-only", async () => {
   const queries: string[] = [];
   const environment = env(
@@ -113,6 +112,8 @@ test("AI Auditor health and monitor state are strictly read-only", async () => {
 
   assert.ok(queries.length > 0);
   assert.ok(
-    queries.every((query) => !/\\b(CREATE|ALTER|DROP|REINDEX|VACUUM)\\b/i.test(query)),
+    queries.every(
+      (query) => !/\\b(CREATE|ALTER|DROP|REINDEX|VACUUM)\\b/i.test(query),
+    ),
   );
 });
