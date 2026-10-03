@@ -11,6 +11,11 @@ let arbitrageLastScanId = null;
 let arbitrageLoading = false;
 let arbitrageCountdownDeadline = null;
 
+function monitorIntervalSeconds() {
+  const configured = Number(S.arbitrage?.config?.intervalSeconds ?? 10);
+  return Number.isInteger(configured) && configured >= 5 && configured <= 300 ? configured : 10;
+}
+
 function arbitrageMoney(value) {
   return Number.isFinite(Number(value)) ? num(value, 2) : "—";
 }
@@ -79,7 +84,7 @@ function syncCountdownDeadline() {
     return;
   }
   if (!Number.isFinite(arbitrageCountdownDeadline) || arbitrageCountdownDeadline <= Date.now()) {
-    arbitrageCountdownDeadline = Date.now() + 10_000;
+    arbitrageCountdownDeadline = Date.now() + monitorIntervalSeconds() * 1000;
   }
 }
 
@@ -132,7 +137,7 @@ async function fetchArbitrageMonitor({ silent = true } = {}) {
   } catch (e) {
     const existing = S.arbitrage || {};
     const message = errorText(e);
-    arbitrageCountdownDeadline = Date.now() + 10_000;
+    arbitrageCountdownDeadline = Date.now() + monitorIntervalSeconds() * 1000;
     S.arbitrage = {
       ...existing,
       state: {
@@ -151,16 +156,21 @@ async function fetchArbitrageMonitor({ silent = true } = {}) {
 
 async function saveArbitrageConfig() {
   const margin = Number($("arbMargin")?.value || 5);
+  const intervalSeconds = Number($("arbInterval")?.value || 10);
   const coin = ($("arbCoin")?.value || "BANK_CUP").trim().toUpperCase() || "BANK_CUP";
   if (!Number.isFinite(margin) || margin < 0) {
     toast("El margen debe ser un número no negativo.", "error");
+    return;
+  }
+  if (!Number.isInteger(intervalSeconds) || intervalSeconds < 5 || intervalSeconds > 300) {
+    toast("El intervalo debe estar entre 5 y 300 segundos.", "error");
     return;
   }
   try {
     await api("/api/arbitrage/monitor", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ minMarginPercent: margin, coin }),
+      body: JSON.stringify({ minMarginPercent: margin, coin, intervalSeconds }),
     });
     await fetchArbitrageMonitor({ silent: false });
   } catch (e) {
@@ -173,7 +183,7 @@ function monitorTick() {
   drawArbitrage();
   if (seconds === 0) {
     // Give the server a new 10-second window while the request is in flight.
-    arbitrageCountdownDeadline = Date.now() + 10_000;
+    arbitrageCountdownDeadline = Date.now() + monitorIntervalSeconds() * 1000;
     void fetchArbitrageMonitor({ silent: true });
   }
 }
