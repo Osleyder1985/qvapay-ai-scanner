@@ -45,7 +45,14 @@ export async function readQvaPayPayload(response: Response): Promise<unknown> {
   const text = await response.text();
   if (!text) return {};
   try {
-    return JSON.parse(text);
+    const parsed = JSON.parse(text);
+    if (
+      (typeof parsed === "number" || typeof parsed === "string") &&
+      Number.isFinite(Number(parsed))
+    ) {
+      return { balance: Number(parsed) };
+    }
+    return parsed;
   } catch {
     return { message: text };
   }
