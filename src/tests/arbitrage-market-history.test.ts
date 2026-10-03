@@ -666,6 +666,16 @@ test("separa precios de referencia por lado y conserva freshness", () => {
         observedAt: "2026-10-02T11:45:01Z",
       }),
       event({
+        offerUuid: "buy-invalid",
+        dedupeKey: "buy-invalid",
+        side: "buy",
+        amount: null,
+        receive: 100,
+        rate: null,
+        eventAt: "2026-10-02T11:48:00Z",
+        observedAt: "2026-10-02T11:48:01Z",
+      }),
+      event({
         offerUuid: "sell-1",
         dedupeKey: "sell-1",
         side: "sell",
@@ -709,11 +719,11 @@ test("separa precios de referencia por lado y conserva freshness", () => {
   assert.equal(result.referencePrices.sell?.vwap, 350);
   assert.equal(result.referencePrices.buy?.stale, false);
   assert.equal(result.referencePrices.sell?.stale, true);
-  assert.equal(result.referencePrices.buy?.quality.sampleCount, 3);
+  assert.equal(result.referencePrices.buy?.quality.sampleCount, 4);
   assert.equal(result.referencePrices.buy?.quality.usableSampleCount, 3);
-  assert.equal(result.referencePrices.buy?.quality.invalidFieldExcludedCount, 0);
+  assert.equal(result.referencePrices.buy?.quality.invalidFieldExcludedCount, 1);
   assert.equal(result.referencePrices.buy?.quality.outlierExcludedCount, 0);
-  assert.equal(result.referencePrices.buy?.quality.excludedSampleCount, 0);
+  assert.equal(result.referencePrices.buy?.quality.excludedSampleCount, 1);
   assert.equal(result.referencePrices.buy?.quality.belowMinimumSample, true);
   assert.equal(result.referencePrices.sell?.quality.staleObservationCount, 2);
   assert.equal(result.referencePrices.sell?.quality.lifecycleCompleteCount, 2);
