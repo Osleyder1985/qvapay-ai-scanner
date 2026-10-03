@@ -143,6 +143,7 @@ jobs:
             if (!row) throw new Error("Could not inspect the legacy D1 migration baseline.");
             const recorded = Number(row.recorded);
             const columnsPresent = Number(row.columns_present);
+            console.log(JSON.stringify(row));
             if (recorded === 1) {
               console.log("Legacy migration 0008 is already recorded.");
               process.exit(0);
