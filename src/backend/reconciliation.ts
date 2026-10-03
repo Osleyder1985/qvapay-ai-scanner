@@ -156,27 +156,36 @@ export function reconcileLayerState(input: {
   const operationSet = new Set(operationIds);
   const financeSet = new Set(financeIds);
 
-  for (const [uuid, count] of new Map(
-    operationIds.map((id) => [id, operationEntries.filter(([entryId]) => entryId === id).length]),
-  )) {
+  const operationCounts = new Map<string, number>();
+  for (const [uuid] of operationEntries) {
+    operationCounts.set(uuid, (operationCounts.get(uuid) ?? 0) + 1);
+  }
+  for (const [uuid, count] of operationCounts) {
     if (count > 1) {
       addDiscrepancy(
         "duplicate_identity",
         uuid,
         [uuid],
-        operationEntries.filter(([entryId]) => entryId === uuid).map(([, entry]) => text(entry.payload.updated_at ?? entry.payload.created_at)),
+        operationEntries
+          .filter(([entryId]) => entryId === uuid)
+          .map(([, entry]) => text(entry.payload.updated_at ?? entry.payload.created_at)),
       );
     }
   }
-  for (const [uuid, count] of new Map(
-    financeIds.map((id) => [id, financeEntries.filter(([entryId]) => entryId === id).length]),
-  )) {
+
+  const financeCounts = new Map<string, number>();
+  for (const [uuid] of financeEntries) {
+    financeCounts.set(uuid, (financeCounts.get(uuid) ?? 0) + 1);
+  }
+  for (const [uuid, count] of financeCounts) {
     if (count > 1) {
       addDiscrepancy(
         "duplicate_identity",
         uuid,
         [uuid],
-        financeEntries.filter(([entryId]) => entryId === uuid).map(([, entry]) => entry.timestamp),
+        financeEntries
+          .filter(([entryId]) => entryId === uuid)
+          .map(([, entry]) => entry.timestamp),
       );
     }
   }
