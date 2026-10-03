@@ -12,13 +12,15 @@ import { handleArbitrageRoutes } from "../cloudflare/arbitrage-routes.js";
 
 test("sanitizes internal arbitrage errors", async () => {
   const originalFetch = globalThis.fetch;
+  const url = new URL("https://example.workers.dev");
+  url.pathname = "/api/arbitrage/scan";
+  url.searchParams.set("minMarginPercent", "5");
+
   globalThis.fetch = async () => {
     throw new Error("QVAPAY_INTERNAL_SECRET_OR_TOKEN");
   };
 
   try {
-    const url =
-      "https://example.workers.dev/api/arbitrage/scan?minMarginPercent=5";
     const response = await handleArbitrageRoutes(
       new Request(url),
       {
@@ -26,22 +28,18 @@ test("sanitizes internal arbitrage errors", async () => {
         QVAPAY_APP_ID: "test-app",
         QVAPAY_APP_SECRET: "test-secret",
       },
-      new URL(url),
+      url,
       (payload, status = 200) =>
         new Response(JSON.stringify(payload), { status }),
     );
 
     assert.ok(response);
     assert.equal(response.status, 502);
-    const body = (await response.json()) as {
-      error: string;
-      code: string;
-      detail?: string;
-    };
-    assert.equal(
-      body.error,
-      "No se pudo completar el escaneo de arbitraje.",
-    );
+
+    const body = (await response.json()) as Record<string, unknown>;
+    const publicError = "No se pudo completar el escaneo de arbitraje.";
+
+    assert.equal(body.error, publicError);
     assert.equal(body.code, "ARBITRAGE_SCAN_FAILED");
     assert.equal("detail" in body, false);
     assert.equal(
