@@ -59,10 +59,10 @@ export async function handleAccountRoutes(
       return json({
         account: {
           balanceUsd: contract.balanceUsd,
-          user: contract.user,
-          identitySource: contract.user ? "qvapay_v2_info" : "unavailable",
+          user: ownerUser,
+          identitySource: ownerUser ? "qvapay_p2p_owner" : "unavailable",
           identityHttpStatus: info.status,
-          identityOk: contract.user !== null,
+          identityOk: ownerUser !== null,
           identityError: contract.identityError
             ? { httpStatus: info.status, message: contract.identityError }
             : null,
