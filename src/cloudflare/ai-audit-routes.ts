@@ -277,6 +277,7 @@ export async function handleAiAuditRoutes(
     "/api/ai-audit/arbitrage",
     "/api/ai-audit/database",
     "/api/ai-audit/runtime",
+    "/api/ai-audit/arbitrage-scheduler",
   ]);
   const auth = await authorizeAiAuditor(request, env.AI_AUDITOR_TOKEN_HASH);
   if (!auth.ok) {
@@ -298,6 +299,41 @@ export async function handleAiAuditRoutes(
 
     if (url.pathname === "/api/ai-audit/arbitrage") {
       return json(await auditArbitrage(env));
+    }
+\n    if (url.pathname === "/api/ai-audit/arbitrage-scheduler") {
+      const current = await monitorState(env.DB);
+      const alarm = await doAlarm(env);
+      let payload: Record<string, unknown> = {};
+      if (current.state?.payload_json) {
+        try {
+          payload = JSON.parse(current.state.payload_json) as Record<string, unknown>;
+        } catch {
+          payload = {};
+        }
+      }
+      const alarmNextRunAt =
+        typeof alarm === "number" && Number.isFinite(alarm)
+          ? new Date(alarm).toISOString()
+          : null;
+      return json({
+        ok: current.state?.status !== "error",
+        readOnly: true,
+        mode: "read-only",
+        config: current.config,
+        state: {
+          status: current.state?.status ?? "starting",
+          scanId: current.state?.scan_id ?? null,
+          scannedAt: current.state?.scanned_at ?? null,
+          nextRunAt: alarmNextRunAt,
+          lastSuccessAt: current.state?.last_success_at ?? null,
+          lastError: current.state?.last_error ?? null,
+          updatedAt: current.state?.updated_at ?? null,
+        },
+        snapshot: {
+          marketOffers: Array.isArray(payload.marketOffers) ? payload.marketOffers.length : 0,
+          opportunities: Array.isArray(payload.opportunities) ? payload.opportunities.length : 0,
+        },
+      });
     }
 
     if (url.pathname === "/api/ai-audit/database") {
