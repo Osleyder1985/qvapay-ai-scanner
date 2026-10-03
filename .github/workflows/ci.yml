@@ -28,17 +28,6 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Temporary Prettier diagnostics
-        run: |
-          npx prettier --write src/cloudflare/account-routes.ts src/cloudflare/arbitrage-execution.ts src/cloudflare/arbitrage-monitor.ts src/cloudflare/qvapay-user.ts
-          git diff -- src/cloudflare/account-routes.ts src/cloudflare/arbitrage-execution.ts src/cloudflare/arbitrage-monitor.ts src/cloudflare/qvapay-user.ts
-          exit 1
-
-      - name: Temporary Prettier diagnostics
-        run: |
-          npx prettier --write src/cloudflare/account-routes.ts src/cloudflare/arbitrage-execution.ts src/cloudflare/arbitrage-monitor.ts src/cloudflare/qvapay-user.ts
-          git diff -- src/cloudflare/account-routes.ts src/cloudflare/arbitrage-execution.ts src/cloudflare/arbitrage-monitor.ts src/cloudflare/qvapay-user.ts
-
       - name: Verify Node.js support contract
         run: |
           node -e "const p=require('./package.json'); const range=p.engines?.node; if (range !== '>=22') { console.error('Expected package.json engines.node to be >=22; found:', range); process.exit(1); } if (Number(process.versions.node.split('.')[0]) < 22) { console.error('CI Node.js runtime is below the supported major version:', process.versions.node); process.exit(1); }"
