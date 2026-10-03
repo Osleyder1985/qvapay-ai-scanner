@@ -117,6 +117,7 @@ export interface MarketLifecycleResolution {
   events: NormalizedMarketEvent[];
   violations: MarketLifecycleViolation[];
   quarantinedEvents: NormalizedMarketEvent[];
+  futureSkewCount: number;
 }
 
 function text(value: unknown): string {
@@ -312,6 +313,7 @@ export function reconcileMarketEventLifecycle(
   const accepted: NormalizedMarketEvent[] = [];
   const violations: MarketLifecycleViolation[] = [];
   const quarantinedEvents = canonical.filter((event) => event.quarantined);
+  const futureSkewCount = quarantinedEvents.length;
   for (const offerEvents of byOffer.values()) {
     offerEvents.sort(
       (a, b) =>
@@ -351,7 +353,7 @@ export function reconcileMarketEventLifecycle(
       a.offerUuid.localeCompare(b.offerUuid) ||
       a.event.localeCompare(b.event),
   );
-  return { events: accepted, violations, quarantinedEvents };
+  return { events: accepted, violations, quarantinedEvents, futureSkewCount };
 }
 
 export function completedTradesFromEvents(
