@@ -7,6 +7,7 @@
  */
 
 import { handleArbitrageRoutes } from "./arbitrage-routes.js";
+import { executeArbitrageCandidates } from "./arbitrage-execution.js";
 import { type D1Database } from "./d1.js";
 import type { QvaPayHttpEnv } from "./qvapay-http.js";
 
@@ -393,6 +394,31 @@ export async function runArbitrageMonitor(
     });
     return { ok: false, error: message };
   }
+
+  let execution = { applied: [] as string[], skipped: [] as string[], message: "Ejecución automática desactivada." };
+  if (config.autoEnabled) {
+    const offers = Array.isArray(payload.marketOffers) ? payload.marketOffers : [];
+    execution = await executeArbitrageCandidates(
+      db,
+      env,
+      {
+        autoEnabled: config.autoEnabled,
+        maxBuyRate: config.maxBuyRate,
+        minSellRate: config.minSellRate,
+        cupBudget: config.cupBudget,
+      },
+      offers as Array<{
+        uuid: string;
+        type: string;
+        amountQusd: number;
+        availableQusd: number;
+        purchaseRate: number;
+        capitalRequiredFiat: number;
+        onlyVip?: boolean;
+      }>,
+    );
+  }
+  payload.execution = execution;
 
   const scannedAt = String(
     (payload.marketSimulation as Record<string, unknown> | undefined)
