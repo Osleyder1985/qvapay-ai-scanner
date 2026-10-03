@@ -644,8 +644,8 @@ test("separa precios de referencia por lado y conserva freshness", () => {
         amount: 1,
         receive: 300,
         rate: 300,
-        eventAt: "2026-10-02T11:50:00Z",
-        observedAt: "2026-10-02T11:50:01Z",
+        eventAt: "2026-10-02T10:00:00Z",
+        observedAt: "2026-10-02T10:00:01Z",
       }),
       event({
         offerUuid: "sell-2",
@@ -654,8 +654,8 @@ test("separa precios de referencia por lado y conserva freshness", () => {
         amount: 1,
         receive: 400,
         rate: 400,
-        eventAt: "2026-10-02T11:55:00Z",
-        observedAt: "2026-10-02T11:55:01Z",
+        eventAt: "2026-10-02T10:05:00Z",
+        observedAt: "2026-10-02T10:05:01Z",
       }),
       event({
         offerUuid: "other-coin",
@@ -680,7 +680,7 @@ test("separa precios de referencia por lado y conserva freshness", () => {
   assert.equal(result.referencePrices.sell?.medianRate, 350);
   assert.equal(result.referencePrices.sell?.vwap, 350);
   assert.equal(result.referencePrices.buy?.stale, false);
-  assert.equal(result.referencePrices.sell?.stale, false);
+  assert.equal(result.referencePrices.sell?.stale, true);
 });
 
 test("cuenta canceladas en la misma ventana terminal que las completadas", () => {
