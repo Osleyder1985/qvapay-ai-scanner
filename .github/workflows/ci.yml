@@ -52,3 +52,89 @@ jobs:
         run: npm ci
       - name: Run Cloudflare local runtime smoke
         run: npm run smoke:cloudflare:local
+
+  production-deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/production/cloudflare'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs:
+      - quality
+      - cloudflare-runtime-smoke
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy Worker with Wrangler
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx wrangler deploy --json > cloudflare-deploy.json
+          node <<'NODE'
+          const fs = require("node:fs");
+          const data = JSON.parse(fs.readFileSync("cloudflare-deploy.json", "utf8"));
+          const versionId =
+            data.version_id ??
+            data.versionId ??
+            data?.deployment?.version_id ??
+            data?.deployment?.versionId ??
+            "";
+          if (!versionId) {
+            throw new Error("Wrangler deployment did not return a version ID.");
+          }
+          fs.writeFileSync("cloudflare-deployed-version.txt", String(versionId) + "\n");
+          console.log("Deployed Cloudflare Worker version " + versionId);
+          NODE
+
+      - name: Verify active production version
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          expected="$(cat cloudflare-deployed-version.txt)"
+          for attempt in {1..30}; do
+            npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-status.json
+            active="$(node -e 'const fs=require("node:fs"); const d=JSON.parse(fs.readFileSync("deployment-status.json","utf8")); const a=(d.versions??[]).filter(v=>Number(v?.percentage)===100).map(v=>v?.version_id).filter(Boolean); process.stdout.write(a.length===1?a[0]:"");')"
+            if [ "$active" = "$expected" ]; then
+              echo "Cloudflare version $active is active at 100%."
+              break
+            fi
+            echo "Waiting for active version (attempt $attempt/30; expected=$expected; active=$active)."
+            sleep 10
+          done
+
+          active="$(node -e 'const fs=require("node:fs"); const d=JSON.parse(fs.readFileSync("deployment-status.json","utf8")); const a=(d.versions??[]).filter(v=>Number(v?.percentage)===100).map(v=>v?.version_id).filter(Boolean); process.stdout.write(a.length===1?a[0]:"");')"
+          if [ "$active" != "$expected" ]; then
+            echo "Expected exactly the Wrangler-deployed version at 100%; found active=$active expected=$expected."
+            exit 1
+          fi
+
+          {
+            echo "github_commit=$GITHUB_SHA"
+            echo "cloudflare_active_version_id=$active"
+            echo "cloudflare_deployed_version_id=$expected"
+            echo "deployment_method=wrangler_direct"
+          } > deployment-evidence.txt
+
+      - name: Upload production deployment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-production-deployment-${{ github.sha }}
+          path: |
+            cloudflare-deploy.json
+            cloudflare-deployed-version.txt
+            deployment-status.json
+            deployment-evidence.txt
+          if-no-files-found: warn
