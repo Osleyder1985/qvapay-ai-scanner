@@ -58,7 +58,10 @@ export class ArbitrageMonitor {
 
   async alarm(): Promise<void> {
     try {
-      await runArbitrageMonitor(this.env.DB, this.env);
+      const result = await runArbitrageMonitor(this.env.DB, this.env);
+      if (!result.ok) {
+        logInternalError("arbitrage_monitor.alarm_run_failed", "MONITOR_RUN_FAILED");
+      }
     } catch (error) {
       logInternalError("arbitrage_monitor.alarm_failed", "MONITOR_RUN_FAILED");
       await this.env.DB.prepare(
