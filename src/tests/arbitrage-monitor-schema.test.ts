@@ -37,12 +37,12 @@ test("monitor schema fallback creates and seeds missing tables", async () => {
 
   await ensureArbitrageMonitorSchema(db);
 
-  assert.equal(queries.length, 5);
+  assert.equal(queries.length, 6);
   assert.ok(queries[0]?.includes("sqlite_master"));
   assert.ok(queries[1]?.includes("CREATE TABLE IF NOT EXISTS arbitrage_monitor_config"));
   assert.ok(queries[2]?.includes("CREATE TABLE IF NOT EXISTS arbitrage_monitor_state"));
-  assert.ok(queries[3]?.includes("INSERT OR IGNORE INTO arbitrage_monitor_config"));
-  assert.ok(queries[4]?.includes("INSERT OR IGNORE INTO arbitrage_monitor_state"));
+  assert.ok(queries[4]?.includes("INSERT OR IGNORE INTO arbitrage_monitor_config"));
+  assert.ok(queries[5]?.includes("INSERT OR IGNORE INTO arbitrage_monitor_state"));
 });
 
 test("monitor schema fallback is a no-op when both tables exist", async () => {
