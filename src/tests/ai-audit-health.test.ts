@@ -9,6 +9,7 @@ function statement(
   tables: Array<{ name: string }>,
   config: Record<string, unknown>,
   state: Record<string, unknown> | null,
+  executionConfig: Record<string, unknown>,
   queries?: string[],
 ): D1PreparedStatement {
   queries?.push(query);
@@ -21,8 +22,8 @@ function statement(
       return { success: true, results: tables };
     },
     async first() {
-      if (query.includes("arbitrage_monitor_config")) return config;
       if (query.includes("arbitrage_execution_config")) return executionConfig;
+      if (query.includes("arbitrage_monitor_config")) return config;
       if (query.includes("arbitrage_monitor_state")) return state;
       return null;
     },
@@ -36,6 +37,7 @@ function env(state: Record<string, unknown> | null, queries: string[] = []) {
   const tables = [
     "arbitrage_monitor_config",
     "arbitrage_monitor_state",
+    "arbitrage_execution_config",
     "auto_apply_config",
     "finance_ledger",
     "market_events",
@@ -61,7 +63,7 @@ function env(state: Record<string, unknown> | null, queries: string[] = []) {
   };
   const db: D1Database = {
     prepare(query) {
-      return statement(query, tables, config, state, queries);
+      return statement(query, tables, config, state, executionConfig, queries);
     },
     async batch() {
       return [];
