@@ -65,10 +65,13 @@ export interface MarketStatisticsQuality {
   sampleCount: number;
   usableSampleCount: number;
   missingFieldCount: number;
+  invalidFieldExcludedCount: number;
   staleObservationCount: number;
   coverageStartAt: string | null;
   coverageEndAt: string | null;
+  timeSpanMs: number | null;
   freshnessMs: number | null;
+  lifecycleCompleteCount: number;
   lifecycleCompletenessPercent: number | null;
   excludedSampleCount: number;
   outlierExcludedCount: number;
@@ -542,10 +545,17 @@ function buildStatisticsQuality(
     sampleCount: candidateEvents.length,
     usableSampleCount: trades.length,
     missingFieldCount,
+    invalidFieldExcludedCount: candidateEvents.length - trades.length,
     staleObservationCount,
     coverageStartAt: coverage[0] ?? null,
     coverageEndAt: coverage.at(-1) ?? null,
+    timeSpanMs:
+      coverage.length > 1
+        ? new Date(coverage.at(-1)!).getTime() -
+          new Date(coverage[0]!).getTime()
+        : 0,
     freshnessMs,
+    lifecycleCompleteCount: trades.length,
     lifecycleCompletenessPercent:
       trades.length > 0
         ? (lifecycleCompleteCount / trades.length) * 100
