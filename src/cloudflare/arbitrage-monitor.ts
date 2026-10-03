@@ -56,7 +56,6 @@ interface StateRow {
   updated_at: string;
 }
 
-
 /**
  * Repairs the monitor/runtime event schema if a deployment reached the Worker
  * before the corresponding D1 migrations were applied. Migrations remain the
@@ -77,9 +76,12 @@ export async function ensureArbitrageMonitorSchema(
     )
     .all<{ name: string }>();
   const names = new Set(existing.results.map((row) => row.name));
-  if (!names.has("arbitrage_monitor_config") || !names.has("arbitrage_monitor_state") || !names.has("market_events")) {
-
-  const results = await db.batch([
+  if (
+    !names.has("arbitrage_monitor_config") ||
+    !names.has("arbitrage_monitor_state") ||
+    !names.has("market_events")
+  ) {
+    const results = await db.batch([
     db.prepare(
       `CREATE TABLE IF NOT EXISTS arbitrage_monitor_config (
         id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -151,15 +153,21 @@ export async function ensureArbitrageMonitorSchema(
       `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_completion
        ON market_events (coin, event, event_at DESC, observed_at DESC, offer_uuid)`,
     ),
-  ]);
+    ]);
     if (results.some((result) => result.success !== true)) {
       throw new Error("ARBITRAGE_RUNTIME_SCHEMA_ENSURE_FAILED");
     }
   }
 
-  const columns = await db.prepare("PRAGMA table_info(arbitrage_monitor_config)").all<{ name: string }>();
+  const columns = await db
+    .prepare("PRAGMA table_info(arbitrage_monitor_config)")
+    .all<{ name: string }>();
   if (!columns.results.some((column) => column.name === "interval_seconds")) {
-    await db.prepare("ALTER TABLE arbitrage_monitor_config ADD COLUMN interval_seconds INTEGER NOT NULL DEFAULT 10").run();
+    await db
+      .prepare(
+        "ALTER TABLE arbitrage_monitor_config ADD COLUMN interval_seconds INTEGER NOT NULL DEFAULT 10",
+      )
+      .run();
   }
 
   const seedResults = await db.batch([
@@ -213,7 +221,10 @@ function readConfig(db: D1Database): Promise<MonitorConfig> {
         enabled: row.enabled === 1,
         minMarginPercent: Number(row.min_margin_percent),
         coin: String(row.coin).toUpperCase(),
-        intervalSeconds: Math.min(300, Math.max(5, Number(row.interval_seconds) || 10)),
+        intervalSeconds: Math.min(
+          300,
+          Math.max(5, Number(row.interval_seconds) || 10),
+        ),
         scheduleEnabled: row.schedule_enabled === 1,
         timezone: row.timezone || "UTC",
         startLocal: row.start_local,
@@ -353,7 +364,9 @@ export async function runArbitrageMonitor(
     await saveState(db, {
       status: "error",
       lastError: message,
-      nextRunAt: new Date(Date.now() + config.intervalSeconds * 1000).toISOString(),
+      nextRunAt: new Date(
+        Date.now() + config.intervalSeconds * 1000,
+      ).toISOString(),
     });
     return { ok: false, error: message };
   }
@@ -367,7 +380,9 @@ export async function runArbitrageMonitor(
     status: "running",
     scanId,
     scannedAt,
-    nextRunAt: new Date(Date.now() + config.intervalSeconds * 1000).toISOString(),
+    nextRunAt: new Date(
+      Date.now() + config.intervalSeconds * 1000,
+    ).toISOString(),
     lastSuccessAt: scannedAt,
     lastError: null,
     payloadJson: JSON.stringify(payload),
