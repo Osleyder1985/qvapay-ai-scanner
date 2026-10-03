@@ -192,6 +192,32 @@ test("aplica windowSize únicamente a operaciones completadas", () => {
   assert.equal(result.cancellationRatePercent, null);
 });
 
+test("incluye cancelaciones en la ventana terminal y calcula tasas reales", () => {
+  const result = calculateCurrencyAnalytics(
+    [
+      event({
+        offerUuid: "completed",
+        dedupeKey: "completed",
+        eventAt: "2026-10-02T11:00:00Z",
+      }),
+      event({
+        offerUuid: "cancelled",
+        dedupeKey: "cancelled",
+        event: "cancelled",
+        status: "cancelled",
+        eventAt: "2026-10-02T11:30:00Z",
+      }),
+    ],
+    "BANK_CUP",
+    { windowSize: 2 },
+  );
+  assert.equal(result.completedCount, 1);
+  assert.equal(result.cancelledCount, 1);
+  assert.equal(result.terminalCount, 2);
+  assert.equal(result.completionRatePercent, 50);
+  assert.equal(result.cancellationRatePercent, 50);
+});
+
 test("usa la creación más antigua para calcular el tiempo de finalización", () => {
   const result = calculateCurrencyAnalytics(
     [
