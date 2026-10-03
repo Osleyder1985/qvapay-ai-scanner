@@ -26,8 +26,7 @@ const PUBLIC_MESSAGES: Record<PublicErrorCode, string> = {
   AUTH_SERVICE_UNAVAILABLE: "El servicio de autenticación no está disponible.",
   AUTH_SESSION_CREATE_FAILED:
     "El servicio de autenticación no pudo crear la sesión.",
-  MONITOR_STATE_READ_FAILED:
-    "No se pudo consultar el estado del monitor.",
+  MONITOR_STATE_READ_FAILED: "No se pudo consultar el estado del monitor.",
   MONITOR_CONFIG_ROW_MISSING:
     "La configuración del monitor no está disponible.",
   MONITOR_CONFIG_WRITE_FAILED:
@@ -46,9 +45,6 @@ export function publicError(
  * Registra únicamente el código de diagnóstico. Nunca serializa el objeto Error,
  * su mensaje, stack, request, payload ni credenciales.
  */
-export function logInternalError(
-  event: string,
-  code: PublicErrorCode,
-): void {
+export function logInternalError(event: string, code: PublicErrorCode): void {
   console.error(JSON.stringify({ event, code }));
 }

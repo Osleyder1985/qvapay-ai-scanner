@@ -71,10 +71,7 @@ export async function handleAuthRoutes(
           "auth.configuration_missing",
           "AUTH_SERVICE_UNAVAILABLE",
         );
-        return json(
-          publicError("AUTH_SERVICE_UNAVAILABLE"),
-          503,
-        );
+        return json(publicError("AUTH_SERVICE_UNAVAILABLE"), 503);
       }
 
       if (
@@ -110,10 +107,7 @@ export async function handleAuthRoutes(
             "auth.rate_limiter_failed",
             "AUTH_SERVICE_UNAVAILABLE",
           );
-          return json(
-            publicError("AUTH_SERVICE_UNAVAILABLE"),
-            503,
-          );
+          return json(publicError("AUTH_SERVICE_UNAVAILABLE"), 503);
         }
         return json({ error: "Credenciales inválidas." }, 401);
       }
@@ -137,10 +131,7 @@ export async function handleAuthRoutes(
         "auth.session_creation_failed",
         "AUTH_SESSION_CREATE_FAILED",
       );
-      return json(
-        publicError("AUTH_SESSION_CREATE_FAILED"),
-        503,
-      );
+      return json(publicError("AUTH_SESSION_CREATE_FAILED"), 503);
     }
   }
 

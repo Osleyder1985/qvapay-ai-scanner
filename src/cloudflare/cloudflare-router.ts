@@ -229,7 +229,10 @@ export async function routeRequest(
       const response = await handleApi(request, env);
       if (response) return response;
     } catch (error) {
-      const code = errorStatus(error) === 500 ? "UPSTREAM_CONTRACT_ERROR" : "INTERNAL_ERROR";
+      const code =
+        errorStatus(error) === 500
+          ? "UPSTREAM_CONTRACT_ERROR"
+          : "INTERNAL_ERROR";
       logInternalError("worker.api_request_failed", code);
       return json(publicError(code), errorStatus(error));
     }
