@@ -6,10 +6,6 @@
  * @status active
  */
 
-import type {
-  FinanceLedgerEntry,
-  MarketHistoryPoint,
-} from "../cloudflare/d1.js";
 import type { NormalizedMarketEvent } from "./arbitrage-market-history.js";
 
 export const MARKET_HISTORY_MATCH_WINDOW_MS = 5 * 60 * 1000;
@@ -17,6 +13,17 @@ export const MARKET_HISTORY_MATCH_WINDOW_MS = 5 * 60 * 1000;
 export interface ReconciliationOperation {
   uuid: string;
   payload: Record<string, unknown>;
+}
+
+export interface ReconciliationFinanceEntry {
+  uuid: string;
+  status: string;
+}
+
+export interface ReconciliationMarketHistoryPoint {
+  timestamp: string;
+  coin: string;
+  type: string;
 }
 
 export interface ReconciliationReport {
@@ -63,8 +70,8 @@ function sorted(values: Iterable<string>): string[] {
 export function reconcileLayerState(input: {
   events: NormalizedMarketEvent[];
   operations: ReconciliationOperation[];
-  finance: FinanceLedgerEntry[];
-  marketHistory: MarketHistoryPoint[];
+  finance: ReconciliationFinanceEntry[];
+  marketHistory: ReconciliationMarketHistoryPoint[];
 }): ReconciliationReport {
   const operationsById = new Map(
     input.operations
@@ -108,9 +115,7 @@ export function reconcileLayerState(input: {
   const completedOperationSet = new Set(completedOperationIds);
 
   const eventMissingOperations = sorted(
-    completedEventSet
-      ? completedEventIds.filter((id) => !operationSet.has(id))
-      : [],
+    completedEventIds.filter((id) => !operationSet.has(id)),
   );
   const operationMissingEvents = sorted(
     completedOperationIds.filter((id) => !completedEventSet.has(id)),
