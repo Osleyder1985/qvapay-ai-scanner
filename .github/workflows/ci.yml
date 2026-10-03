@@ -34,11 +34,21 @@ jobs:
       - name: Verify source documentation language
         run: node scripts/check-source-language.mjs
       - name: Run quality gates
-        run: npm run quality
+        run: |
+          set -o pipefail
+          npm run quality 2>&1 | tee quality-output.log
       - name: Run repository governance checks
         run: npm run governance:check
       - name: Run Cloudflare architecture contract
         run: npm run architecture:check
+      - name: Upload quality diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-diagnostics-${{ github.sha }}
+          path: quality-output.log
+          if-no-files-found: ignore
+          retention-days: 3
 
   cloudflare-runtime-smoke:
     runs-on: ubuntu-latest
