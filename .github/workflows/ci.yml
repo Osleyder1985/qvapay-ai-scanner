@@ -196,7 +196,7 @@ jobs:
               const health=JSON.parse(fs.readFileSync("production-monitor-evidence/health.json","utf8"));
               const monitor=JSON.parse(fs.readFileSync("production-monitor-evidence/monitor.json","utf8"));
               const running=monitor?.ok===true && monitor?.state?.status==="running" && Boolean(monitor?.state?.scannedAt);
-              const snapshot=Array.isArray(monitor?.snapshot?.marketOffers) && Array.isArray(monitor?.snapshot?.opportunities);
+              const snapshot=Number.isInteger(monitor?.snapshot?.marketOffers) && Number.isInteger(monitor?.snapshot?.opportunities) && monitor.snapshot.marketOffers > 0;
               const database=health?.checks?.database?.ok===true;
               console.log(JSON.stringify({database: health?.checks?.database, monitor: monitor?.state, snapshot: monitor?.snapshot}, null, 2));
               if(database && running && snapshot) process.exit(0);
