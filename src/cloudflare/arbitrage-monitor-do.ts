@@ -6,6 +6,7 @@
  * @status active
  */
 
+import { DurableObject } from "cloudflare:workers";
 import {
   runArbitrageMonitor,
   getMonitorIntervalMs,
