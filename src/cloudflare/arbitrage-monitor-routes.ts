@@ -8,7 +8,11 @@
 
 import { monitorState } from "./arbitrage-monitor.js";
 import type { D1Database } from "./d1.js";
-import {\n  logInternalError,\n  publicError,\n  type PublicErrorCode,\n} from "./error-contract.js";
+import {
+  logInternalError,
+  publicError,
+  type PublicErrorCode,
+} from "./error-contract.js";
 
 interface DurableObjectStub {
   fetch(request: Request): Promise<Response>;
@@ -46,7 +50,13 @@ function stub(env: Env) {
   return env.ARBITRAGE_MONITOR.get(id);
 }
 
-function operationalError(\n  code:\n    | "MONITOR_STATE_READ_FAILED"\n    | "MONITOR_CONFIG_ROW_MISSING"\n    | "MONITOR_CONFIG_WRITE_FAILED",\n  json: Json,\n): Response {
+function operationalError(
+  code:
+    | "MONITOR_STATE_READ_FAILED"
+    | "MONITOR_CONFIG_ROW_MISSING"
+    | "MONITOR_CONFIG_WRITE_FAILED",
+  json: Json,
+): Response {
   logInternalError("arbitrage_monitor.operation_failed", code);
   return json(publicError(code), 503);
 }
