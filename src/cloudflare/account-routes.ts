@@ -86,6 +86,7 @@ export async function handleAccountRoutes(
       const ownCollection = ownOffers.ok
         ? parseQvaPayP2PCollection(ownOffersPayload, 0, 1)
         : null;
+      // La identidad de usuario se toma del contexto P2P propio; /v2/info identifica la aplicación.
       const ownerUser = parseP2POwnerIdentity(
         ownCollection?.data?.[0]?.User ??
           ownCollection?.data?.[0]?.Peer ??
