@@ -18,6 +18,7 @@ export type PublicErrorCode =
   | "MONITOR_CONFIG_WRITE_FAILED"
   | "MONITOR_RUN_FAILED";
 
+/** Public messages are deliberately independent from internal exception text. */
 const PUBLIC_MESSAGES: Record<PublicErrorCode, string> = {
   INTERNAL_ERROR: "No se pudo completar la solicitud.",
   UPSTREAM_ERROR: "No se pudo completar la solicitud con el servicio externo.",
