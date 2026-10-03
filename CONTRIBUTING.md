@@ -9,11 +9,13 @@ El contenido descriptivo debe estar en español; los comentarios explicativos y 
 ## Flujo
 
 1. Crear o seleccionar un Issue.
-2. Crear una rama con nombre descriptivo en inglés.
-3. Implementar un cambio pequeño y trazable.
-4. Ejecutar las verificaciones aplicables.
-5. Crear un Pull Request con título en inglés y descripción en español.
-6. Revisar evidencia y mantener trazabilidad.
+2. Para cambios del runtime o del producto desplegado, partir de `production/cloudflare`.
+3. Crear una rama de trabajo con nombre descriptivo en inglés.
+4. Implementar un cambio pequeño y trazable.
+5. Ejecutar las verificaciones aplicables.
+6. Crear un Pull Request contra `production/cloudflare` cuando el cambio afecte al runtime productivo.
+7. Revisar evidencia y mantener trazabilidad.
+8. No usar `main` como baseline del runtime Cloudflare; esa rama permanece histórica durante la migración de gobernanza.
 
 ## Seguridad
 
