@@ -29,10 +29,10 @@ for (const relative of forbiddenPaths) {
 
 const worker = read("src/worker.ts");
 for (const required of [
-  './cloudflare/cloudflare-router.js',
-  './cloudflare/access.js',
-  './cloudflare/arbitrage-monitor-routes.js',
-  './cloudflare/arbitrage-monitor-do.js',
+  "./cloudflare/cloudflare-router.js",
+  "./cloudflare/access.js",
+  "./cloudflare/arbitrage-monitor-routes.js",
+  "./cloudflare/arbitrage-monitor-do.js",
 ]) {
   if (!worker.includes(required)) failures.push(`El entrypoint no compone la implementación canónica: ${required}`);
 }
