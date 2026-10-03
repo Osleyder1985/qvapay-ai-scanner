@@ -140,41 +140,44 @@ test(
   "sanitizes upstream/internal errors from the arbitrage scan response",
   async () => {
     const originalFetch = globalThis.fetch;
-      globalThis.fetch = async () => {
+    globalThis.fetch = async () => {
       throw new Error("QVAPAY_INTERNAL_SECRET_OR_TOKEN");
     };
 
     try {
       const response = await handleArbitrageRoutes(
-      new Request(
-        "https://example.workers.dev/api/arbitrage/scan?minMarginPercent=5",
-      ),
-      {
-        DB: {} as never,
-        QVAPAY_APP_ID: "test-app",
-        QVAPAY_APP_SECRET: "test-secret",
-      },
-      new URL(
-        "https://example.workers.dev/api/arbitrage/scan?minMarginPercent=5",
-      ),
-      (payload, status = 200) =>
-        new Response(JSON.stringify(payload), { status }),
-    );
+        new Request(
+          "https://example.workers.dev/api/arbitrage/scan?minMarginPercent=5",
+        ),
+        {
+          DB: {} as never,
+          QVAPAY_APP_ID: "test-app",
+          QVAPAY_APP_SECRET: "test-secret",
+        },
+        new URL(
+          "https://example.workers.dev/api/arbitrage/scan?minMarginPercent=5",
+        ),
+        (payload, status = 200) =>
+          new Response(JSON.stringify(payload), { status }),
+      );
 
       assert.ok(response);
       assert.equal(response.status, 502);
       const body = (await response.json()) as {
-      error: string;
-      code: string;
-      detail?: string;
-    };
-      assert.equal(body.error, "No se pudo completar el escaneo de arbitraje.");
+        error: string;
+        code: string;
+        detail?: string;
+      };
+      assert.equal(
+        body.error,
+        "No se pudo completar el escaneo de arbitraje.",
+      );
       assert.equal(body.code, "ARBITRAGE_SCAN_FAILED");
       assert.equal("detail" in body, false);
       assert.equal(
-      JSON.stringify(body).includes("QVAPAY_INTERNAL_SECRET_OR_TOKEN"),
-      false,
-    );
+        JSON.stringify(body).includes("QVAPAY_INTERNAL_SECRET_OR_TOKEN"),
+        false,
+      );
     } finally {
       globalThis.fetch = originalFetch;
     }
