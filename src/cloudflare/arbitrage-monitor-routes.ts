@@ -73,7 +73,7 @@ export async function handleArbitrageMonitorRoutes(
     try {
       const current = await monitorState(env.DB);
       try {
-        await stub(env).fetch(new Request("https://internal/start"));
+        await stub(env).fetch(new Request("https://internal/run-now"));
       } catch {
         // Keep the state endpoint readable even if the Durable Object is temporarily unavailable.
       }
@@ -137,7 +137,7 @@ export async function handleArbitrageMonitorRoutes(
       return operationalError("MONITOR_CONFIG_ROW_MISSING", json);
     }
 
-    await stub(env).fetch(new Request("https://internal/start"));
+    await stub(env).fetch(new Request("https://internal/run-now"));
     return json({
       ok: true,
       minMarginPercent: margin,
@@ -150,5 +150,5 @@ export async function handleArbitrageMonitorRoutes(
 }
 
 export async function bootstrapArbitrageMonitor(env: Env): Promise<void> {
-  await stub(env).fetch(new Request("https://internal/start"));
+  await stub(env).fetch(new Request("https://internal/run-now"));
 }
