@@ -35,7 +35,10 @@ El cliente recibe solamente el código y el mensaje público. Para investigar un
 
 La sanitización es fail-closed: si un estado persistente contiene un valor histórico que no pertenece al catálogo, la API lo sustituye por MONITOR_RUN_FAILED en lugar de devolver el texto histórico.
 
+## Diagnóstico de despliegue
+
+Si el check `Workers Builds: qvapay-ai-scanner` falla antes de compilar, el workflow de producción conserva la evidencia del build y sus logs. Un timeout durante la inicialización del entorno de Cloudflare se trata como un fallo de infraestructura del proveedor, no como evidencia de un error de aplicación. El despliegue debe volver a intentarse y verificarse contra la versión activa antes de considerar completado un cambio de producción.
 
 ## Trazabilidad
 
-Issue #136: contrato de errores públicos y sanitización de diagnósticos verificados mediante CI.
+Issue #136: contrato de errores públicos y sanitización de diagnósticos verificados mediante CI y evidencia de despliegue.
