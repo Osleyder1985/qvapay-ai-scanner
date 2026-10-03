@@ -8,10 +8,8 @@
 
 import {
   monitorState,
-  runArbitrageMonitor,
   type ArbitrageMonitorEnv,
 } from "./arbitrage-monitor.js";
-import type { D1Database } from "./d1.js";
 import {
   logInternalError,
   publicError,
@@ -64,33 +62,6 @@ async function readMonitorAlarm(env: Env): Promise<number | null> {
     : null;
 }
 
-async function ensureMonitorProgress(env: Env) {
-  let current = await monitorState(env.DB);
-  const now = Date.now();
-  let alarm = await readMonitorAlarm(env);
-
-  // Browser reads are observational. The Durable Object alarm is the scheduler;
-  // GET must never run a market scan just because the countdown reached zero.
-  if (!current.state?.scanned_at) {
-    await runArbitrageMonitor(env.DB, env);
-    await stub(env).fetch(new Request("https://internal/start"));
-    current = await monitorState(env.DB);
-    alarm = await readMonitorAlarm(env);
-  } else if (alarm === null) {
-    const persistedNextRun = current.state.next_run_at
-      ? Date.parse(current.state.next_run_at)
-      : Number.NaN;
-    if (!Number.isFinite(persistedNextRun) || persistedNextRun <= now) {
-      await runArbitrageMonitor(env.DB, env);
-      current = await monitorState(env.DB);
-    }
-    await stub(env).fetch(new Request("https://internal/start"));
-    alarm = await readMonitorAlarm(env);
-  }
-
-  return { ...current, alarm };
-}
-
 function operationalError(
   code:
     | "MONITOR_STATE_READ_FAILED"
@@ -112,23 +83,21 @@ export async function handleArbitrageMonitorRoutes(
 
   if (request.method === "GET") {
     try {
-      const current = await ensureMonitorProgress(env);
+      const current = await monitorState(env.DB);
+      const alarm = await readMonitorAlarm(env);
       let payload: Record<string, unknown> = {};
       if (current.state?.payload_json) {
         try {
-          payload = JSON.parse(current.state.payload_json) as Record<
-            string,
-            unknown
-          >;
+          payload = JSON.parse(current.state.payload_json) as Record<string, unknown>;
         } catch {
           payload = {};
         }
       }
       const serverNow = new Date().toISOString();
       const alarmNextRunAt =
-        typeof current.alarm === "number" && Number.isFinite(current.alarm)
-          ? current.alarm > Date.parse(serverNow)
-            ? new Date(current.alarm).toISOString()
+        typeof alarm === "number" && Number.isFinite(alarm)
+          ? alarm > Date.parse(serverNow)
+            ? new Date(alarm).toISOString()
             : null
           : null;
       const stateStatus =
@@ -155,7 +124,7 @@ export async function handleArbitrageMonitorRoutes(
         marketSimulation: payload.marketSimulation ?? null,
         coverage: payload.coverage ?? null,
       });
-    } catch (error) {
+    } catch {
       return operationalError("MONITOR_STATE_READ_FAILED", json);
     }
   }
@@ -176,45 +145,20 @@ export async function handleArbitrageMonitorRoutes(
         ? null
         : Number(body.minSellRate);
     const cupBudget = Number(body.cupBudget ?? 0);
-    const coin = String(body.coin ?? "BANK_CUP")
-      .trim()
-      .toUpperCase();
+    const coin = String(body.coin ?? "BANK_CUP").trim().toUpperCase();
     if (!Number.isFinite(margin) || margin < 0)
       return json({ error: "minMarginPercent inválido." }, 400);
-    if (
-      typeof body.autoEnabled !== "undefined" &&
-      typeof body.autoEnabled !== "boolean"
-    )
+    if (typeof body.autoEnabled !== "undefined" && typeof body.autoEnabled !== "boolean")
       return json({ error: "autoEnabled inválido." }, 400);
-    if (
-      maxBuyRate !== null &&
-      (!Number.isFinite(maxBuyRate) || maxBuyRate <= 0)
-    )
-      return json(
-        { error: "maxBuyRate debe ser mayor que 0 o estar vacío." },
-        400,
-      );
-    if (
-      minSellRate !== null &&
-      (!Number.isFinite(minSellRate) || minSellRate <= 0)
-    )
-      return json(
-        { error: "minSellRate debe ser mayor que 0 o estar vacío." },
-        400,
-      );
+    if (maxBuyRate !== null && (!Number.isFinite(maxBuyRate) || maxBuyRate <= 0))
+      return json({ error: "maxBuyRate debe ser mayor que 0 o estar vacío." }, 400);
+    if (minSellRate !== null && (!Number.isFinite(minSellRate) || minSellRate <= 0))
+      return json({ error: "minSellRate debe ser mayor que 0 o estar vacío." }, 400);
     if (!Number.isFinite(cupBudget) || cupBudget < 0)
       return json({ error: "cupBudget debe ser un número no negativo." }, 400);
-    if (
-      !Number.isInteger(intervalSeconds) ||
-      intervalSeconds < 5 ||
-      intervalSeconds > 300
-    )
-      return json(
-        { error: "intervalSeconds debe estar entre 5 y 300 segundos." },
-        400,
-      );
-    if (!/^[A-Z0-9_]{2,32}$/.test(coin))
-      return json({ error: "coin inválida." }, 400);
+    if (!Number.isInteger(intervalSeconds) || intervalSeconds < 5 || intervalSeconds > 300)
+      return json({ error: "intervalSeconds debe estar entre 5 y 300 segundos." }, 400);
+    if (!/^[A-Z0-9_]{2,32}$/.test(coin)) return json({ error: "coin inválida." }, 400);
 
     const now = new Date().toISOString();
     const monitorResult = await env.DB.prepare(
@@ -222,26 +166,18 @@ export async function handleArbitrageMonitorRoutes(
        SET min_margin_percent = ?, coin = ?, interval_seconds = ?,
            enabled = 1, updated_at = ?
        WHERE id = 1`,
-    )
-      .bind(margin, coin, intervalSeconds, now)
-      .run();
-
-    if (Number(monitorResult.meta?.changes ?? 0) !== 1) {
+    ).bind(margin, coin, intervalSeconds, now).run();
+    if (Number(monitorResult.meta?.changes ?? 0) !== 1)
       return operationalError("MONITOR_CONFIG_ROW_MISSING", json);
-    }
 
     const executionResult = await env.DB.prepare(
       `UPDATE arbitrage_execution_config
        SET auto_enabled = ?, max_buy_rate = ?, min_sell_rate = ?,
            cup_budget = ?, updated_at = ?
        WHERE id = 1`,
-    )
-      .bind(autoEnabled ? 1 : 0, maxBuyRate, minSellRate, cupBudget, now)
-      .run();
-
-    if (Number(executionResult.meta?.changes ?? 0) !== 1) {
+    ).bind(autoEnabled ? 1 : 0, maxBuyRate, minSellRate, cupBudget, now).run();
+    if (Number(executionResult.meta?.changes ?? 0) !== 1)
       return operationalError("MONITOR_CONFIG_ROW_MISSING", json);
-    }
 
     await stub(env).fetch(new Request("https://internal/run-now"));
     return json({
@@ -255,7 +191,7 @@ export async function handleArbitrageMonitorRoutes(
       cupBudget,
       nextRunAt: new Date(Date.now() + intervalSeconds * 1000).toISOString(),
     });
-  } catch (error) {
+  } catch {
     return operationalError("MONITOR_CONFIG_WRITE_FAILED", json);
   }
 }
