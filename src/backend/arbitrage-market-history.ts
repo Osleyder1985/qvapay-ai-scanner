@@ -61,6 +61,21 @@ export interface CompletedTrade {
   observedAt: string;
 }
 
+export interface MarketStatisticsQuality {
+  sampleCount: number;
+  usableSampleCount: number;
+  missingFieldCount: number;
+  staleObservationCount: number;
+  coverageStartAt: string | null;
+  coverageEndAt: string | null;
+  freshnessMs: number | null;
+  lifecycleCompletenessPercent: number | null;
+  excludedSampleCount: number;
+  outlierExcludedCount: number;
+  minimumSampleSize: number;
+  belowMinimumSample: boolean;
+}
+
 export interface CurrencyReferencePriceStatistics {
   sampleCount: number;
   tradedVolumeQusd: number;
@@ -94,6 +109,7 @@ export interface CurrencyExecutionAnalytics {
   newestEventAt: string | null;
   newestObservedAt: string | null;
   stale: boolean;
+  quality: MarketStatisticsQuality;
   referencePrices: {
     buy: CurrencyReferencePriceStatistics | null;
     sell: CurrencyReferencePriceStatistics | null;
@@ -469,6 +485,142 @@ export function completedTradesFromEvents(
     );
 }
 
+function buildStatisticsQuality(
+  trades: CompletedTrade[],
+  candidateEvents: NormalizedMarketEvent[],
+  allEvents: NormalizedMarketEvent[],
+  now: Date,
+  maxAgeMs: number | undefined,
+  minimumSampleSize: number,
+): MarketStatisticsQuality {
+  const usableIds = new Set(trades.map((trade) => trade.offerUuid));
+  const missingFieldCount = candidateEvents.reduce(
+    (count, event) =>
+      count +
+      (event.amount === null ? 1 : 0) +
+      (event.receive === null ? 1 : 0) +
+      (event.rate === null ? 1 : 0),
+    0,
+  );
+  const staleObservationCount =
+    maxAgeMs === undefined
+      ? 0
+      : trades.filter(
+          (trade) =>
+            now.getTime() - new Date(trade.observedAt).getTime() > maxAgeMs,
+        ).length;
+  const coverage = trades.map((trade) => trade.completedAt).sort();
+  const newestObservedAt = trades
+    .map((trade) => trade.observedAt)
+    .sort()
+    .at(-1);
+  const createdIds = new Set(
+    allEvents
+      .filter((event) => event.event === "created")
+      .map((event) => event.offerUuid),
+  );
+  const lifecycleCompleteCount = trades.filter((trade) =>
+    createdIds.has(trade.offerUuid),
+  ).length;
+  const freshnessMs = newestObservedAt
+    ? Math.max(0, now.getTime() - new Date(newestObservedAt).getTime())
+    : null;
+
+  return {
+    sampleCount: candidateEvents.length,
+    usableSampleCount: trades.length,
+    missingFieldCount,
+    staleObservationCount,
+    coverageStartAt: coverage[0] ?? null,
+    coverageEndAt: coverage.at(-1) ?? null,
+    freshnessMs,
+    lifecycleCompletenessPercent:
+      trades.length > 0
+        ? (lifecycleCompleteCount / trades.length) * 100
+        : null,
+    excludedSampleCount: candidateEvents.filter(
+      (event) => !usableIds.has(event.offerUuid),
+    ).length,
+    outlierExcludedCount: 0,
+    minimumSampleSize,
+    belowMinimumSample: trades.length < minimumSampleSize,
+  };
+}
+
+function referencePriceStatistics(
+  trades: CompletedTrade[],
+  candidateEvents: NormalizedMarketEvent[],
+  allEvents: NormalizedMarketEvent[],
+  now: Date,
+  maxAgeMs: number | undefined,
+  minimumSampleSize: number,
+): CurrencyReferencePriceStatistics | null {
+  if (!trades.length) return null;
+  const rates = trades
+    .map((trade) => trade.rate)
+    .filter((rate) => Number.isFinite(rate) && rate > 0)
+    .sort((a, b) => a - b);
+  const volume = trades.reduce(
+    (sum, trade) =>
+      Number.isFinite(trade.amount) && trade.amount > 0
+        ? sum + trade.amount
+        : sum,
+    0,
+  );
+  const weightedValue = trades.reduce(
+    (sum, trade) =>
+      Number.isFinite(trade.rate) &&
+      trade.rate > 0 &&
+      Number.isFinite(trade.amount) &&
+      trade.amount > 0
+        ? sum + trade.rate * trade.amount
+        : sum,
+    0,
+  );
+  const newestEventAt = trades.map((trade) => trade.completedAt).sort().at(-1);
+  const newestObservedAt = trades.map((trade) => trade.observedAt).sort().at(-1);
+  const newestObservedMs = newestObservedAt
+    ? new Date(newestObservedAt).getTime()
+    : NaN;
+  const nowMs = now.getTime();
+
+  return {
+    sampleCount: trades.length,
+    tradedVolumeQusd: volume,
+    minRate: rates.at(0) ?? null,
+    maxRate: rates.at(-1) ?? null,
+    meanRate:
+      rates.length > 0
+        ? rates.reduce((sum, rate) => sum + rate, 0) / rates.length
+        : null,
+    medianRate: percentile(rates, 0.5),
+    percentiles: {
+      p10: percentile(rates, 0.1),
+      p25: percentile(rates, 0.25),
+      p50: percentile(rates, 0.5),
+      p75: percentile(rates, 0.75),
+      p90: percentile(rates, 0.9),
+    },
+    vwap: volume > 0 ? weightedValue / volume : null,
+    newestEventAt: newestEventAt ?? null,
+    newestObservedAt: newestObservedAt ?? null,
+    stale:
+      maxAgeMs !== undefined &&
+      Number.isFinite(nowMs) &&
+      Number.isFinite(newestObservedMs)
+        ? nowMs - newestObservedMs > maxAgeMs
+        : false,
+    quality: buildStatisticsQuality(
+      trades,
+      candidateEvents,
+      allEvents,
+      now,
+      maxAgeMs,
+      minimumSampleSize,
+    ),
+  };
+}
+
 /**
  * Calcula una ventana por moneda. La ventana se aplica después de filtrar
  * operaciones completadas; una cancelación no se presenta como una ejecución.
@@ -476,10 +628,16 @@ export function completedTradesFromEvents(
 export function calculateCurrencyAnalytics(
   events: NormalizedMarketEvent[],
   coin: string,
-  options: { windowSize?: number; now?: Date; maxAgeMs?: number } = {},
+  options: {
+    windowSize?: number;
+    now?: Date;
+    maxAgeMs?: number;
+    minimumSampleSize?: number;
+  } = {},
 ): CurrencyExecutionAnalytics {
   const normalizedCoin = coin.trim().toUpperCase();
   const windowSize = Math.max(1, Math.trunc(options.windowSize ?? 500));
+  const minimumSampleSize = Math.max(1, Math.trunc(options.minimumSampleSize ?? 10));
   const all = reconcileMarketEventLifecycle(events).events.filter(
     (event) => event.coin === normalizedCoin,
   );
@@ -592,18 +750,35 @@ export function calculateCurrencyAnalytics(
       ? nowMs - newestObservedMs > options.maxAgeMs
       : false;
   const referenceNow = options.now ?? new Date();
+  const completedCandidateEvents = windowEvents.filter(
+    (event) => event.event === "completed",
+  );
   const referencePrices = {
     buy: referencePriceStatistics(
       completed.filter((trade) => trade.side === "buy"),
+      completedCandidateEvents.filter((event) => event.side === "buy"),
+      windowEvents,
       referenceNow,
       options.maxAgeMs,
+      minimumSampleSize,
     ),
     sell: referencePriceStatistics(
       completed.filter((trade) => trade.side === "sell"),
+      completedCandidateEvents.filter((event) => event.side === "sell"),
+      windowEvents,
       referenceNow,
       options.maxAgeMs,
+      minimumSampleSize,
     ),
   };
+  const quality = buildStatisticsQuality(
+    completed,
+    completedCandidateEvents,
+    windowEvents,
+    referenceNow,
+    options.maxAgeMs,
+    minimumSampleSize,
+  );
 
   return {
     coin: normalizedCoin,
@@ -639,6 +814,7 @@ export function calculateCurrencyAnalytics(
     newestEventAt: newest ?? null,
     newestObservedAt: newestObserved ?? null,
     stale,
+    quality,
     referencePrices,
   };
 }
