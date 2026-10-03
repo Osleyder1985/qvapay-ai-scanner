@@ -157,7 +157,7 @@ export async function auditHealth(
     checks: {
       worker: { ok: true },
       database,
-      durableObject: { ok: monitorAlarm !== null, nextAlarmAt: monitorAlarm },
+      durableObject: { ok: alarm !== null, nextAlarmAt: alarm },
       arbitrageMonitor: {
         ok: monitor.state?.status !== "error",
         status: monitor.state?.status ?? "starting",
@@ -224,7 +224,7 @@ async function auditMonitor(env: AiAuditEnv) {
       lastError: current.state?.last_error ?? null,
       updatedAt: current.state?.updated_at ?? null,
     },
-    durableObject: { nextAlarmAt: alarm },
+    durableObject: { nextAlarmAt: monitorAlarm },
     snapshot: {
       marketOffers: marketOffers.length,
       opportunities: opportunities.length,
