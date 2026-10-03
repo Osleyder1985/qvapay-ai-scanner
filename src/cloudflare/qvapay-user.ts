@@ -23,7 +23,8 @@ export function parseQvaPayUserIdentity(payload: unknown): QvaPayUserIdentity | 
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
   const record = payload as Record<string, unknown>;
   const uuid = typeof record.uuid === "string" ? record.uuid.trim() : "";
-  const username = typeof record.username === "string" ? record.username.trim() : "";
+  const username =
+    typeof record.username === "string" ? record.username.trim() : "";
   if (!uuid || !username) return null;
   const numberOrNull = (value: unknown): number | null =>
     typeof value === "number" && Number.isFinite(value) ? value : null;
@@ -34,9 +35,13 @@ export function parseQvaPayUserIdentity(payload: unknown): QvaPayUserIdentity | 
     rating_avg: numberOrNull(record.rating_avg),
     rating_count: numberOrNull(record.rating_count),
     telegram_verified:
-      typeof record.telegram_verified === "boolean" ? record.telegram_verified : null,
+      typeof record.telegram_verified === "boolean"
+        ? record.telegram_verified
+        : null,
     phone_verified:
-      typeof record.phone_verified === "boolean" ? record.phone_verified : null,
+      typeof record.phone_verified === "boolean"
+        ? record.phone_verified
+        : null,
     kyc: typeof record.kyc === "boolean" ? record.kyc : null,
     vip: typeof record.vip === "boolean" ? record.vip : null,
     golden_check:
