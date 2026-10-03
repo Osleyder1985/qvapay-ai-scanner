@@ -43,9 +43,7 @@ export function parseQvaPayUserIdentity(
         ? record.telegram_verified
         : null,
     phone_verified:
-      typeof record.phone_verified === "boolean"
-        ? record.phone_verified
-        : null,
+      typeof record.phone_verified === "boolean" ? record.phone_verified : null,
     kyc: typeof record.kyc === "boolean" ? record.kyc : null,
     vip: typeof record.vip === "boolean" ? record.vip : null,
     golden_check:
