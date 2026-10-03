@@ -106,12 +106,7 @@ export async function handleAuthRoutes(
       }
 
       try {
-        await clearLoginRateLimit(
-          env.DB,
-          request,
-          username,
-          env.AUTH_PASSWORD,
-        );
+        await clearLoginRateLimit(env.DB, request, username, env.AUTH_PASSWORD);
       } catch (error) {
         console.error("Authentication rate limiter cleanup failed:", error);
         return json(
