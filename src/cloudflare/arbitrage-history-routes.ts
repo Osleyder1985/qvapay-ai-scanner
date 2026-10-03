@@ -94,6 +94,8 @@ export async function handleArbitrageHistoryRoutes(
     lifecycle: {
       invalidTransitionCount: lifecycle.violations.length,
       invalidTransitions: lifecycle.violations,
+      futureSkewCount: lifecycle.futureSkewCount,
+      quarantinedEvents: lifecycle.quarantinedEvents,
       quarantinedEventCount: lifecycle.quarantinedEvents.length,
     },
   });
