@@ -420,6 +420,24 @@ paths:
                 properties:
                   status: { $ref: '#/components/schemas/FreeformObject' }
 
+  /api/arbitrage/reconciliation:
+    get:
+      tags: [Arbitrage]
+      summary: Obtener diagnóstico determinista de reconciliación
+      description: Informe de solo lectura entre eventos, operaciones, finanzas y cobertura de market history. No modifica registros de producción.
+      parameters:
+        - name: coin
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: Diagnóstico de reconciliación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconciliationDiagnosticReport'
+
 components:
   parameters:
     Page: { name: page, in: query, schema: { type: integer, minimum: 1 } }
@@ -523,6 +541,34 @@ components:
         pagesFetched: { type: integer }
         truncated: { type: boolean }
         persisted: { type: integer }
+    ReconciliationDiscrepancy:
+      type: object
+      required: [category, identity, sourceIds, timestamps]
+      properties:
+        category:
+          type: string
+          enum: [event_missing_operation, operation_missing_event, operation_missing_finance, finance_missing_operation, market_history_unmatched_event, stale_lifecycle, duplicate_identity, conflicting_identity]
+        identity: { type: string }
+        sourceIds: { type: array, items: { type: string } }
+        timestamps: { type: array, items: { type: string, format: date-time } }
+    ReconciliationDiagnosticReport:
+      type: object
+      required: [operationIds, eventOfferUuids, financeIds, completedEventIds, completedOperationIds, completedFinanceIds, eventMissingOperations, operationMissingEvents, operationMissingFinance, financeMissingOperations, marketHistoryMatchedCompletedEvents, marketHistoryUnmatchedCompletedEvents, discrepancies, idempotent]
+      properties:
+        operationIds: { type: array, items: { type: string } }
+        eventOfferUuids: { type: array, items: { type: string } }
+        financeIds: { type: array, items: { type: string } }
+        completedEventIds: { type: array, items: { type: string } }
+        completedOperationIds: { type: array, items: { type: string } }
+        completedFinanceIds: { type: array, items: { type: string } }
+        eventMissingOperations: { type: array, items: { type: string } }
+        operationMissingEvents: { type: array, items: { type: string } }
+        operationMissingFinance: { type: array, items: { type: string } }
+        financeMissingOperations: { type: array, items: { type: string } }
+        marketHistoryMatchedCompletedEvents: { type: array, items: { type: string } }
+        marketHistoryUnmatchedCompletedEvents: { type: array, items: { type: string } }
+        discrepancies: { type: array, items: { $ref: '#/components/schemas/ReconciliationDiscrepancy' } }
+        idempotent: { type: boolean, enum: [true] }
     Reconciliation:
       type: object
       additionalProperties: true
