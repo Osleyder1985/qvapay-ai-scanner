@@ -100,6 +100,28 @@ test("deduplica el mismo lifecycle entre webhook y reconciliación", () => {
   assert.equal(deduplicateMarketEvents([webhook, reconciliation]).length, 1);
 });
 
+test("prefiere una observación válida frente a una futura en cuarentena", () => {
+  const quarantined = event({
+    offerUuid: "clock-skew",
+    observedAt: "2026-10-02T12:05:00Z",
+    eventAt: "2026-10-02T12:15:00Z",
+    timestampQuality: "future_skew",
+    quarantined: true,
+  });
+  const valid = event({
+    offerUuid: "clock-skew",
+    observedAt: "2026-10-02T12:01:00Z",
+    eventAt: "2026-10-02T12:00:00Z",
+    timestampQuality: "valid",
+    quarantined: false,
+  });
+
+  const result = deduplicateMarketEvents([quarantined, valid]);
+  assert.equal(result.length, 1);
+  assert.equal(result[0]?.quarantined, false);
+  assert.equal(result[0]?.eventAt, "2026-10-02T12:00:00Z");
+});
+
 test("conserva el payload completado de la observación más reciente", () => {
   const older = event({
     offerUuid: "canonical",
