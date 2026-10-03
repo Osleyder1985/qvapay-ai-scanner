@@ -58,6 +58,7 @@ export interface CompletedTrade {
   receive: number;
   rate: number;
   completedAt: string;
+  observedAt: string;
 }
 
 export interface CurrencyReferencePriceStatistics {
@@ -350,7 +351,7 @@ function referencePriceStatistics(
     .sort()
     .at(-1);
   const newestObservedAt = trades
-    .map((trade) => trade.completedAt)
+    .map((trade) => trade.observedAt)
     .sort()
     .at(-1);
   const newestObservedMs = newestObservedAt
@@ -459,6 +460,7 @@ export function completedTradesFromEvents(
       receive: event.receive!,
       rate: event.rate!,
       completedAt: event.eventAt,
+      observedAt: event.observedAt,
     }))
     .sort(
       (a, b) =>
