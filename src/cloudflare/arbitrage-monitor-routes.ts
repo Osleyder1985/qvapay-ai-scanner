@@ -53,9 +53,7 @@ function stub(env: Env) {
   return env.ARBITRAGE_MONITOR.get(id);
 }
 
-async function ensureMonitorProgress(
-  env: Env,
-): Promise<Awaited<ReturnType<typeof monitorState>>> {
+async function ensureMonitorProgress(env: Env) {
   const current = await monitorState(env.DB);
   const alarmResponse = await stub(env).fetch(
     new Request("https://internal/status"),
