@@ -6,7 +6,7 @@
  * @status active
  */
 
-import { monitorState, type ArbitrageMonitorEnv } from "./arbitrage-monitor.js";
+import { authorizeAiAuditor } from "./ai-audit-auth.js";\nimport {\n  monitorState,\n  type ArbitrageMonitorEnv,\n} from "./arbitrage-monitor.js";
 import {
   logInternalError,
   publicError,
