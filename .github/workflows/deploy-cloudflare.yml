@@ -26,10 +26,74 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+          command: deploy --tag "${{ github.sha }}" --message "GitHub commit ${{ github.sha }}"
 
       - name: Verify deployment status
-        run: npx wrangler deployments status --name qvapay-ai-scanner --json
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-status.json
+          npx wrangler versions list --name qvapay-ai-scanner --json > deployment-versions.json
+
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          const expectedSha = process.env.GITHUB_SHA;
+          const status = JSON.parse(fs.readFileSync("deployment-status.json", "utf8"));
+          const versions = JSON.parse(fs.readFileSync("deployment-versions.json", "utf8"));
+
+          const activeVersionIds = (status?.versions ?? [])
+            .filter((entry) => Number(entry?.percentage) === 100)
+            .map((entry) => entry?.version_id)
+            .filter(Boolean);
+
+          if (activeVersionIds.length !== 1) {
+            throw new Error(
+              `Expected exactly one 100% active Worker version, found ${activeVersionIds.length}.`,
+            );
+          }
+
+          const activeVersionId = activeVersionIds[0];
+          const deployedVersion = (versions?.items ?? versions?.versions ?? [])
+            .find((version) => version?.id === activeVersionId || version?.version_id === activeVersionId);
+
+          if (!deployedVersion) {
+            throw new Error(
+              `Active Worker version ${activeVersionId} was not present in the version inventory.`,
+            );
+          }
+
+          const tag = deployedVersion.tag ?? deployedVersion?.annotations?.["workers/tag"];
+          const message = deployedVersion.message ?? deployedVersion?.annotations?.["workers/message"] ?? "";
+
+          if (tag !== expectedSha && !String(message).includes(expectedSha)) {
+            throw new Error(
+              `Cloudflare version ${activeVersionId} is not traceable to GitHub commit ${expectedSha}; tag=${JSON.stringify(tag)}, message=${JSON.stringify(message)}.`,
+            );
+          }
+
+          fs.writeFileSync(
+            "deployment-evidence.txt",
+            [
+              `github_commit=${expectedSha}`,
+              `cloudflare_version_id=${activeVersionId}`,
+              `cloudflare_version_tag=${tag ?? ""}`,
+              `cloudflare_version_message=${message}`,
+              "",
+            ].join("\n"),
+          );
+
+          console.log(
+            `Verified Cloudflare version ${activeVersionId} is traceable to GitHub commit ${expectedSha}.`,
+          );
+          NODE
+
+      - name: Upload deployment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-deployment-evidence-${{ github.sha }}
+          path: |
+            deployment-status.json
+            deployment-versions.json
+            deployment-evidence.txt
+          if-no-files-found: warn
