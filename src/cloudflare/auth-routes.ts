@@ -14,6 +14,7 @@ import {
   requireSession,
   type SessionDatabase,
 } from "./access.js";
+import { logInternalError, publicError } from "./error-contract.js";
 import {
   clearLoginRateLimit,
   pruneLoginRateLimits,
@@ -66,11 +67,11 @@ export async function handleAuthRoutes(
           : "";
 
       if (!env.AUTH_USERNAME || !env.AUTH_PASSWORD) {
-        console.error("Authentication secrets are not configured.");
-        return json(
-          { error: "El servicio de autenticación no está configurado." },
-          503,
+        logInternalError(
+          "auth.configuration_missing",
+          "AUTH_SERVICE_UNAVAILABLE",
         );
+        return json(publicError("AUTH_SERVICE_UNAVAILABLE"), 503);
       }
 
       if (
@@ -102,11 +103,11 @@ export async function handleAuthRoutes(
             );
           }
         } catch (error) {
-          console.error("Authentication rate limiter failed:", error);
-          return json(
-            { error: "El servicio de autenticación no está disponible." },
-            503,
+          logInternalError(
+            "auth.rate_limiter_failed",
+            "AUTH_SERVICE_UNAVAILABLE",
           );
+          return json(publicError("AUTH_SERVICE_UNAVAILABLE"), 503);
         }
         return json({ error: "Credenciales inválidas." }, 401);
       }
@@ -114,7 +115,10 @@ export async function handleAuthRoutes(
       try {
         await clearLoginRateLimit(env.DB, request, username, env.AUTH_PASSWORD);
       } catch (error) {
-        console.error("Authentication rate limiter cleanup failed:", error);
+        logInternalError(
+          "auth.rate_limiter_cleanup_failed",
+          "AUTH_SERVICE_UNAVAILABLE",
+        );
         return json(
           { error: "El servicio de autenticación no está disponible." },
           503,
@@ -123,11 +127,11 @@ export async function handleAuthRoutes(
 
       return await createSession(request, env.DB, username);
     } catch (error) {
-      console.error("Authentication session creation failed:", error);
-      return json(
-        { error: "El servicio de autenticación no pudo crear la sesión." },
-        503,
+      logInternalError(
+        "auth.session_creation_failed",
+        "AUTH_SESSION_CREATE_FAILED",
       );
+      return json(publicError("AUTH_SESSION_CREATE_FAILED"), 503);
     }
   }
 

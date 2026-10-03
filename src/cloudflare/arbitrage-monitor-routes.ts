@@ -8,6 +8,11 @@
 
 import { monitorState } from "./arbitrage-monitor.js";
 import type { D1Database } from "./d1.js";
+import {
+  logInternalError,
+  publicError,
+  type PublicErrorCode,
+} from "./error-contract.js";
 
 interface DurableObjectStub {
   fetch(request: Request): Promise<Response>;
@@ -24,19 +29,36 @@ interface Env {
 
 type Json = (payload: unknown, status?: number) => Response;
 
+const MONITOR_ERROR_CODES = new Set<PublicErrorCode>([
+  "MONITOR_RUN_FAILED",
+  "MONITOR_STATE_READ_FAILED",
+  "MONITOR_CONFIG_ROW_MISSING",
+  "MONITOR_CONFIG_WRITE_FAILED",
+]);
+
+function sanitizeMonitorError(value: unknown): PublicErrorCode | null {
+  const code = typeof value === "string" ? value : "";
+  return MONITOR_ERROR_CODES.has(code as PublicErrorCode)
+    ? (code as PublicErrorCode)
+    : value
+      ? "MONITOR_RUN_FAILED"
+      : null;
+}
+
 function stub(env: Env) {
   const id = env.ARBITRAGE_MONITOR.idFromName("global");
   return env.ARBITRAGE_MONITOR.get(id);
 }
 
-function operationalError(code: string, error: unknown, json: Json): Response {
-  return json(
-    {
-      error: "No se pudo completar la solicitud.",
-      code,
-    },
-    503,
-  );
+function operationalError(
+  code:
+    | "MONITOR_STATE_READ_FAILED"
+    | "MONITOR_CONFIG_ROW_MISSING"
+    | "MONITOR_CONFIG_WRITE_FAILED",
+  json: Json,
+): Response {
+  logInternalError("arbitrage_monitor.operation_failed", code);
+  return json(publicError(code), 503);
 }
 
 export async function handleArbitrageMonitorRoutes(
@@ -71,7 +93,7 @@ export async function handleArbitrageMonitorRoutes(
           scannedAt: current.state?.scanned_at ?? null,
           nextRunAt: current.state?.next_run_at ?? null,
           lastSuccessAt: current.state?.last_success_at ?? null,
-          lastError: current.state?.last_error ?? null,
+          lastError: sanitizeMonitorError(current.state?.last_error),
           updatedAt: current.state?.updated_at ?? null,
         },
         marketOffers: payload.marketOffers ?? [],
@@ -80,7 +102,7 @@ export async function handleArbitrageMonitorRoutes(
         coverage: payload.coverage ?? null,
       });
     } catch (error) {
-      return operationalError("MONITOR_STATE_READ_FAILED", error, json);
+      return operationalError("MONITOR_STATE_READ_FAILED", json);
     }
   }
 
@@ -107,11 +129,7 @@ export async function handleArbitrageMonitorRoutes(
       .run();
 
     if (Number(result.meta?.changes ?? 0) !== 1) {
-      return operationalError(
-        "MONITOR_CONFIG_ROW_MISSING",
-        new Error("arbitrage_monitor_config id=1 no existe."),
-        json,
-      );
+      return operationalError("MONITOR_CONFIG_ROW_MISSING", json);
     }
 
     await stub(env).fetch(new Request("https://internal/start"));
@@ -122,7 +140,7 @@ export async function handleArbitrageMonitorRoutes(
       nextRunAt: new Date(Date.now() + 10_000).toISOString(),
     });
   } catch (error) {
-    return operationalError("MONITOR_CONFIG_WRITE_FAILED", error, json);
+    return operationalError("MONITOR_CONFIG_WRITE_FAILED", json);
   }
 }
 
