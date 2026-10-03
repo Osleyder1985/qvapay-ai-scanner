@@ -177,9 +177,14 @@ export async function ensureArbitrageMonitorSchema(
 export async function ensureArbitrageExecutionConfigColumns(
   db: D1Database,
 ): Promise<void> {
-  const columns = await db
-    .prepare('PRAGMA table_info("arbitrage_monitor_config")')
-    .all<{ name: string }>();
+  let columns: { results: Array<{ name: string }> };
+  try {
+    columns = await db
+      .prepare('PRAGMA table_info("arbitrage_monitor_config")')
+      .all<{ name: string }>();
+  } catch {
+    return;
+  }
   const existingColumns = new Set(
     columns.results.map((column) => String(column.name)),
   );
