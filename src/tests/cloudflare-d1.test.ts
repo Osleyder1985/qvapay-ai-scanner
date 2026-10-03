@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import {
   appendMarketEvents,
+  appendMarketHistory,
   d1Health,
   queryMarketHistory,
   type D1Database,
@@ -160,6 +161,29 @@ test("D1 market event persistence refreshes repeated event IDs by observation ti
   );
   assert.ok(
     queries[0]?.includes("excluded.observed_at = market_events.observed_at"),
+  );
+});
+
+test("D1 market history persistence fails when D1 reports a batch error", async () => {
+  const db: D1Database = {
+    prepare: () => statement([]),
+    batch: failedBatch,
+  };
+
+  await assert.rejects(
+    appendMarketHistory(db, [
+      {
+        timestamp: "2026-10-02T12:00:00.000Z",
+        coin: "BANK_CUP",
+        type: "sell",
+        samples: 1,
+        minRate: 1200,
+        medianRate: 1200,
+        maxRate: 1200,
+        spread: 0,
+      },
+    ]),
+    /D1 market history batch persistence failed/,
   );
 });
 

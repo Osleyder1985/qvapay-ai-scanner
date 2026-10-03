@@ -114,7 +114,7 @@ export async function appendMarketHistory(
   points: MarketHistoryPoint[],
 ): Promise<void> {
   if (!points.length) return;
-  await db.batch(
+  const results = await db.batch(
     points.map((point) =>
       db
         .prepare(
@@ -140,6 +140,9 @@ export async function appendMarketHistory(
         ),
     ),
   );
+  if (results.some((result) => result.success !== true)) {
+    throw new Error("D1 market history batch persistence failed.");
+  }
 }
 
 export async function queryMarketHistory(
@@ -207,6 +210,9 @@ export async function upsertOperations(
     );
   if (!statements.length) return 0;
   const results = await db.batch(statements);
+  if (results.some((result) => result.success !== true)) {
+    throw new Error("D1 operations batch persistence failed.");
+  }
   return results.length;
 }
 
@@ -255,6 +261,9 @@ export async function upsertFinanceEntries(
       ),
   );
   const results = await db.batch(statements);
+  if (results.some((result) => result.success !== true)) {
+    throw new Error("D1 finance batch persistence failed.");
+  }
   return results.length;
 }
 
