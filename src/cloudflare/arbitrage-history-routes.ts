@@ -74,7 +74,8 @@ export async function handleArbitrageHistoryRoutes(
     request.method === "GET" &&
     url.pathname === "/api/arbitrage/reconciliation"
   ) {
-    const coin = url.searchParams.get("coin")?.trim().toUpperCase() || undefined;
+    const coin =
+      url.searchParams.get("coin")?.trim().toUpperCase() || undefined;
     const [eventRows, operations, finance, marketHistory] = await Promise.all([
       listMarketEvents(env.DB, coin, 10000),
       listOperations(env.DB),
@@ -87,7 +88,9 @@ export async function handleArbitrageHistoryRoutes(
       operations: coin
         ? operations.filter(
             (operation) =>
-              String(operation.payload.coin ?? "").trim().toUpperCase() === coin,
+              String(operation.payload.coin ?? "")
+                .trim()
+                .toUpperCase() === coin,
           )
         : operations,
       finance: coin
