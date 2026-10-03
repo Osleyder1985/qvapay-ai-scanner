@@ -27,22 +27,10 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          npx wrangler deploy --json > cloudflare-deploy.json
-          node <<'NODE'
-          const fs = require("node:fs");
-          const data = JSON.parse(fs.readFileSync("cloudflare-deploy.json", "utf8"));
-          const versionId =
-            data.version_id ??
-            data.versionId ??
-            data?.deployment?.version_id ??
-            data?.deployment?.versionId ??
-            "";
-          if (!versionId) {
-            throw new Error("Wrangler deployment did not return a version ID.");
-          }
-          fs.writeFileSync("cloudflare-deployed-version.txt", String(versionId) + "\n");
-          console.log("Deployed Cloudflare Worker version " + versionId);
-          NODE
+          npx wrangler deployments status --name qvapay-ai-scanner --json > pre-deployment-status.json
+          previous="$(node -e 'const fs=require("node:fs"); const d=JSON.parse(fs.readFileSync("pre-deployment-status.json","utf8")); const a=(d.versions??[]).filter(v=>Number(v?.percentage)===100).map(v=>v?.version_id).filter(Boolean); process.stdout.write(a.length===1?a[0]:"");')"
+          npx wrangler deploy > cloudflare-deploy.txt
+          printf '%s\n' "$previous" > cloudflare-previous-version.txt
 
       - name: Wait for Cloudflare deployment to become active
         env:
@@ -50,18 +38,19 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          expected="$(cat cloudflare-deployed-version.txt)"
+          previous="$(cat cloudflare-previous-version.txt)"
           for attempt in {1..30}; do
             npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-status.json
             active="$(node -e 'const fs=require("node:fs"); const d=JSON.parse(fs.readFileSync("deployment-status.json","utf8")); const a=(d.versions??[]).filter(v=>Number(v?.percentage)===100).map(v=>v?.version_id).filter(Boolean); process.stdout.write(a.length===1?a[0]:"");')"
-            if [ "$active" = "$expected" ]; then
+            if [ -n "$active" ] && [ "$active" != "$previous" ]; then
+              printf '%s\n' "$active" > cloudflare-deployed-version.txt
               echo "Cloudflare version $active is active at 100%."
               exit 0
             fi
-            echo "Waiting for active Cloudflare version (attempt $attempt/30; expected=$expected; active=$active)."
+            echo "Waiting for new active Cloudflare version (attempt $attempt/30; previous=$previous; active=$active)."
             sleep 10
           done
-          echo "Cloudflare deployment did not become the single 100% active version."
+          echo "Cloudflare deployment did not become a new single 100% active version."
           exit 1
 
       - name: Capture managed Cloudflare Build status
@@ -94,7 +83,8 @@ jobs:
         with:
           name: cloudflare-deployment-evidence-${{ github.sha }}
           path: |
-            cloudflare-deploy.json
+            cloudflare-deploy.txt
+            cloudflare-previous-version.txt
             cloudflare-deployed-version.txt
             cloudflare-build-check.json
             deployment-status.json
