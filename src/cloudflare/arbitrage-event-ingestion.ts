@@ -8,6 +8,7 @@
 
 import {
   normalizeMarketEvent,
+  reconcileMarketEventLifecycle,
   type NormalizedMarketEvent,
   type RawMarketEvent,
 } from "../backend/arbitrage-market-history.js";
@@ -39,6 +40,7 @@ interface ReconciliationResult {
   unsupported: number;
   pagesFetched: number;
   truncated: boolean;
+  invalidTransitions: number;
 }
 
 function record(value: unknown): QvaPayRecord | null {
@@ -372,6 +374,7 @@ export async function reconcileArbitrageHistory(
     }
   }
 
+  const lifecycle = reconcileMarketEventLifecycle(events);
   const stored = await appendMarketEvents(env.DB, events);
   return {
     fetched,
@@ -379,5 +382,6 @@ export async function reconcileArbitrageHistory(
     unsupported,
     pagesFetched,
     truncated: lastPage > MAX_OPERATION_PAGES,
+    invalidTransitions: lifecycle.violations.length,
   };
 }

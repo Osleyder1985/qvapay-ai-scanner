@@ -84,6 +84,32 @@ const EVENTS = new Set<MarketEventType>([
   "cancelled",
 ]);
 
+const LIFECYCLE_TRANSITIONS: Record<
+  MarketEventType,
+  ReadonlySet<MarketEventType>
+> = {
+  created: new Set(["reopened", "applied", "paid", "completed", "cancelled"]),
+  reopened: new Set(["applied", "paid", "completed", "cancelled"]),
+  applied: new Set(["paid", "completed", "cancelled"]),
+  paid: new Set(["completed", "cancelled"]),
+  completed: new Set(),
+  cancelled: new Set(["reopened"]),
+};
+
+export interface MarketLifecycleViolation {
+  offerUuid: string;
+  previousEvent: MarketEventType;
+  event: MarketEventType;
+  previousEventAt: string;
+  eventAt: string;
+  reason: "invalid_transition";
+}
+
+export interface MarketLifecycleResolution {
+  events: NormalizedMarketEvent[];
+  violations: MarketLifecycleViolation[];
+}
+
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -249,11 +275,65 @@ function percentile(sorted: number[], p: number): number | null {
   return lower === upper ? low : low + (high - low) * (position - lower);
 }
 
+export function reconcileMarketEventLifecycle(
+  events: NormalizedMarketEvent[],
+): MarketLifecycleResolution {
+  const canonical = deduplicateMarketEvents(events);
+  const byOffer = new Map<string, NormalizedMarketEvent[]>();
+  for (const event of canonical) {
+    const offerEvents = byOffer.get(event.offerUuid) ?? [];
+    offerEvents.push(event);
+    byOffer.set(event.offerUuid, offerEvents);
+  }
+
+  const accepted: NormalizedMarketEvent[] = [];
+  const violations: MarketLifecycleViolation[] = [];
+  for (const offerEvents of byOffer.values()) {
+    offerEvents.sort(
+      (a, b) =>
+        new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime() ||
+        new Date(a.observedAt).getTime() - new Date(b.observedAt).getTime() ||
+        a.event.localeCompare(b.event),
+    );
+    let previous: NormalizedMarketEvent | null = null;
+    for (const event of offerEvents) {
+      if (previous && !LIFECYCLE_TRANSITIONS[previous.event].has(event.event)) {
+        violations.push({
+          offerUuid: event.offerUuid,
+          previousEvent: previous.event,
+          event: event.event,
+          previousEventAt: previous.eventAt,
+          eventAt: event.eventAt,
+          reason: "invalid_transition",
+        });
+        continue;
+      }
+      accepted.push(event);
+      previous = event;
+    }
+  }
+
+  accepted.sort(
+    (a, b) =>
+      new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime() ||
+      new Date(a.observedAt).getTime() - new Date(b.observedAt).getTime() ||
+      a.offerUuid.localeCompare(b.offerUuid) ||
+      a.event.localeCompare(b.event),
+  );
+  violations.sort(
+    (a, b) =>
+      new Date(a.eventAt).getTime() - new Date(b.eventAt).getTime() ||
+      a.offerUuid.localeCompare(b.offerUuid) ||
+      a.event.localeCompare(b.event),
+  );
+  return { events: accepted, violations };
+}
+
 export function completedTradesFromEvents(
   events: NormalizedMarketEvent[],
 ): CompletedTrade[] {
-  return deduplicateMarketEvents(events)
-    .filter(
+  return reconcileMarketEventLifecycle(events)
+    .events.filter(
       (event) => event.event === "completed" && isValidCompletedTrade(event),
     )
     .map((event) => ({
@@ -283,7 +363,7 @@ export function calculateCurrencyAnalytics(
 ): CurrencyExecutionAnalytics {
   const normalizedCoin = coin.trim().toUpperCase();
   const windowSize = Math.max(1, Math.trunc(options.windowSize ?? 500));
-  const all = deduplicateMarketEvents(events).filter(
+  const all = reconcileMarketEventLifecycle(events).events.filter(
     (event) => event.coin === normalizedCoin,
   );
   const completedOfferIdsInOrder: string[] = [];
