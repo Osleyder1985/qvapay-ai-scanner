@@ -29,9 +29,7 @@ function event(
   };
 }
 
-test(
-  "reconciles complete event, operation, finance and market-history evidence",
-  () => {
+test("reconciles complete event, operation, finance and market-history evidence", () => {
     const report = reconcileLayerState({
       events: [event("offer-1")],
       operations: [
@@ -62,9 +60,7 @@ test(
   },
 );
 
-test(
-  "detects delayed or missing counterparts without mutating any layer",
-  () => {
+test("detects delayed or missing counterparts without mutating any layer", () => {
     const report = reconcileLayerState({
       events: [event("event-only")],
       operations: [
@@ -87,9 +83,7 @@ test(
   },
 );
 
-test(
-  "quarantined events do not participate in cross-layer reconciliation",
-  () => {
+test("quarantined events do not participate in cross-layer reconciliation", () => {
     const quarantined = {
       ...event("future"),
       quarantined: true,
@@ -136,9 +130,7 @@ test("reconciliation output is deterministic across input order", () => {
   assert.deepEqual(second, first);
 });
 
-test(
-  "emits machine-readable gap categories with source IDs and timestamps",
-  () => {
+test("emits machine-readable gap categories with source IDs and timestamps", () => {
     const report = reconcileLayerState({
       events: [event("event-only"), event("stale-event", "created")],
       operations: [
@@ -222,9 +214,7 @@ test("detects conflicting operation identity", () => {
   );
 });
 
-test(
-  "detects duplicate identities without mutating source layers",
-  () => {
+test("detects duplicate identities without mutating source layers", () => {
     const input = {
       events: [],
       operations: [
