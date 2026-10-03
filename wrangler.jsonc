@@ -7,6 +7,9 @@
   "triggers": {
     "crons": ["* * * * *"]
   },
+  "vars": {
+    "QVAPAY_API_BASE_URL": "https://api.qvapay.com"
+  },
   "assets": {
     "directory": "./src/frontend",
     "binding": "ASSETS",
