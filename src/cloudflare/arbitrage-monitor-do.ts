@@ -13,19 +13,10 @@ import {
 } from "./arbitrage-monitor.js";
 import { logInternalError } from "./error-contract.js";
 
-interface AlarmStorage {
-  setAlarm(timestamp: number): Promise<void>;
-  getAlarm(): Promise<number | null>;
-}
-interface DurableObjectStateLike {
-  storage: AlarmStorage;
-}
-
-export class ArbitrageMonitor {
-  constructor(
-    private readonly ctx: DurableObjectStateLike,
-    private readonly env: ArbitrageMonitorEnv,
-  ) {}
+export class ArbitrageMonitor extends DurableObject<ArbitrageMonitorEnv> {
+  constructor(ctx: DurableObjectState, env: ArbitrageMonitorEnv) {
+    super(ctx, env);
+  }
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
