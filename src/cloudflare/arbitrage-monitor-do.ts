@@ -48,10 +48,31 @@ export class ArbitrageMonitor extends DurableObject<ArbitrageMonitorEnv> {
   }
 
   async alarm(): Promise<void> {
+    // Cloudflare reports getAlarm() as null while an alarm handler is running.
+    // Keep the next cycle explicitly scheduled during execution so observers do
+    // not mistake an in-flight alarm for a lost scheduler.
+    let intervalMs = 10_000;
+    try {
+      intervalMs = await getMonitorIntervalMs(this.env.DB);
+    } catch {
+      // Keep the fail-safe 10-second cadence if configuration cannot be read.
+    }
+    try {
+      await this.ctx.storage.setAlarm(Date.now() + intervalMs);
+    } catch {
+      logInternalError(
+        "arbitrage_monitor.alarm_reschedule_failed",
+        "MONITOR_RUN_FAILED",
+      );
+    }
+
     try {
       const result = await runArbitrageMonitor(this.env.DB, this.env);
       if (!result.ok) {
-        logInternalError("arbitrage_monitor.alarm_run_failed", "MONITOR_RUN_FAILED");
+        logInternalError(
+          "arbitrage_monitor.alarm_run_failed",
+          "MONITOR_RUN_FAILED",
+        );
       }
     } catch (error) {
       logInternalError("arbitrage_monitor.alarm_failed", "MONITOR_RUN_FAILED");
@@ -71,14 +92,20 @@ export class ArbitrageMonitor extends DurableObject<ArbitrageMonitorEnv> {
     } finally {
       // Always schedule the next cycle, including upstream/API failures. Read the
       // persisted cadence so changing the configuration takes effect on the next cycle.
-      let intervalMs = 10_000;
       try {
         intervalMs = await getMonitorIntervalMs(this.env.DB);
       } catch {
-        // Keep the fail-safe 10-second cadence if configuration cannot be read.
+        // Keep the last known/fail-safe cadence if configuration cannot be read.
       }
       const nextAlarmAt = Date.now() + intervalMs;
-      await this.ctx.storage.setAlarm(nextAlarmAt);
+      try {
+        await this.ctx.storage.setAlarm(nextAlarmAt);
+      } catch {
+        logInternalError(
+          "arbitrage_monitor.alarm_reschedule_failed",
+          "MONITOR_RUN_FAILED",
+        );
+      }
       await this.env.DB.prepare(
         "UPDATE arbitrage_monitor_state SET next_run_at = ?, updated_at = ? WHERE id = 1",
       )
