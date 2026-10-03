@@ -557,9 +557,7 @@ function buildStatisticsQuality(
     freshnessMs,
     lifecycleCompleteCount: trades.length,
     lifecycleCompletenessPercent:
-      trades.length > 0
-        ? (lifecycleCompleteCount / trades.length) * 100
-        : null,
+      trades.length > 0 ? (lifecycleCompleteCount / trades.length) * 100 : null,
     excludedSampleCount: candidateEvents.filter(
       (event) => !usableIds.has(event.offerUuid),
     ).length,
@@ -585,7 +583,10 @@ export function calculateCurrencyAnalytics(
 ): CurrencyExecutionAnalytics {
   const normalizedCoin = coin.trim().toUpperCase();
   const windowSize = Math.max(1, Math.trunc(options.windowSize ?? 500));
-  const minimumSampleSize = Math.max(1, Math.trunc(options.minimumSampleSize ?? 10));
+  const minimumSampleSize = Math.max(
+    1,
+    Math.trunc(options.minimumSampleSize ?? 10),
+  );
   const all = reconcileMarketEventLifecycle(events).events.filter(
     (event) => event.coin === normalizedCoin,
   );
