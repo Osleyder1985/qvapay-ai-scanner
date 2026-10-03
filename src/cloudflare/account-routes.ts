@@ -9,7 +9,47 @@
 import { evaluateQvaPayAccountContract } from "./qvapay-account-contract.js";
 import { parseQvaPayApplicationIdentity } from "./qvapay-identity.js";
 import { parseQvaPayP2PCollection } from "./qvapay-contracts.js";
-import { parseQvaPayUserIdentity } from "./qvapay-user.js";
+
+function parseP2POwnerIdentity(payload: unknown): {
+  uuid: string;
+  username: string;
+  name: string | null;
+  rating_avg: number | null;
+  rating_count: number | null;
+  telegram_verified: boolean | null;
+  phone_verified: boolean | null;
+  kyc: boolean | null;
+  vip: boolean | null;
+  golden_check: boolean | null;
+} | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+  const record = payload as Record<string, unknown>;
+  const uuid = typeof record.uuid === "string" ? record.uuid.trim() : "";
+  const username =
+    typeof record.username === "string" ? record.username.trim() : "";
+  if (!uuid || !username) return null;
+  const numberOrNull = (value: unknown): number | null =>
+    typeof value === "number" && Number.isFinite(value) ? value : null;
+  return {
+    uuid,
+    username,
+    name: typeof record.name === "string" ? record.name.trim() || null : null,
+    rating_avg: numberOrNull(record.rating_avg),
+    rating_count: numberOrNull(record.rating_count),
+    telegram_verified:
+      typeof record.telegram_verified === "boolean"
+        ? record.telegram_verified
+        : null,
+    phone_verified:
+      typeof record.phone_verified === "boolean" ? record.phone_verified : null,
+    kyc: typeof record.kyc === "boolean" ? record.kyc : null,
+    vip: typeof record.vip === "boolean" ? record.vip : null,
+    golden_check:
+      typeof record.golden_check === "boolean" ? record.golden_check : null,
+  };
+}
 import {
   qvapay,
   readQvaPayPayload,
@@ -46,7 +86,7 @@ export async function handleAccountRoutes(
       const ownCollection = ownOffers.ok
         ? parseQvaPayP2PCollection(ownOffersPayload, 0, 1)
         : null;
-      const ownerUser = parseQvaPayUserIdentity(
+      const ownerUser = parseP2POwnerIdentity(
         ownCollection?.data?.[0]?.User ?? ownCollection?.data?.[0]?.Peer ?? null,
       );
       const contract = evaluateQvaPayAccountContract({
