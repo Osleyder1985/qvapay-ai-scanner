@@ -129,9 +129,7 @@ async function readConfig(db: D1Database): Promise<MonitorConfig> {
     maxBuyRate:
       execution?.max_buy_rate == null ? null : Number(execution.max_buy_rate),
     minSellRate:
-      execution?.min_sell_rate == null
-        ? null
-        : Number(execution.min_sell_rate),
+      execution?.min_sell_rate == null ? null : Number(execution.min_sell_rate),
     cupBudget: Math.max(0, Number(execution?.cup_budget) || 0),
     scheduleEnabled: row.schedule_enabled === 1,
     timezone: row.timezone || "UTC",
