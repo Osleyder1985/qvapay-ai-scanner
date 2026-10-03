@@ -72,6 +72,11 @@ export async function handleArbitrageMonitorRoutes(
   if (request.method === "GET") {
     try {
       const current = await monitorState(env.DB);
+      try {
+        await stub(env).fetch(new Request("https://internal/start"));
+      } catch {
+        // Keep the state endpoint readable even if the Durable Object is temporarily unavailable.
+      }
       let payload: Record<string, unknown> = {};
       if (current.state?.payload_json) {
         try {
