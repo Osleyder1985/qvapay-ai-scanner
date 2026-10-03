@@ -132,10 +132,13 @@ test("logout invalidates the existing session token", async () => {
   const match = setCookie.match(/qvas_session=([^;]+)/);
   assert.ok(match?.[1]);
 
-  const logoutRequest = new Request("https://scanner.example.com/api/auth/logout", {
-    method: "POST",
-    headers: { Cookie: `qvas_session=${match[1]}` },
-  });
+  const logoutRequest = new Request(
+    "https://scanner.example.com/api/auth/logout",
+    {
+      method: "POST",
+      headers: { Cookie: `qvas_session=${match[1]}` },
+    },
+  );
   await destroySession(logoutRequest, db);
   assert.equal(db.rows.size, 0);
 });
