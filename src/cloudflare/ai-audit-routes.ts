@@ -125,12 +125,23 @@ async function doAlarm(env: AiAuditEnv): Promise<number | null> {
   return typeof payload.alarm === "number" ? payload.alarm : null;
 }
 
+async function ensureAlarm(env: AiAuditEnv): Promise<number | null> {
+  const current = await doAlarm(env);
+  if (current !== null) return current;
+  const id = env.ARBITRAGE_MONITOR.idFromName("global");
+  const response = await env.ARBITRAGE_MONITOR.get(id).fetch(
+    new Request("https://internal/start"),
+  );
+  if (!response.ok) return null;
+  return doAlarm(env);
+}
+
 export async function auditHealth(
   env: AiAuditEnv,
 ): Promise<Record<string, unknown>> {
   const database = await d1Health(env.DB);
   const monitor = await monitorState(env.DB);
-  const alarm = await doAlarm(env);
+  const alarm = await ensureAlarm(env);
 
   return {
     ok:
