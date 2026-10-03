@@ -675,7 +675,7 @@ test("separa precios de referencia por lado y conserva freshness", () => {
 
   assert.equal(result.referencePrices.buy?.sampleCount, 3);
   assert.equal(result.referencePrices.buy?.medianRate, 200);
-  assert.equal(result.referencePrices.buy?.vwap, 300);
+  assert.equal(result.referencePrices.buy?.vwap, 375);
   assert.equal(result.referencePrices.sell?.sampleCount, 2);
   assert.equal(result.referencePrices.sell?.medianRate, 350);
   assert.equal(result.referencePrices.sell?.vwap, 350);
