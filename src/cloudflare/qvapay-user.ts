@@ -19,8 +19,12 @@ export interface QvaPayUserIdentity {
   golden_check: boolean | null;
 }
 
-export function parseQvaPayUserIdentity(payload: unknown): QvaPayUserIdentity | null {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+export function parseQvaPayUserIdentity(
+  payload: unknown,
+): QvaPayUserIdentity | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
   const record = payload as Record<string, unknown>;
   const uuid = typeof record.uuid === "string" ? record.uuid.trim() : "";
   const username =
