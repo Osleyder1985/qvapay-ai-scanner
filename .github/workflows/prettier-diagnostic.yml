@@ -1,0 +1,19 @@
+name: Temporary Prettier diagnostic
+on:
+  push:
+    branches:
+      - tmp/prettier-arbitrage-monitor
+jobs:
+  format-diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Show Prettier result
+        run: |
+          npx prettier --write src/cloudflare/arbitrage-monitor-routes.ts
+          git diff -- src/cloudflare/arbitrage-monitor-routes.ts
