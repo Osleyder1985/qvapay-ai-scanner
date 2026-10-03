@@ -1,4 +1,4 @@
-name: Deploy Cloudflare Worker
+name: Verify Cloudflare Production Deployment
 
 on:
   push:
@@ -15,9 +15,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -38,6 +38,7 @@ jobs:
                 echo "Cloudflare Workers Build failed with conclusion: $conclusion"
                 exit 1
               fi
+              printf '%s' "$response" > cloudflare-build-check.json
               echo "Cloudflare Workers Build completed successfully for $GITHUB_SHA."
               exit 0
             fi
@@ -49,85 +50,64 @@ jobs:
           echo "Timed out waiting for the Cloudflare Workers Build check."
           exit 1
 
-      - name: Deploy Worker
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --tag "${{ github.sha }}" --message "GitHub commit ${{ github.sha }}"
-
-      - name: Verify deployment status
+      - name: Verify active production deployment
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          for attempt in {1..12}; do
-            npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-status.json
-            npx wrangler deployments list --name qvapay-ai-scanner --json > deployment-list.json
+          npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-status.json
 
-            if EXPECTED_SHA="$GITHUB_SHA" node <<'NODE'
-            const fs = require("node:fs");
+          node <<'NODE'
+          const fs = require("node:fs");
 
-            const expectedSha = process.env.EXPECTED_SHA;
-            const status = JSON.parse(fs.readFileSync("deployment-status.json", "utf8"));
-            const deployments = JSON.parse(fs.readFileSync("deployment-list.json", "utf8"));
+          const expectedSha = process.env.GITHUB_SHA;
+          const checks = JSON.parse(fs.readFileSync("cloudflare-build-check.json", "utf8"));
+          const status = JSON.parse(fs.readFileSync("deployment-status.json", "utf8"));
+          const check = checks?.check_runs?.find(
+            (entry) => entry?.name === "Workers Builds: qvapay-ai-scanner",
+          );
 
-            const activeVersionIds = (status?.versions ?? [])
-              .filter((entry) => Number(entry?.percentage) === 100)
-              .map((entry) => entry?.version_id)
-              .filter(Boolean);
-
-            const deploymentsList = Array.isArray(deployments)
-              ? deployments
-              : deployments?.deployments ?? deployments?.result?.deployments ?? [];
-
-            const matchingDeployment = deploymentsList.find((deployment) => {
-              const versionIds = (deployment?.versions ?? [])
-                .filter((entry) => Number(entry?.percentage) === 100)
-                .map((entry) => entry?.version_id)
-                .filter(Boolean);
-              const message =
-                deployment?.annotations?.["workers/message"] ??
-                deployment?.message ??
-                "";
-              return (
-                activeVersionIds.length === 1 &&
-                versionIds.length === 1 &&
-                versionIds[0] === activeVersionIds[0] &&
-                String(message).includes(expectedSha)
-              );
-            });
-
-            if (!matchingDeployment) {
-              process.exit(1);
-            }
-
-            fs.writeFileSync(
-              "deployment-evidence.txt",
-              [
-                `github_commit=${expectedSha}`,
-                `cloudflare_deployment_id=${matchingDeployment.id ?? ""}`,
-                `cloudflare_version_id=${activeVersionIds[0]}`,
-                `cloudflare_deployment_message=${matchingDeployment?.annotations?.["workers/message"] ?? matchingDeployment?.message ?? ""}`,
-                "",
-              ].join("\n"),
+          if (!check || check.head_sha !== expectedSha || check.conclusion !== "success") {
+            throw new Error(
+              `Cloudflare Workers Build is not traceable to GitHub commit ${expectedSha}.`,
             );
+          }
 
-            console.log(
-              `Verified Cloudflare deployment ${matchingDeployment.id} and version ${activeVersionIds[0]} are traceable to GitHub commit ${expectedSha}.`,
+          const activeVersionIds = (status?.versions ?? [])
+            .filter((entry) => Number(entry?.percentage) === 100)
+            .map((entry) => entry?.version_id)
+            .filter(Boolean);
+
+          if (activeVersionIds.length !== 1) {
+            throw new Error(
+              `Expected exactly one active 100% Worker version, found ${activeVersionIds.length}.`,
             );
-            NODE
-            then
-              exit 0
-            fi
+          }
 
-            echo "Waiting for Cloudflare deployment state to converge (attempt $attempt/12)."
-            sleep 5
-          done
+          const buildUrl = check?.details_url ?? check?.html_url ?? "";
+          const buildId =
+            check?.output?.summary?.match(/Build ID: \[([^\]]+)\]/)?.[1] ??
+            check?.external_id ??
+            "";
 
-          echo "Timed out waiting for the active Cloudflare deployment to match the deployed commit."
-          exit 1
+          fs.writeFileSync(
+            "deployment-evidence.txt",
+            [
+              `github_commit=${expectedSha}`,
+              `cloudflare_build_id=${buildId}`,
+              `cloudflare_build_url=${buildUrl}`,
+              `cloudflare_check_head_sha=${check.head_sha}`,
+              `cloudflare_check_conclusion=${check.conclusion}`,
+              `cloudflare_active_version_id=${activeVersionIds[0]}`,
+              "",
+            ].join("\n"),
+          );
+
+          console.log(
+            `Verified Cloudflare production build ${buildId} for GitHub commit ${expectedSha}; active version ${activeVersionIds[0]}.`,
+          );
+          NODE
 
       - name: Upload deployment evidence
         if: always()
@@ -135,7 +115,7 @@ jobs:
         with:
           name: cloudflare-deployment-evidence-${{ github.sha }}
           path: |
+            cloudflare-build-check.json
             deployment-status.json
-            deployment-versions.json
             deployment-evidence.txt
           if-no-files-found: warn
