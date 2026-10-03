@@ -216,6 +216,28 @@ export async function upsertOperations(
   return results.length;
 }
 
+export async function listOperations(
+  db: D1Database,
+): Promise<Array<{ uuid: string; payload: Record<string, unknown> }>> {
+  const rows = await db
+    .prepare(
+      "SELECT uuid, payload_json FROM operations_ledger ORDER BY last_seen_at ASC, uuid ASC",
+    )
+    .all<{ uuid: string; payload_json: string }>();
+
+  return rows.results.flatMap((row) => {
+    try {
+      const payload = JSON.parse(row.payload_json) as unknown;
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        return [];
+      }
+      return [{ uuid: row.uuid, payload: payload as Record<string, unknown> }];
+    } catch {
+      return [];
+    }
+  });
+}
+
 export async function listOperationIds(db: D1Database): Promise<string[]> {
   const rows = await db
     .prepare("SELECT uuid FROM operations_ledger ORDER BY last_seen_at DESC")
