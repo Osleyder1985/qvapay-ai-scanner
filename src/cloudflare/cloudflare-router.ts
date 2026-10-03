@@ -203,7 +203,8 @@ export async function routeRequest(
       !publicWebhook &&
       url.pathname !== "/api/health" &&
       !url.pathname.startsWith("/api/auth/") &&
-      !url.pathname.startsWith("/api/ai-audit/")
+      !url.pathname.startsWith("/api/ai-audit/") &&
+      !(request.method === "GET" && url.pathname === "/api/arbitrage/monitor")
     ) {
       const session = await requireSession(
         request,
