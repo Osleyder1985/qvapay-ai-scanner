@@ -73,7 +73,10 @@ export async function ensureArbitrageMonitorSchema(
     )
     .all<{ name: string }>();
   const names = new Set(existing.results.map((row) => row.name));
-  if (names.has('arbitrage_monitor_config') && names.has('arbitrage_monitor_state')) {
+  if (
+    names.has("arbitrage_monitor_config") &&
+    names.has("arbitrage_monitor_state")
+  ) {
     return;
   }
 
@@ -111,7 +114,7 @@ export async function ensureArbitrageMonitorSchema(
     ),
   ]);
   if (results.some((result) => result.success !== true)) {
-    throw new Error('ARBITRAGE_MONITOR_SCHEMA_ENSURE_FAILED');
+    throw new Error("ARBITRAGE_MONITOR_SCHEMA_ENSURE_FAILED");
   }
 
   const seedResults = await db.batch([
@@ -127,7 +130,7 @@ export async function ensureArbitrageMonitorSchema(
     ),
   ]);
   if (seedResults.some((result) => result.success !== true)) {
-    throw new Error('ARBITRAGE_MONITOR_SCHEMA_SEED_FAILED');
+    throw new Error("ARBITRAGE_MONITOR_SCHEMA_SEED_FAILED");
   }
 }
 
