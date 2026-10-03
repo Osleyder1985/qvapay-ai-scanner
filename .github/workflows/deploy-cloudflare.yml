@@ -25,6 +25,8 @@ jobs:
       - name: Wait for Cloudflare Workers Build
         env:
           GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           for attempt in {1..60}; do
@@ -34,11 +36,28 @@ jobs:
             conclusion="$(printf '%s' "$response" | jq -r '.check_runs[0].conclusion // ""')"
 
             if [ "$status" = "completed" ]; then
+              printf '%s' "$response" > cloudflare-build-check.json
+
               if [ "$conclusion" != "success" ]; then
+                build_id="$(printf '%s' "$response" | jq -r '.check_runs[0].external_id // ""')"
                 echo "Cloudflare Workers Build failed with conclusion: $conclusion"
+                if [ -n "$build_id" ] && [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+                  curl --fail-with-body --silent --show-error                     -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"                     "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/builds/builds/$build_id"                     > cloudflare-build.json || true
+                  curl --fail-with-body --silent --show-error                     -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"                     "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/builds/builds/$build_id/logs"                     > cloudflare-build-logs.json || true
+                  if [ -s cloudflare-build.json ]; then
+                    echo "Cloudflare build metadata:"
+                    jq '{success,errors,messages,result:{build_outcome,build_uuid,status,build_trigger_metadata,trigger,created_on,modified_on,stopped_on}}' cloudflare-build.json || true
+                  fi
+                  if [ -s cloudflare-build-logs.json ]; then
+                    echo "Cloudflare build logs:"
+                    jq -r '.result.lines[]? | if type == "array" then .[-1] else . end' cloudflare-build-logs.json || true
+                  fi
+                else
+                  echo "Cloudflare build diagnostics skipped because the build ID or API credentials are unavailable."
+                fi
                 exit 1
               fi
-              printf '%s' "$response" > cloudflare-build-check.json
+
               echo "Cloudflare Workers Build completed successfully for $GITHUB_SHA."
               exit 0
             fi
@@ -86,14 +105,13 @@ jobs:
           }
 
           const summary = String(check.output?.summary ?? "");
-          const versionMatch = summary.match(/Version ID:\s*([0-9a-f-]{36})/i);
+          const versionMatch = summary.match(/Version ID:\\s*([0-9a-f-]{36})/i);
 
           if (!versionMatch || versionMatch[1] !== activeVersions[0]) {
             throw new Error(
               `Cloudflare active version ${activeVersions[0]} does not match the version reported by the successful build check.`,
             );
           }
-
 
           fs.writeFileSync(
             "deployment-evidence.txt",
@@ -121,6 +139,8 @@ jobs:
           name: cloudflare-deployment-evidence-${{ github.sha }}
           path: |
             cloudflare-build-check.json
+            cloudflare-build.json
+            cloudflare-build-logs.json
             deployment-status.json
             deployment-evidence.txt
           if-no-files-found: warn
