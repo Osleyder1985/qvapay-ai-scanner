@@ -35,52 +35,60 @@ test("accepts the documented generic numeric envelope", () => {
   );
 });
 
-test("rejects strings, booleans, non-finite, negative and ambiguous balances", () => {
-  for (const payload of [
-    { balance: "50" },
-    { balance: true },
-    { balance: Number.NaN },
-    { balance: Number.POSITIVE_INFINITY },
-    { balance: -1 },
-    {},
-    { balance: 50, extra: true },
-    { data: { balance: 500 }, message: "Operación exitosa" },
-    { balances: [{ balance: 500 }] },
-  ]) {
-    const parsed = parseQvaPayBalance(payload);
+test(
+  "rejects strings, booleans, non-finite, negative and ambiguous balances",
+  () => {
+    for (const payload of [
+      { balance: "50" },
+      { balance: true },
+      { balance: Number.NaN },
+      { balance: Number.POSITIVE_INFINITY },
+      { balance: -1 },
+      {},
+      { balance: 50, extra: true },
+      { data: { balance: 500 }, message: "Operación exitosa" },
+      { balances: [{ balance: 500 }] },
+    ]) {
+      const parsed = parseQvaPayBalance(payload);
+      assert.equal(parsed.ok, false, JSON.stringify(payload));
+      assert.equal(parsed.balance, null);
+    }
+  },
+);
+
+test(
+  "accepts coherent identity only from the authoritative application response",
+  () => {
+    assert.deepEqual(parseQvaPayApplicationIdentity(identity), identity);
     assert.equal(
-      parsed.ok,
-      false,
-      JSON.stringify(payload),
+      parseQvaPayApplicationIdentity({
+        User: { uuid: "p2p-user", name: "CRYPTOBRO" },
+      }),
+      null,
     );
-    assert.equal(parsed.balance, null);
-  }
-});
+    assert.equal(
+      parseQvaPayApplicationIdentity({ uuid: identity.uuid }),
+      null,
+    );
+  },
+);
 
-test("accepts coherent identity only from the authoritative application response", () => {
-  assert.deepEqual(parseQvaPayApplicationIdentity(identity), identity);
-  assert.equal(
-    parseQvaPayApplicationIdentity({
-      User: { uuid: "p2p-user", name: "CRYPTOBRO" },
-    }),
-    null,
-  );
-  assert.equal(parseQvaPayApplicationIdentity({ uuid: identity.uuid }), null);
-});
+test(
+  "P2P User data cannot override the authoritative application identity",
+  () => {
+    const result = evaluateQvaPayAccountContract({
+      identityStatus: 200,
+      identityPayload: identity,
+      balanceStatus: 200,
+      balancePayload: { balance: 50 },
+    });
 
-test("P2P User data cannot override the authoritative application identity", () => {
-  const result = evaluateQvaPayAccountContract({
-    identityStatus: 200,
-    identityPayload: identity,
-    balanceStatus: 200,
-    balancePayload: { balance: 50 },
-  });
-
-  assert.equal(result.ok, true);
-  assert.equal(result.integrationStatus, "verified");
-  assert.equal(result.user?.uuid, identity.uuid);
-  assert.notEqual(result.user?.name, "CRYPTOBRO");
-});
+    assert.equal(result.ok, true);
+    assert.equal(result.integrationStatus, "verified");
+    assert.equal(result.user?.uuid, identity.uuid);
+    assert.notEqual(result.user?.name, "CRYPTOBRO");
+  },
+);
 
 test("does not infer identity from a P2P User object", () => {
   const result = evaluateQvaPayAccountContract({
@@ -97,22 +105,25 @@ test("does not infer identity from a P2P User object", () => {
   assert.equal(result.integrationStatus, "degraded");
 });
 
-test("an authoritative identity plus a conflicting P2P-shaped balance payload is fail-closed", () => {
-  const result = evaluateQvaPayAccountContract({
-    identityStatus: 200,
-    identityPayload: identity,
-    balanceStatus: 200,
-    balancePayload: {
-      balance: 50,
-      User: { uuid: "p2p-user", name: "CRYPTOBRO" },
-    },
-  });
+test(
+  "an authoritative identity plus a conflicting P2P-shaped balance payload is fail-closed",
+  () => {
+    const result = evaluateQvaPayAccountContract({
+      identityStatus: 200,
+      identityPayload: identity,
+      balanceStatus: 200,
+      balancePayload: {
+        balance: 50,
+        User: { uuid: "p2p-user", name: "CRYPTOBRO" },
+      },
+    });
 
-  assert.equal(result.ok, false);
-  assert.equal(result.integrationStatus, "degraded");
-  assert.equal(result.balanceUsd, null);
-  assert.equal(result.user?.uuid, identity.uuid);
-});
+    assert.equal(result.ok, false);
+    assert.equal(result.integrationStatus, "degraded");
+    assert.equal(result.balanceUsd, null);
+    assert.equal(result.user?.uuid, identity.uuid);
+  },
+);
 
 test("fails closed on HTTP failures and incompatible 200 payloads", () => {
   const httpFailure = evaluateQvaPayAccountContract({
