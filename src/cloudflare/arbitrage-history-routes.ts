@@ -84,8 +84,15 @@ export async function handleArbitrageHistoryRoutes(
     const events = eventRows.map(toEvent);
     const report = reconcileLayerState({
       events,
-      operations,
-      finance,
+      operations: coin
+        ? operations.filter(
+            (operation) =>
+              String(operation.payload.coin ?? "").trim().toUpperCase() === coin,
+          )
+        : operations,
+      finance: coin
+        ? finance.filter((entry) => entry.coin.toUpperCase() === coin)
+        : finance,
       marketHistory,
     });
     return json(report, 200);
