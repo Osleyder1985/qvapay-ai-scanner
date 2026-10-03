@@ -67,7 +67,7 @@ function readConfig(db: D1Database): Promise<MonitorConfig> {
     .then((row) => {
       if (!row) {
         return {
-          enabled: true,
+          enabled: false,
           minMarginPercent: 5,
           coin: "BANK_CUP",
           scheduleEnabled: false,
