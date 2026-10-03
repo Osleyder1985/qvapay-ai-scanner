@@ -199,11 +199,11 @@ test("resets the bucket after the fifteen-minute window", async () => {
   assert.equal(afterWindow.allowed, true);
 });
 
-test("clears the failed-attempt bucket after successful authentication", async () => {
+test(\n  "clears the failed-attempt bucket after successful authentication",\n  async () => {
   const db = fakeDatabase();
   const now = new Date("2026-10-03T04:00:00.000Z");
 
-  await recordFailedLogin(db, request("198.51.100.13"), "admin", "secret", now);
+  await recordFailedLogin(\n    db,\n    request("198.51.100.13"),\n    "admin",\n    "secret",\n    now,\n  );
   assert.equal(db.rows.size, 1);
 
   await clearLoginRateLimit(
