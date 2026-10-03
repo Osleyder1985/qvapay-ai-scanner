@@ -200,7 +200,10 @@ export function reconcileLayerState(input: {
         "conflicting_identity",
         uuid,
         [uuid, payloadUuid],
-        [text(operation.payload.updated_at), text(operation.payload.created_at)],
+        [
+          text(operation.payload.updated_at),
+          text(operation.payload.created_at),
+        ],
       );
     }
   }
