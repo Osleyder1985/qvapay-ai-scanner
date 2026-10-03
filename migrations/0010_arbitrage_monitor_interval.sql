@@ -1,3 +1,3 @@
--- Configurable server-side arbitrage monitor cadence.
+-- Persist the configurable server-side arbitrage monitor cadence.
 ALTER TABLE arbitrage_monitor_config
-  ADD COLUMN interval_seconds INTEGER NOT NULL DEFAULT 10 CHECK (interval_seconds BETWEEN 5 AND 300);
+  ADD COLUMN interval_seconds INTEGER NOT NULL DEFAULT 10;
