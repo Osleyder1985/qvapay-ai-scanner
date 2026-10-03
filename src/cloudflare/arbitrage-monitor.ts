@@ -56,7 +56,8 @@ interface StateRow {
   updated_at: string;
 }
 
-const INTERVAL_MS = 10_000;
+const DEFAULT_INTERVAL_SECONDS = 10;
+const INTERVAL_MS = DEFAULT_INTERVAL_SECONDS * 1000;
 
 /**
  * Repairs the monitor/runtime event schema if a deployment reached the Worker
@@ -161,6 +162,13 @@ export async function ensureArbitrageMonitorSchema(
   ]);
   if (results.some((result) => result.success !== true)) {
     throw new Error("ARBITRAGE_RUNTIME_SCHEMA_ENSURE_FAILED");
+  }
+
+  if (names.has("arbitrage_monitor_config")) {
+    const columns = await db.prepare("PRAGMA table_info(arbitrage_monitor_config)").all<{ name: string }>();
+    if (!columns.results.some((column) => column.name === "interval_seconds")) {
+      await db.prepare("ALTER TABLE arbitrage_monitor_config ADD COLUMN interval_seconds INTEGER NOT NULL DEFAULT 10").run();
+    }
   }
 
   const seedResults = await db.batch([
@@ -384,7 +392,7 @@ export async function runArbitrageMonitor(
     status: "running",
     scanId,
     scannedAt,
-    nextRunAt: new Date(Date.now() + INTERVAL_MS).toISOString(),
+    nextRunAt: new Date(Date.now() + config.intervalSeconds * 1000).toISOString(),
     lastSuccessAt: scannedAt,
     lastError: null,
     payloadJson: JSON.stringify(payload),
