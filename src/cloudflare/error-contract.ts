@@ -35,6 +35,10 @@ const PUBLIC_MESSAGES: Record<PublicErrorCode, string> = {
   MONITOR_RUN_FAILED: "El monitor no pudo completar el ciclo de ejecución.",
 };
 
+/**
+ * The public contract is fail-closed: callers select a catalog code rather than
+ * passing arbitrary exception details across the HTTP boundary.
+ */
 export function publicError(
   code: PublicErrorCode,
   extra: Record<string, unknown> = {},
