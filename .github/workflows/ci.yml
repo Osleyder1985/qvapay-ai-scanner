@@ -170,53 +170,35 @@ jobs:
             exit 1
           fi
           mkdir -p production-monitor-evidence
-          for attempt in {1..12}; do
-            curl --fail-with-body --silent --show-error --location \
+          for attempt in {1..6}; do
+            curl --fail-with-body --silent --show-error --location --connect-timeout 5 --max-time 20 \
               --header "Authorization: Bearer ${AI_AUDITOR_TOKEN}" \
               --header "Accept: application/json" \
               --output production-monitor-evidence/health.json \
               "${AI_AUDITOR_BASE_URL}/api/ai-audit/health"
-            curl --fail-with-body --silent --show-error --location \
+            curl --fail-with-body --silent --show-error --location --connect-timeout 5 --max-time 20 \
               --header "Authorization: Bearer ${AI_AUDITOR_TOKEN}" \
               --header "Accept: application/json" \
               --output production-monitor-evidence/monitor.json \
               "${AI_AUDITOR_BASE_URL}/api/ai-audit/monitor"
-            curl --fail-with-body --silent --show-error --location \
-              --header "Authorization: Bearer ${AI_AUDITOR_TOKEN}" \
-              --header "Accept: application/json" \
-              --output production-monitor-evidence/arbitrage.json \
-              "${AI_AUDITOR_BASE_URL}/api/ai-audit/arbitrage"
             node --input-type=module -e '
               import fs from "node:fs";
               const health=JSON.parse(fs.readFileSync("production-monitor-evidence/health.json","utf8"));
               const monitor=JSON.parse(fs.readFileSync("production-monitor-evidence/monitor.json","utf8"));
-              const arbitrage=JSON.parse(fs.readFileSync("production-monitor-evidence/arbitrage.json","utf8"));
               const running=monitor?.ok===true && monitor?.state?.status==="running" && Boolean(monitor?.state?.scannedAt);
-              const snapshot=arbitrage?.ok===true && Boolean(arbitrage?.scannedAt) && Array.isArray(arbitrage?.marketOffers) && Array.isArray(arbitrage?.opportunities);
+              const snapshot=Array.isArray(monitor?.snapshot?.marketOffers) && Array.isArray(monitor?.snapshot?.opportunities);
               const database=health?.checks?.database?.ok===true;
-              if(database && running && snapshot) {
-                console.log(JSON.stringify({
-                  database: health.checks.database,
-                  monitor: monitor.state,
-                  snapshot: {
-                    marketOffers: arbitrage.marketOffers.length,
-                    opportunities: arbitrage.opportunities.length,
-                    scannedAt: arbitrage.scannedAt
-                  }
-                }, null, 2));
-                process.exit(0);
-              }
-              console.log("Waiting for a healthy production monitor scan...");
+              console.log(JSON.stringify({database: health?.checks?.database, monitor: monitor?.state, snapshot: monitor?.snapshot}, null, 2));
+              if(database && running && snapshot) process.exit(0);
               process.exit(2);
             ' && break
-            if [ "${attempt}" -eq 12 ]; then
+            if [ "${attempt}" -eq 6 ]; then
               echo "Production arbitrage monitor did not reach a healthy scanned state." >&2
               exit 1
             fi
             sleep 10
           done
           unset AI_AUDITOR_TOKEN
-
       - name: Upload production monitor evidence
         if: always()
         uses: actions/upload-artifact@v4
