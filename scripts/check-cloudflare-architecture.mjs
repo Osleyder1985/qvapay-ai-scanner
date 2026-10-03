@@ -13,7 +13,7 @@ function exists(relative) {
 }
 
 const wranglerSource = read("wrangler.jsonc");
-const mainMatch = wranglerSource.match(/\bmain\s*:\s*"([^"]+)"/);
+const mainMatch = wranglerSource.match(/["']?main["']?\s*:\s*["']([^"']+)["']/);
 if (mainMatch?.[1] !== "src/worker.ts") {
   failures.push(`El único entrypoint Wrangler esperado es src/worker.ts; encontrado: ${mainMatch?.[1] ?? "ausente"}`);
 }
@@ -43,7 +43,7 @@ if (!monitorDo.includes("export class ArbitrageMonitor")) {
 }
 
 const monitorBindingMatch = wranglerSource.match(
-  /name\s*:\s*"ARBITRAGE_MONITOR"[^}]*class_name\s*:\s*"([^"]+)"/s,
+  /["']?name["']?\s*:\s*["']ARBITRAGE_MONITOR["'][^}]*["']?class_name["']?\s*:\s*["']([^"']+)["']/s,
 );
 if (monitorBindingMatch?.[1] !== "ArbitrageMonitor") {
   failures.push("El binding ARBITRAGE_MONITOR no apunta a ArbitrageMonitor.");
