@@ -231,7 +231,7 @@ export async function routeRequest(
     } catch (error) {
       const code = errorStatus(error) === 500 ? "UPSTREAM_CONTRACT_ERROR" : "INTERNAL_ERROR";
       logInternalError("worker.api_request_failed", code);
-      return json(publicError(code, { requestPath: url.pathname }), errorStatus(error));
+      return json(publicError(code), errorStatus(error));
     }
   }
 
