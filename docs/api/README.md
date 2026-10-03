@@ -2,24 +2,37 @@
 
 This directory contains the OpenAPI contract for the Cloudflare Worker HTTP API.
 
-## Security boundary
+## Production security boundary
 
-Production uses the Worker as the primary application authentication boundary. Private routes require a D1-backed session and state-changing browser requests require same-origin validation.
+Production uses the Worker as the primary application authentication boundary.
 
-Cloudflare Access is not assumed as primary authentication. Any Access, WAF or edge rate-limit control is defense-in-depth and must be recorded as external account-level evidence.
+- Private /api/* routes require a D1-backed session.
+- POST/PUT/PATCH/DELETE browser mutations require an explicit matching Origin.
+- /api/auth/login uses same-origin credentials plus the D1-backed login rate limiter.
+- /api/auth/logout is same-origin and revokes the presented session.
+- /api/ai-audit/* is a separate read-only technical identity protected by a token hash.
+- /api/arbitrage/webhook is public only at the HTTP session layer; it requires HMAC-SHA-256 signature and a fresh timestamp.
+- QvaPay remains authoritative for operation-level authorization and state.
+- There is currently one configured dashboard identity and no multi-user RBAC inside the Worker.
 
-## Private mutations
+Cloudflare Access, WAF and edge rate limiting are not assumed as the primary application control. If enabled, they are defense-in-depth and must be verified as external account-level evidence.
 
-- POST /api/p2p/{uuid}/apply
-- POST /api/operations/{uuid}/paid
-- POST /api/operations/{uuid}/received
-- POST /api/operations/{uuid}/cancel
-- POST /api/operations/{uuid}/chat
-- POST /api/operations/{uuid}/rate
-- PUT/PATCH /api/auto-apply/config (disabled; returns 501)
+## Route inventory
 
-The Worker authenticates the dashboard operator; QvaPay remains responsible for operation-level authorization.
+The canonical route-by-route security and mutation inventory is maintained in docs/security/threat-model.md. Any route added to the Worker must be added there in the same change.
+
+## Auto-Apply
+
+Auto-Apply is fail-closed in the Cloudflare deployment:
+
+- GET config/status expose a fixed disabled state.
+- PUT/PATCH /api/auto-apply/config return HTTP 501.
+- The Worker scheduler starts the arbitrage monitor only; it does not invoke the Auto-Apply engine.
+
+## Cloudflare evidence
+
+Repository code cannot prove account-level settings by itself. The production workflow verifies deployment/version, required secret names, and the production authentication smoke without exposing secret values. Account-level Worker route, D1 binding, Access/WAF and edge-rate-limit settings require separate Cloudflare control-plane review.
 
 ## Maintenance rule
 
-Route, contract or security-boundary changes must update docs/api/openapi.yaml and the security baseline in the same change.
+Route, contract or security-boundary changes must update docs/api/openapi.yaml and docs/security/threat-model.md in the same change.
