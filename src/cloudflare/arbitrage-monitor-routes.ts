@@ -7,10 +7,7 @@
  */
 
 import { authorizeAiAuditor } from "./ai-audit-auth.js";
-import {
-  monitorState,
-  type ArbitrageMonitorEnv,
-} from "./arbitrage-monitor.js";
+import { monitorState, type ArbitrageMonitorEnv } from "./arbitrage-monitor.js";
 import {
   logInternalError,
   publicError,
