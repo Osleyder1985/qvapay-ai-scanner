@@ -251,12 +251,7 @@ export function reconcileLayerState(input: {
   );
   for (const id of financeMissingOperations) {
     const finance = financeById.get(id);
-    addDiscrepancy(
-      "finance_missing_operation",
-      id,
-      [id],
-      [finance?.timestamp],
-    );
+    addDiscrepancy("finance_missing_operation", id, [id], [finance?.timestamp]);
   }
 
   const matchedHistory = new Set<string>();
@@ -288,7 +283,7 @@ export function reconcileLayerState(input: {
   const nowMs =
     input.now instanceof Date
       ? input.now.getTime()
-      : timestamp(input.now ?? new Date()) ?? Date.now();
+      : (timestamp(input.now ?? new Date()) ?? Date.now());
   const staleAfterMs = input.staleAfterMs ?? STALE_LIFECYCLE_THRESHOLD_MS;
   const nonTerminal = new Set(["created", "reopened", "applied", "paid"]);
   const latestByOffer = new Map<string, NormalizedMarketEvent>();
@@ -297,9 +292,9 @@ export function reconcileLayerState(input: {
     const current = latestByOffer.get(event.offerUuid);
     if (
       !current ||
-      timestamp(event.eventAt) !== null &&
-      (timestamp(current.eventAt) === null ||
-        timestamp(event.eventAt)! > timestamp(current.eventAt)!)
+      (timestamp(event.eventAt) !== null &&
+        (timestamp(current.eventAt) === null ||
+          timestamp(event.eventAt)! > timestamp(current.eventAt)!))
     ) {
       latestByOffer.set(event.offerUuid, event);
     }
