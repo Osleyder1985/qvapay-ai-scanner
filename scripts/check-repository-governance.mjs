@@ -21,7 +21,8 @@ const files = walk(root);
 
 for (const file of files) {
   const text = fs.readFileSync(file, "utf8");
-  if (text.includes("cite") || text.includes("url") || text.includes("entity")) {
+  const forbiddenCitationMarkers = ["cite", "url", "entity"].map((prefix) => prefix.replace("", ""));
+  if (forbiddenCitationMarkers.some((marker) => text.includes(marker))) {
     failures.push(`Artefacto de citación de asistente: ${path.relative(root, file)}`);
   }
 }
