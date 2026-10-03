@@ -1,7 +1,7 @@
 /**
  * @file qvapay-balance.ts
  * @path src/cloudflare/qvapay-balance.ts
- * @description Valida el contrato financiero documentado para el balance de QvaPay.
+ * @description Valida el contrato financiero documentado y compatible con QvaPay.
  * @module cloudflare
  * @status active
  */
@@ -17,11 +17,11 @@ export interface QvaPayBalanceParseResult {
 }
 
 /**
- * Valida exclusivamente las formas documentadas de POST /v2/balance:
- * { "balance": number } o { "message": string, "data": number }.
+ * Normaliza las formas documentadas y compatibles de POST /v2/balance:
+ * { "balance": number }, un envelope { "data": ... } o un valor numérico.
  *
- * El campo representa el balance actual en USD. No se aceptan strings,
- * booleanos, valores no finitos, valores negativos ni envelopes anidados.
+ * El campo representa el balance actual en USD. Se rechazan valores no
+ * finitos y negativos.
  */
 export function parseQvaPayBalance(payload: unknown): QvaPayBalanceParseResult {
   const normalize = (raw: unknown): QvaPayBalanceParseResult => {
@@ -63,7 +63,8 @@ export function parseQvaPayBalance(payload: unknown): QvaPayBalanceParseResult {
     return {
       ok: false,
       balance: null,
-      reason: "La respuesta de balance no contiene un objeto JSON ni un valor numérico válido.",
+      reason:
+        "La respuesta de balance no contiene un objeto JSON ni un valor numérico válido.",
     };
   }
 
@@ -87,6 +88,7 @@ export function parseQvaPayBalance(payload: unknown): QvaPayBalanceParseResult {
   return {
     ok: false,
     balance: null,
-    reason: "La respuesta de balance no contiene un campo balance reconocible.",
+    reason:
+      "La respuesta de balance no contiene un campo balance reconocible.",
   };
 }
