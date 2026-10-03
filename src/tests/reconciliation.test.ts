@@ -46,6 +46,7 @@ test("reconciles complete event, operation, finance and market-history evidence"
         type: "sell",
       },
     ],
+    now: "2026-10-02T12:05:00.000Z",
   });
 
   assert.deepEqual(report.eventMissingOperations, []);
