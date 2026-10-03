@@ -14,7 +14,6 @@ import {
   type QvaPayHttpEnv,
 } from "./qvapay-http.js";
 
-type JsonRecord = Record<string, unknown>;
 type JsonResponse = (payload: unknown, status?: number) => Response;
 
 function errorStatus(error: unknown): number {
@@ -57,27 +56,6 @@ export async function handleAccountRoutes(
         balancePayload,
       });
 
-      const balanceRecord =
-        balancePayload && typeof balancePayload === "object"
-          ? (balancePayload as JsonRecord)
-          : null;
-      const valueType = (value: unknown): string => {
-        if (value === null) return "null";
-        if (Array.isArray(value)) return "array";
-        return typeof value;
-      };
-      const balanceDiagnostics = {
-        payloadType: valueType(balancePayload),
-        payloadKeys: balanceRecord
-          ? Object.keys(balanceRecord).slice(0, 50)
-          : [],
-        balanceFieldType: valueType(balanceRecord?.balance),
-        balanceFieldPresent: Object.prototype.hasOwnProperty.call(
-          balanceRecord ?? {},
-          "balance",
-        ),
-      };
-
       return json({
         account: {
           balanceUsd: contract.balanceUsd,
@@ -97,7 +75,6 @@ export async function handleAccountRoutes(
           balanceError: contract.balanceError
             ? { httpStatus: balance.status, message: contract.balanceError }
             : null,
-          balanceDiagnostics,
           integrationOk: contract.ok,
           integrationStatus: contract.integrationStatus,
           fetchedAt: new Date().toISOString(),
