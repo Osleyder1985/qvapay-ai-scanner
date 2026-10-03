@@ -8,6 +8,7 @@
 
 import { monitorState } from "./arbitrage-monitor.js";
 import type { D1Database } from "./d1.js";
+import { logInternalError, publicError } from "./error-contract.js";
 
 interface DurableObjectStub {
   fetch(request: Request): Promise<Response>;
@@ -29,14 +30,9 @@ function stub(env: Env) {
   return env.ARBITRAGE_MONITOR.get(id);
 }
 
-function operationalError(code: string, error: unknown, json: Json): Response {
-  return json(
-    {
-      error: "No se pudo completar la solicitud.",
-      code,
-    },
-    503,
-  );
+function operationalError(code: "MONITOR_STATE_READ_FAILED" | "MONITOR_CONFIG_ROW_MISSING" | "MONITOR_CONFIG_WRITE_FAILED", json: Json): Response {
+  logInternalError("arbitrage_monitor.operation_failed", code);
+  return json(publicError(code), 503);
 }
 
 export async function handleArbitrageMonitorRoutes(
@@ -80,7 +76,7 @@ export async function handleArbitrageMonitorRoutes(
         coverage: payload.coverage ?? null,
       });
     } catch (error) {
-      return operationalError("MONITOR_STATE_READ_FAILED", error, json);
+      return operationalError("MONITOR_STATE_READ_FAILED", json);
     }
   }
 
@@ -107,11 +103,7 @@ export async function handleArbitrageMonitorRoutes(
       .run();
 
     if (Number(result.meta?.changes ?? 0) !== 1) {
-      return operationalError(
-        "MONITOR_CONFIG_ROW_MISSING",
-        new Error("arbitrage_monitor_config id=1 no existe."),
-        json,
-      );
+      return operationalError("MONITOR_CONFIG_ROW_MISSING", json);
     }
 
     await stub(env).fetch(new Request("https://internal/start"));
@@ -122,7 +114,7 @@ export async function handleArbitrageMonitorRoutes(
       nextRunAt: new Date(Date.now() + 10_000).toISOString(),
     });
   } catch (error) {
-    return operationalError("MONITOR_CONFIG_WRITE_FAILED", error, json);
+    return operationalError("MONITOR_CONFIG_WRITE_FAILED", json);
   }
 }
 
