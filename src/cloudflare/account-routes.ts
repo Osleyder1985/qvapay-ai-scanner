@@ -8,6 +8,7 @@
 
 import { evaluateQvaPayAccountContract } from "./qvapay-account-contract.js";
 import { parseQvaPayApplicationIdentity } from "./qvapay-identity.js";
+import { parseQvaPayP2PCollection } from "./qvapay-contracts.js";
 import {
   qvapay,
   readQvaPayPayload,
@@ -33,15 +34,21 @@ export async function handleAccountRoutes(
 ): Promise<Response | null> {
   if (url.pathname === "/api/account" && request.method === "GET") {
     try {
-      const [balance, info] = await Promise.all([
+      const [balance, info, ownOffers] = await Promise.all([
         qvapay(env, "/v2/balance", { method: "POST" }),
         qvapay(env, "/v2/info", { method: "POST" }),
+        qvapay(env, "/p2p?my=1&take=1&page=1", { method: "GET" }),
       ]);
       const balancePayload = await readQvaPayPayload(balance);
       const infoPayload = await readQvaPayPayload(info);
+      const ownOffersPayload = await readQvaPayPayload(ownOffers);
+      const ownCollection = ownOffers.ok
+        ? parseQvaPayP2PCollection(ownOffersPayload, 0, 1)
+        : null;
+      const ownerUser = ownCollection?.data?.[0]?.User ?? ownCollection?.data?.[0]?.Peer ?? null;
       const contract = evaluateQvaPayAccountContract({
         identityStatus: info.status,
-        identityPayload: infoPayload,
+        identityPayload: ownerUser,
         balanceStatus: balance.status,
         balancePayload,
       });
@@ -50,12 +57,18 @@ export async function handleAccountRoutes(
         account: {
           balanceUsd: contract.balanceUsd,
           user: contract.user,
-          identitySource: contract.user ? "qvapay_v2_info" : "unavailable",
-          identityHttpStatus: info.status,
-          identityOk: info.ok,
+          identitySource: contract.user ? "qvapay_p2p_owner" : "unavailable",
+          identityHttpStatus: ownOffers.status,
+          identityOk: contract.user !== null,
           identityError: contract.identityError
-            ? { httpStatus: info.status, message: contract.identityError }
+            ? { httpStatus: ownOffers.status, message: contract.identityError }
             : null,
+          application: {
+            uuid: parseQvaPayApplicationIdentity(infoPayload)?.uuid ?? null,
+            name: parseQvaPayApplicationIdentity(infoPayload)?.name ?? null,
+            active: parseQvaPayApplicationIdentity(infoPayload)?.active ?? null,
+            enabled: parseQvaPayApplicationIdentity(infoPayload)?.enabled ?? null,
+          },
           balanceSource:
             contract.balanceUsd !== null
               ? "qvapay_v2_balance"
