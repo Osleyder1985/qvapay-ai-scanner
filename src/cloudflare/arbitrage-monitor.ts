@@ -224,7 +224,10 @@ function readConfig(db: D1Database): Promise<MonitorConfig> {
         enabled: row.enabled === 1,
         minMarginPercent: Number(row.min_margin_percent),
         coin: String(row.coin).toUpperCase(),
-        intervalSeconds: Math.min(300, Math.max(5, Number(row.interval_seconds) || 10)),
+        intervalSeconds: Math.min(
+          300,
+          Math.max(5, Number(row.interval_seconds) || 10),
+        ),
         scheduleEnabled: row.schedule_enabled === 1,
         timezone: row.timezone || "UTC",
         startLocal: row.start_local,
@@ -364,7 +367,9 @@ export async function runArbitrageMonitor(
     await saveState(db, {
       status: "error",
       lastError: message,
-      nextRunAt: new Date(Date.now() + config.intervalSeconds * 1000).toISOString(),
+      nextRunAt: new Date(
+        Date.now() + config.intervalSeconds * 1000,
+      ).toISOString(),
     });
     return { ok: false, error: message };
   }

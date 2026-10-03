@@ -182,9 +182,7 @@ export async function handleArbitrageMonitorRoutes(
       minMarginPercent: margin,
       coin,
       intervalSeconds,
-      nextRunAt: new Date(
-        Date.now() + intervalSeconds * 1000,
-      ).toISOString(),
+      nextRunAt: new Date(Date.now() + intervalSeconds * 1000).toISOString(),
     });
   } catch (error) {
     return operationalError("MONITOR_CONFIG_WRITE_FAILED", json);
