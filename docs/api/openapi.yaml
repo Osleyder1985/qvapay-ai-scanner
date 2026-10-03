@@ -566,15 +566,18 @@ components:
         persisted: { type: integer }
     MarketStatisticsQuality:
       type: object
-      required: [sampleCount, usableSampleCount, missingFieldCount, staleObservationCount, coverageStartAt, coverageEndAt, freshnessMs, lifecycleCompletenessPercent, excludedSampleCount, outlierExcludedCount, minimumSampleSize, belowMinimumSample]
+      required: [sampleCount, usableSampleCount, missingFieldCount, invalidFieldExcludedCount, staleObservationCount, coverageStartAt, coverageEndAt, timeSpanMs, freshnessMs, lifecycleCompleteCount, lifecycleCompletenessPercent, excludedSampleCount, outlierExcludedCount, minimumSampleSize, belowMinimumSample]
       properties:
         sampleCount: { type: integer, minimum: 0 }
         usableSampleCount: { type: integer, minimum: 0 }
         missingFieldCount: { type: integer, minimum: 0 }
+        invalidFieldExcludedCount: { type: integer, minimum: 0 }
         staleObservationCount: { type: integer, minimum: 0 }
         coverageStartAt: { type: string, format: date-time, nullable: true }
         coverageEndAt: { type: string, format: date-time, nullable: true }
+        timeSpanMs: { type: number, minimum: 0, nullable: true }
         freshnessMs: { type: number, minimum: 0, nullable: true }
+        lifecycleCompleteCount: { type: integer, minimum: 0 }
         lifecycleCompletenessPercent: { type: number, minimum: 0, maximum: 100, nullable: true }
         excludedSampleCount: { type: integer, minimum: 0 }
         outlierExcludedCount: { type: integer, minimum: 0 }
