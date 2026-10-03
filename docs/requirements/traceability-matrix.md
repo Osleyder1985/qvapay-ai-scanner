@@ -1,6 +1,6 @@
 # Requirements Traceability Matrix
 
-**Baseline:** 1.0  
+**Baseline:** 1.1  
 **Status:** Active  
 **Verification convention:** `Implemented` means repository evidence exists; `Verified` is reserved for an executed verification result that is actually known. Where execution has not been independently observed, the matrix records that limitation.
 
@@ -64,3 +64,8 @@
 - The repository has integration/E2E tests, but their latest post-merge execution has not been independently observed in this audit environment.
 - CI workflows are present, but no successful GitHub Actions run is claimed unless a run result is explicitly observed.
 - Requirements are intentionally limited to capabilities evidenced by the current implementation; future AI/ML, alerts and autonomous trading capabilities are not promoted to baseline requirements until separately specified and validated.
+
+
+## Baseline governance note
+
+Baseline version 1.1 is authoritative. Historical requirement documents outside "docs/requirements" are summaries and do not override this matrix. A status of **Implemented** is not equivalent to **Verified**; verification requires an observed execution result or other explicit evidence.
