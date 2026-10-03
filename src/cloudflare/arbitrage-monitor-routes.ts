@@ -67,7 +67,11 @@ async function ensureMonitorProgress(env: Env) {
     ? Date.parse(current.state.next_run_at)
     : Number.NaN;
   const intervalMs = current.config.intervalSeconds * 1000;
-  if (Number.isFinite(nextRunAt) && nextRunAt > Date.now() && nextRunAt <= Date.now() + intervalMs) {
+  if (
+    Number.isFinite(nextRunAt) &&
+    nextRunAt > Date.now() &&
+    nextRunAt <= Date.now() + intervalMs
+  ) {
     return current;
   }
 
@@ -147,15 +151,27 @@ export async function handleArbitrageMonitorRoutes(
       .toUpperCase();
     if (!Number.isFinite(margin) || margin < 0)
       return json({ error: "minMarginPercent inválido." }, 400);
-    if (!Number.isInteger(intervalSeconds) || intervalSeconds < 5 || intervalSeconds > 300)
-      return json({ error: "intervalSeconds debe estar entre 5 y 300 segundos." }, 400);
+    if (
+      !Number.isInteger(intervalSeconds) ||
+      intervalSeconds < 5 ||
+      intervalSeconds > 300
+    )
+      return json(
+        { error: "intervalSeconds debe estar entre 5 y 300 segundos." },
+        400,
+      );
     if (!/^[A-Z0-9_]{2,32}$/.test(coin))
       return json({ error: "coin inválida." }, 400);
 
     const now = new Date().toISOString();
     const result = await env.DB.prepare(
       `UPDATE arbitrage_monitor_config
-       SET min_margin_percent = ?, coin = ?, interval_seconds = ?, enabled = 1, updated_at = ?
+       SET
+         min_margin_percent = ?,
+         coin = ?,
+         interval_seconds = ?,
+         enabled = 1,
+         updated_at = ?
        WHERE id = 1`,
     )
       .bind(margin, coin, intervalSeconds, now)
@@ -171,7 +187,9 @@ export async function handleArbitrageMonitorRoutes(
       minMarginPercent: margin,
       coin,
       intervalSeconds,
-      nextRunAt: new Date(Date.now() + intervalSeconds * 1000).toISOString(),
+      nextRunAt: new Date(
+        Date.now() + intervalSeconds * 1000,
+      ).toISOString(),
     });
   } catch (error) {
     return operationalError("MONITOR_CONFIG_WRITE_FAILED", json);
