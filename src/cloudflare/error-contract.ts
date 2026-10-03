@@ -24,10 +24,14 @@ const PUBLIC_MESSAGES: Record<PublicErrorCode, string> = {
   UPSTREAM_CONTRACT_ERROR: "La respuesta del servicio externo no es válida.",
   D1_UNAVAILABLE: "La base de datos no está disponible.",
   AUTH_SERVICE_UNAVAILABLE: "El servicio de autenticación no está disponible.",
-  AUTH_SESSION_CREATE_FAILED:\n    "El servicio de autenticación no pudo crear la sesión.",
-  MONITOR_STATE_READ_FAILED:\n    "No se pudo consultar el estado del monitor.",
-  MONITOR_CONFIG_ROW_MISSING:\n    "La configuración del monitor no está disponible.",
-  MONITOR_CONFIG_WRITE_FAILED:\n    "No se pudo actualizar la configuración del monitor.",
+  AUTH_SESSION_CREATE_FAILED:
+    "El servicio de autenticación no pudo crear la sesión.",
+  MONITOR_STATE_READ_FAILED:
+    "No se pudo consultar el estado del monitor.",
+  MONITOR_CONFIG_ROW_MISSING:
+    "La configuración del monitor no está disponible.",
+  MONITOR_CONFIG_WRITE_FAILED:
+    "No se pudo actualizar la configuración del monitor.",
   MONITOR_RUN_FAILED: "El monitor no pudo completar el ciclo de ejecución.",
 };
 
