@@ -53,17 +53,21 @@ function stub(env: Env) {
   return env.ARBITRAGE_MONITOR.get(id);
 }
 
+async function readMonitorAlarm(env: Env): Promise<number | null> {
+  const response = await stub(env).fetch(
+    new Request("https://internal/status"),
+  );
+  if (!response.ok) return null;
+  const payload = (await response.json()) as { alarm?: number | null };
+  return typeof payload.alarm === "number" && Number.isFinite(payload.alarm)
+    ? payload.alarm
+    : null;
+}
+
 async function ensureMonitorProgress(env: Env) {
   let current = await monitorState(env.DB);
   const now = Date.now();
-  const alarmResponse = await stub(env).fetch(
-    new Request("https://internal/status"),
-  );
-  const alarmPayload = (await alarmResponse.json()) as { alarm?: number | null };
-  const alarm =
-    typeof alarmPayload.alarm === "number" && Number.isFinite(alarmPayload.alarm)
-      ? alarmPayload.alarm
-      : null;
+  let alarm = await readMonitorAlarm(env);
 
   // Browser reads are observational. The Durable Object alarm is the scheduler;
   // GET must never run a market scan just because the countdown reached zero.
@@ -71,23 +75,20 @@ async function ensureMonitorProgress(env: Env) {
     await runArbitrageMonitor(env.DB, env);
     await stub(env).fetch(new Request("https://internal/start"));
     current = await monitorState(env.DB);
+    alarm = await readMonitorAlarm(env);
   } else if (alarm === null) {
     const persistedNextRun = current.state.next_run_at
       ? Date.parse(current.state.next_run_at)
       : Number.NaN;
     if (!Number.isFinite(persistedNextRun) || persistedNextRun <= now) {
       await runArbitrageMonitor(env.DB, env);
+      current = await monitorState(env.DB);
     }
     await stub(env).fetch(new Request("https://internal/start"));
-    current = await monitorState(env.DB);
+    alarm = await readMonitorAlarm(env);
   }
 
-  return {
-    ...current,
-    alarm: (await stub(env).fetch(new Request("https://internal/status"))).ok
-      ? (((await (await stub(env).fetch(new Request("https://internal/status"))).json()) as { alarm?: number | null }).alarm ?? null)
-      : alarm,
-  };
+  return { ...current, alarm };
 }
 
 function operationalError(
