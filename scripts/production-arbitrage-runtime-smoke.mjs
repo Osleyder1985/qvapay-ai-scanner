@@ -98,6 +98,7 @@ console.log("Authoritative scheduler deadline:", initialSchedulerDeadline);
 const deadline = Date.now() + (interval + 15) * 1000;
 let previous = b;
 let observedTransition = false;
+let finalSchedulerDeadline = initialSchedulerDeadline;
 
 while (Date.now() < deadline) {
   await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -107,6 +108,7 @@ while (Date.now() < deadline) {
   const s = snapshot(current);
   const schedulerState = scheduler?.state ?? {};
   const schedulerDeadline = schedulerState.nextRunAt ?? scheduler?.durableObject?.nextAlarmAt ?? null;
+  if (schedulerDeadline) finalSchedulerDeadline = schedulerDeadline;
 
   if (schedulerState.lastError) {
     throw new Error("Production scheduler audit reports lastError: " + schedulerState.lastError);
@@ -145,7 +147,7 @@ if (!observedTransition) {
   );
 }
 
-if (!previous.nextRunAt || Date.parse(previous.nextRunAt) <= Date.now()) {
+if (!finalSchedulerDeadline || Date.parse(finalSchedulerDeadline) <= Date.now()) {
   throw new Error("After a completed scan, nextRunAt was not scheduled in the future.");
 }
 
@@ -156,5 +158,5 @@ console.log(JSON.stringify({
   initialScannedAt: a.scannedAt,
   completedScanId: previous.scanId,
   completedScannedAt: previous.scannedAt,
-  nextRunAt: schedulerDeadline,
+  nextRunAt: finalSchedulerDeadline,
 }, null, 2));
