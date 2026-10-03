@@ -21,4 +21,4 @@ No se copia texto protegido de las normas. Sólo se registra la referencia, su e
 
 ## Fuentes
 
-Las fuentes normativas oficiales y la fecha de revisión están registradas en docs/governance/references.md.
+Las fuentes normativas oficiales y la fecha de revisión están registradas en docs/governance/standards-references.md.
