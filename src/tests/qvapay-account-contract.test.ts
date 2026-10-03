@@ -20,13 +20,17 @@ const identity = {
 };
 
 test("accepts direct balance and zero", () => {
-  assert.equal(parseQvaPayBalance({ balance: 125.5 }).balance?.balanceUsd, 125.5);
+  assert.equal(
+    parseQvaPayBalance({ balance: 125.5 }).balance?.balanceUsd,
+    125.5,
+  );
   assert.equal(parseQvaPayBalance({ balance: 0 }).balance?.balanceUsd, 0);
 });
 
 test("accepts the documented generic numeric envelope", () => {
   assert.equal(
-    parseQvaPayBalance({ message: "Operación exitosa", data: 125.5 }).balance?.balanceUsd,
+    parseQvaPayBalance({ message: "Operación exitosa", data: 125.5 })
+      .balance?.balanceUsd,
     125.5,
   );
 });
@@ -44,7 +48,11 @@ test("rejects strings, booleans, non-finite, negative and ambiguous balances", (
     { balances: [{ balance: 500 }] },
   ]) {
     const parsed = parseQvaPayBalance(payload);
-    assert.equal(parsed.ok, false, JSON.stringify(payload));
+    assert.equal(
+      parsed.ok,
+      false,
+      JSON.stringify(payload),
+    );
     assert.equal(parsed.balance, null);
   }
 });
