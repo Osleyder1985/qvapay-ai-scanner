@@ -604,6 +604,85 @@ test("calcula mediana, percentiles y VWAP", () => {
   assert.equal(result.percentiles.p75, 250);
 });
 
+test("separa precios de referencia por lado y conserva freshness", () => {
+  const result = calculateCurrencyAnalytics(
+    [
+      event({
+        offerUuid: "buy-1",
+        dedupeKey: "buy-1",
+        side: "buy",
+        amount: 1,
+        receive: 100,
+        rate: 100,
+        eventAt: "2026-10-02T11:00:00Z",
+        observedAt: "2026-10-02T11:00:01Z",
+      }),
+      event({
+        offerUuid: "buy-2",
+        dedupeKey: "buy-2",
+        side: "buy",
+        amount: 2,
+        receive: 400,
+        rate: 200,
+        eventAt: "2026-10-02T11:30:00Z",
+        observedAt: "2026-10-02T11:30:01Z",
+      }),
+      event({
+        offerUuid: "buy-outlier",
+        dedupeKey: "buy-outlier",
+        side: "buy",
+        amount: 1,
+        receive: 1000,
+        rate: 1000,
+        eventAt: "2026-10-02T11:45:00Z",
+        observedAt: "2026-10-02T11:45:01Z",
+      }),
+      event({
+        offerUuid: "sell-1",
+        dedupeKey: "sell-1",
+        side: "sell",
+        amount: 1,
+        receive: 300,
+        rate: 300,
+        eventAt: "2026-10-02T10:00:00Z",
+        observedAt: "2026-10-02T10:00:01Z",
+      }),
+      event({
+        offerUuid: "sell-2",
+        dedupeKey: "sell-2",
+        side: "sell",
+        amount: 1,
+        receive: 400,
+        rate: 400,
+        eventAt: "2026-10-02T10:05:00Z",
+        observedAt: "2026-10-02T10:05:01Z",
+      }),
+      event({
+        offerUuid: "other-coin",
+        dedupeKey: "other-coin",
+        coin: "USDT",
+        side: "buy",
+        amount: 1,
+        receive: 9999,
+        rate: 9999,
+        eventAt: "2026-10-02T11:59:00Z",
+        observedAt: "2026-10-02T11:59:01Z",
+      }),
+    ],
+    "BANK_CUP",
+    { now: NOW, maxAgeMs: 60 * 60 * 1000 },
+  );
+
+  assert.equal(result.referencePrices.buy?.sampleCount, 3);
+  assert.equal(result.referencePrices.buy?.medianRate, 200);
+  assert.equal(result.referencePrices.buy?.vwap, 375);
+  assert.equal(result.referencePrices.sell?.sampleCount, 2);
+  assert.equal(result.referencePrices.sell?.medianRate, 350);
+  assert.equal(result.referencePrices.sell?.vwap, 350);
+  assert.equal(result.referencePrices.buy?.stale, false);
+  assert.equal(result.referencePrices.sell?.stale, true);
+});
+
 test("cuenta canceladas en la misma ventana terminal que las completadas", () => {
   const result = calculateCurrencyAnalytics(
     [

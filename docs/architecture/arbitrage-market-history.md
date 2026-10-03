@@ -59,7 +59,8 @@ Por moneda se calculan:
 - conteo de operaciones completadas;
 - métricas de tiempo hasta completar cuando los timestamps son válidos;
 - timestamp de evento y observación más recientes;
-- estado de obsolescencia cuando el consumidor proporciona un límite de antigüedad.
+- estado de obsolescencia cuando el consumidor proporciona un límite de antigüedad;
+- estadísticas de precio de referencia separadas para `buy` y `sell` cuando existe evidencia de lado. Cada lado conserva muestra, volumen, min/max, media, mediana, percentiles, VWAP y freshness propios.
 
 No se mezclan monedas.
 
@@ -97,6 +98,14 @@ El webhook requiere:
 - cuerpo de máximo 256 KiB.
 
 El límite de cuerpo se aplica también durante la lectura del stream para evitar aceptar primero un payload sobredimensionado y validarlo después.
+
+## Precio de referencia por lado
+
+`referencePrices.buy` y `referencePrices.sell` se calculan únicamente con operaciones completadas válidas de la misma moneda y lado. Los eventos con otro lado o sin lado no se mezclan en estas estadísticas.
+
+La mediana y los percentiles son robustos frente a valores extremos; el VWAP conserva el peso del volumen negociado. La ausencia de muestras produce `null` y no se fabrica un precio. La freshness se determina con `observed_at` frente a `maxAgeMs` cuando el consumidor lo proporciona.
+
+Estas estadísticas son evidencia descriptiva para análisis posterior. No seleccionan automáticamente un precio, no reprician ofertas y no ejecutan operaciones.
 
 ## Limitaciones
 
