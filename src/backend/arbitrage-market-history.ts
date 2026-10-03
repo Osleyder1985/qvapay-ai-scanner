@@ -249,8 +249,10 @@ export function deduplicateMarketEvents(
     // fecha de creación. Para el resto de estados, conservar la observación
     // más reciente, que es la que puede contener el payload final corregido.
     const shouldReplace =
-      event.event === "created"
-        ? eventAt < currentEventAt ||
+      current.quarantined !== event.quarantined
+        ? current.quarantined
+        : event.event === "created"
+          ? eventAt < currentEventAt ||
           (eventAt === currentEventAt && observedAt > currentObservedAt)
         : observedAt > currentObservedAt ||
           (observedAt === currentObservedAt && eventAt > currentEventAt);
