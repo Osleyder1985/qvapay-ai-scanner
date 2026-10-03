@@ -120,33 +120,36 @@ function request(ip: string): Request {
   });
 }
 
-test(\n  "allows four failures and blocks the fifth within the window",\n  async () => {
-  const db = fakeDatabase();
-  const base = new Date("2026-10-03T04:00:00.000Z");
+test(
+  "allows four failures and blocks the fifth within the window",
+  async () => {
+    const db = fakeDatabase();
+    const base = new Date("2026-10-03T04:00:00.000Z");
 
-  for (let i = 1; i < AUTH_RATE_LIMIT_MAX_FAILURES; i += 1) {
-    const decision = await recordFailedLogin(
+    for (let i = 1; i < AUTH_RATE_LIMIT_MAX_FAILURES; i += 1) {
+      const decision = await recordFailedLogin(
+        db,
+        request("198.51.100.10"),
+        "admin",
+        "secret",
+        new Date(base.getTime() + i * 1000),
+      );
+      assert.equal(decision.allowed, true);
+      assert.equal(decision.retryAfterSeconds, 0);
+    }
+
+    const blocked = await recordFailedLogin(
       db,
       request("198.51.100.10"),
       "admin",
       "secret",
-      new Date(base.getTime() + i * 1000),
+      new Date(base.getTime() + 5000),
     );
-    assert.equal(decision.allowed, true);
-    assert.equal(decision.retryAfterSeconds, 0);
-  }
 
-  const blocked = await recordFailedLogin(
-    db,
-    request("198.51.100.10"),
-    "admin",
-    "secret",
-    new Date(base.getTime() + 5000),
-  );
-
-  assert.equal(blocked.allowed, false);
-  assert.ok(blocked.retryAfterSeconds > 0);
-});
+    assert.equal(blocked.allowed, false);
+    assert.ok(blocked.retryAfterSeconds > 0);
+  },
+);
 
 test("separates rate-limit buckets by client address", async () => {
   const db = fakeDatabase();
