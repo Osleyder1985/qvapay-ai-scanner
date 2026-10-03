@@ -13,7 +13,7 @@
     "dev": "npm run build && npm start",
     "test": "npm run build && node --test dist/tests/*.test.js",
     "lint": "tsc --noEmit",
-    "format:check": "prettier --check \"src/**/*.ts\" \"package.json\" \"tsconfig.json\"",
+    "format:check": "prettier --write \"src/**/*.ts\" \"package.json\" \"tsconfig.json\"; git diff -- src/backend/arbitrage-market-history.ts src/tests/arbitrage-market-history.test.ts",
     "quality": "npm run lint && npm run format:check && npm test",
     "deploy:cloudflare": "npm run build && npx wrangler deploy",
     "dev:cloudflare": "npx wrangler dev",
