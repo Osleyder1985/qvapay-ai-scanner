@@ -133,7 +133,7 @@ async function ensureAlarm(env: AiAuditEnv): Promise<number | null> {
     new Request("https://internal/start"),
   );
   if (!response.ok) return null;
-  return doAlarm(env);
+  return Date.now() + 10_000;
 }
 
 export async function auditHealth(
