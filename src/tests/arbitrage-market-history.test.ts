@@ -200,8 +200,8 @@ test("rechaza regresiones de ciclo después de un estado terminal", () => {
     offerUuid: "regression",
     previousEvent: "completed",
     event: "paid",
-    previousEventAt: "2026-10-02T11:00:00.000Z",
-    eventAt: "2026-10-02T12:00:00.000Z",
+    previousEventAt: "2026-10-02T11:00:00Z",
+    eventAt: "2026-10-02T12:00:00Z",
     reason: "invalid_transition",
   });
 });
