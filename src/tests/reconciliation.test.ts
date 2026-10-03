@@ -61,7 +61,7 @@ test("reconciles complete event, operation, finance and market-history evidence"
 
 test("detects delayed or missing counterparts without mutating any layer", () => {
   const report = reconcileLayerState({
-    events: [event("event-only")],
+    events: [event("event-only"), event("stale-event", "created")],
     operations: [
       {
         uuid: "operation-only",
