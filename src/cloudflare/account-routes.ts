@@ -45,7 +45,8 @@ export async function handleAccountRoutes(
       const ownCollection = ownOffers.ok
         ? parseQvaPayP2PCollection(ownOffersPayload, 0, 1)
         : null;
-      const ownerUser = ownCollection?.data?.[0]?.User ?? ownCollection?.data?.[0]?.Peer ?? null;
+      const ownerUser =
+        ownCollection?.data?.[0]?.User ?? ownCollection?.data?.[0]?.Peer ?? null;
       const contract = evaluateQvaPayAccountContract({
         identityStatus: info.status,
         identityPayload: ownerUser,
@@ -57,7 +58,9 @@ export async function handleAccountRoutes(
         account: {
           balanceUsd: contract.balanceUsd,
           user: contract.user,
-          identitySource: contract.user ? "qvapay_p2p_owner" : "unavailable",
+          identitySource: contract.user
+            ? "qvapay_p2p_owner"
+            : "unavailable",
           identityHttpStatus: ownOffers.status,
           identityOk: contract.user !== null,
           identityError: contract.identityError
