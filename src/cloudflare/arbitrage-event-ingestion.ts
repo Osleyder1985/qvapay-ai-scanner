@@ -41,6 +41,7 @@ interface ReconciliationResult {
   pagesFetched: number;
   truncated: boolean;
   invalidTransitions: number;
+  futureSkewCount: number;
 }
 
 function record(value: unknown): QvaPayRecord | null {
@@ -383,5 +384,6 @@ export async function reconcileArbitrageHistory(
     pagesFetched,
     truncated: lastPage > MAX_OPERATION_PAGES,
     invalidTransitions: lifecycle.violations.length,
+    futureSkewCount: lifecycle.futureSkewCount,
   };
 }
