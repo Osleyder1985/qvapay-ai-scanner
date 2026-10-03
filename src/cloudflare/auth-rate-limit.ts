@@ -20,6 +20,26 @@ export interface AuthRateLimitDecision {
   retryAfterSeconds: number;
 }
 
+const AUTH_RATE_LIMIT_SCHEMA = [
+  `CREATE TABLE IF NOT EXISTS auth_login_rate_limits (
+  key_hash TEXT PRIMARY KEY,
+  window_started_at TEXT NOT NULL,
+  failed_attempts INTEGER NOT NULL,
+  blocked_until TEXT,
+  updated_at TEXT NOT NULL
+)`,
+  `CREATE INDEX IF NOT EXISTS idx_auth_login_rate_limits_blocked_until
+  ON auth_login_rate_limits(blocked_until)`,
+  `CREATE INDEX IF NOT EXISTS idx_auth_login_rate_limits_updated_at
+  ON auth_login_rate_limits(updated_at)`,
+];
+
+async function ensureAuthRateLimitSchema(db: SessionDatabase): Promise<void> {
+  for (const statement of AUTH_RATE_LIMIT_SCHEMA) {
+    await db.prepare(statement).bind().run();
+  }
+}
+
 async function hmacHex(secret: string, value: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -69,6 +89,7 @@ export async function recordFailedLogin(
   secret: string,
   now = new Date(),
 ): Promise<AuthRateLimitDecision> {
+  await ensureAuthRateLimitSchema(db);
   const nowIso = now.toISOString();
   const resetBefore = new Date(
     now.getTime() - AUTH_RATE_LIMIT_WINDOW_MS,
@@ -130,6 +151,7 @@ export async function clearLoginRateLimit(
   username: string,
   secret: string,
 ): Promise<void> {
+  await ensureAuthRateLimitSchema(db);
   const key = await rateLimitKey(request, username, secret);
   await db
     .prepare("DELETE FROM auth_login_rate_limits WHERE key_hash = ?")
@@ -141,6 +163,7 @@ export async function pruneLoginRateLimits(
   db: SessionDatabase,
   now = new Date(),
 ): Promise<void> {
+  await ensureAuthRateLimitSchema(db);
   const cutoff = new Date(
     now.getTime() - AUTH_RATE_LIMIT_WINDOW_MS,
   ).toISOString();
