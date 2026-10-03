@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import {
   appendMarketEvents,
+  appendMarketHistory,
   d1Health,
   queryMarketHistory,
   type D1Database,
