@@ -27,6 +27,7 @@ function arbitragePercent(value) {
 function drawArbitrageMarket() {
   const box = $("arbitrageMarketResults");
   if (!box) return;
+  const previousScrollLeft = box.scrollLeft;
   const offers = [
     ...(S.arbitrage?.marketOffers || []),
     ...(S.arbitrage?.marketBuyOffers || []),
@@ -66,6 +67,7 @@ function drawArbitrageMarket() {
         '</tr>';
     }).join("") +
     '</tbody></table></div>';
+  box.scrollLeft = previousScrollLeft;
 }
 
 function drawArbitrageSignals() {
@@ -160,7 +162,10 @@ async function fetchArbitrageMonitor({ silent = true } = {}) {
 }
 
 async function applyArbitrageOffer(id) {
-  const offer = (S.arbitrage?.marketOffers || []).find((item) => String(item.uuid) === String(id));
+  const offer = [
+    ...(S.arbitrage?.marketOffers || []),
+    ...(S.arbitrage?.marketBuyOffers || []),
+  ].find((item) => String(item.uuid) === String(id));
   if (!offer) return toast("La oferta ya no está disponible en el snapshot.", "error");
   const rate = Number(offer.purchaseRate);
   const side = String(offer.type || "sell").toLowerCase();
@@ -243,7 +248,7 @@ function monitorTick() {
   const seconds = nextSeconds();
   drawArbitrage();
   if (seconds === 0) {
-    // Give the server a new 10-second window while the request is in flight.
+    // Keep the configured interval while the request is in flight.
     arbitrageCountdownDeadline = Date.now() + monitorIntervalSeconds() * 1000;
     void fetchArbitrageMonitor({ silent: true });
   }
