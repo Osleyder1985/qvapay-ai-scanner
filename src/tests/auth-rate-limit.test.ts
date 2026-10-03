@@ -210,27 +210,3 @@ test("clears the failed-attempt bucket after successful authentication", async (
 
   assert.equal(db.rows.size, 0);
 });
-  "clears the failed-attempt bucket after successful authentication",
-  async () => {
-    const db = fakeDatabase();
-    const now = new Date("2026-10-03T04:00:00.000Z");
-
-    await recordFailedLogin(
-      db,
-      request("198.51.100.13"),
-      "admin",
-      "secret",
-      now,
-    );
-    assert.equal(db.rows.size, 1);
-
-    await clearLoginRateLimit(
-      db,
-      request("198.51.100.13"),
-      "admin",
-      "secret",
-    );
-
-    assert.equal(db.rows.size, 0);
-  },
-);
