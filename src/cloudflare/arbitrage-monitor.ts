@@ -157,10 +157,9 @@ export async function ensureArbitrageMonitorSchema(
   const seedResults = await db.batch([
     db.prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_config
-       (id, enabled, min_margin_percent, coin, interval_seconds, auto_enabled,
-        max_buy_rate, min_sell_rate, cup_budget, schedule_enabled, timezone,
-        active_days_json, updated_at)
-       VALUES (1, 1, 5, 'BANK_CUP', 10, 0, NULL, NULL, 0, 0, 'UTC',
+       (id, enabled, min_margin_percent, coin, interval_seconds,
+        schedule_enabled, timezone, active_days_json, updated_at)
+       VALUES (1, 1, 5, 'BANK_CUP', 10, 0, 'UTC',
                '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
     ),
     db.prepare(
