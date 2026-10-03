@@ -199,7 +199,7 @@ export async function handleArbitrageRoutes(
     });
 
     const selectedCoin = (base.get("coin") ?? "").toUpperCase();
-    const marketOffers = offers
+    const normalizedMarketOffers = offers
       .filter(
         (offer) =>
           ["sell", "buy"].includes(String(offer.type).toLowerCase()) &&
@@ -260,6 +260,12 @@ export async function handleArbitrageRoutes(
         if (a.type === "buy" && b.type === "buy") return bRate - aRate;
         return a.type === "sell" ? -1 : 1;
       });
+    const marketOffers = normalizedMarketOffers.filter(
+      (offer) => offer.type.toLowerCase() === "sell",
+    );
+    const marketBuyOffers = normalizedMarketOffers.filter(
+      (offer) => offer.type.toLowerCase() === "buy",
+    );
 
     return json({
       mode: "read-only",
@@ -269,6 +275,7 @@ export async function handleArbitrageRoutes(
       opportunities: result.opportunities,
       rejected: result.rejected,
       marketOffers,
+      marketBuyOffers,
       marketSimulation: {
         coin: selectedCoin,
         type: "sell",
