@@ -9,7 +9,6 @@
 import {
   monitorState,
   runArbitrageMonitor,
-  getMonitorIntervalMs,
   type ArbitrageMonitorEnv,
 } from "./arbitrage-monitor.js";
 import type { D1Database } from "./d1.js";
