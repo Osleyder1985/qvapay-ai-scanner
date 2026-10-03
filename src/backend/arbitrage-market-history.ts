@@ -61,6 +61,20 @@ export interface CompletedTrade {
   observedAt: string;
 }
 
+export interface CurrencyReferencePriceQuality {
+  sampleCount: number;
+  usableSampleCount: number;
+  invalidFieldExcludedCount: number;
+  staleObservationCount: number;
+  lifecycleCompleteCount: number;
+  outlierExcludedCount: number;
+  excludedSampleCount: number;
+  firstEventAt: string | null;
+  lastEventAt: string | null;
+  timeSpanMs: number | null;
+  belowMinimumSample: boolean;
+}
+
 export interface CurrencyReferencePriceStatistics {
   sampleCount: number;
   tradedVolumeQusd: number;
@@ -73,6 +87,7 @@ export interface CurrencyReferencePriceStatistics {
   newestEventAt: string | null;
   newestObservedAt: string | null;
   stale: boolean;
+  quality: CurrencyReferencePriceQuality;
 }
 
 export interface CurrencyExecutionAnalytics {
@@ -320,8 +335,10 @@ function percentile(sorted: number[], p: number): number | null {
 
 function referencePriceStatistics(
   trades: CompletedTrade[],
+  candidateSampleCount: number,
   now: Date,
   maxAgeMs?: number,
+  minimumSampleCount = 10,
 ): CurrencyReferencePriceStatistics | null {
   if (!trades.length) return null;
 
@@ -385,6 +402,38 @@ function referencePriceStatistics(
       Number.isFinite(newestObservedMs)
         ? nowMs - newestObservedMs > maxAgeMs
         : false,
+    quality: {
+      sampleCount: candidateSampleCount,
+      usableSampleCount: trades.length,
+      invalidFieldExcludedCount: Math.max(
+        0,
+        candidateSampleCount - trades.length,
+      ),
+      staleObservationCount:
+        maxAgeMs === undefined
+          ? 0
+          : trades.filter(
+              (trade) =>
+                nowMs - new Date(trade.observedAt).getTime() > maxAgeMs,
+            ).length,
+      lifecycleCompleteCount: trades.length,
+      outlierExcludedCount: 0,
+      excludedSampleCount: Math.max(0, candidateSampleCount - trades.length),
+      firstEventAt:
+        trades
+          .map((trade) => trade.completedAt)
+          .sort()
+          .at(0) ?? null,
+      lastEventAt: newestEventAt ?? null,
+      timeSpanMs:
+        trades.length > 1
+          ? new Date(newestEventAt!).getTime() -
+            new Date(
+              trades.map((trade) => trade.completedAt).sort().at(0)!,
+            ).getTime()
+          : 0,
+      belowMinimumSample: candidateSampleCount < minimumSampleCount,
+    },
   };
 }
 
@@ -476,7 +525,12 @@ export function completedTradesFromEvents(
 export function calculateCurrencyAnalytics(
   events: NormalizedMarketEvent[],
   coin: string,
-  options: { windowSize?: number; now?: Date; maxAgeMs?: number } = {},
+  options: {
+    windowSize?: number;
+    now?: Date;
+    maxAgeMs?: number;
+    minimumSampleCount?: number;
+  } = {},
 ): CurrencyExecutionAnalytics {
   const normalizedCoin = coin.trim().toUpperCase();
   const windowSize = Math.max(1, Math.trunc(options.windowSize ?? 500));
@@ -592,16 +646,28 @@ export function calculateCurrencyAnalytics(
       ? nowMs - newestObservedMs > options.maxAgeMs
       : false;
   const referenceNow = options.now ?? new Date();
+  const buyTrades = completed.filter((trade) => trade.side === "buy");
+  const sellTrades = completed.filter((trade) => trade.side === "sell");
+  const buyCandidateSampleCount = windowEvents.filter(
+    (event) => event.event === "completed" && event.side === "buy",
+  ).length;
+  const sellCandidateSampleCount = windowEvents.filter(
+    (event) => event.event === "completed" && event.side === "sell",
+  ).length;
   const referencePrices = {
     buy: referencePriceStatistics(
-      completed.filter((trade) => trade.side === "buy"),
+      buyTrades,
+      buyCandidateSampleCount,
       referenceNow,
       options.maxAgeMs,
+      options.minimumSampleCount,
     ),
     sell: referencePriceStatistics(
-      completed.filter((trade) => trade.side === "sell"),
+      sellTrades,
+      sellCandidateSampleCount,
       referenceNow,
       options.maxAgeMs,
+      options.minimumSampleCount,
     ),
   };
 
