@@ -321,11 +321,9 @@ export function calculateCurrencyAnalytics(
     terminalOfferIdsSeen.add(event.offerUuid);
     terminalOfferIdsInOrder.push(event.offerUuid);
   }
-  const terminalOfferIds = new Set(
-    terminalOfferIdsInOrder.slice(-windowSize),
-  );
-  const windowEvents = all.filter(
-    (event) => terminalOfferIds.has(event.offerUuid),
+  const terminalOfferIds = new Set(terminalOfferIdsInOrder.slice(-windowSize));
+  const windowEvents = all.filter((event) =>
+    terminalOfferIds.has(event.offerUuid),
   );
   const completed = completedTradesFromEvents(windowEvents).filter((trade) =>
     completedOfferIds.has(trade.offerUuid),
