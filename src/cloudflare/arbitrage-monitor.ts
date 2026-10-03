@@ -477,7 +477,7 @@ export async function monitorState(db: D1Database): Promise<{
   const state = await db
     .prepare(
       "SELECT status, scan_id, scanned_at, next_run_at, last_success_at, " +
-        "last_error, payload_json, updated_at FROM arbitrage_monitor_state WHERE id = 1",
+        "last_error, payload_json, updated_at " +\n        "FROM arbitrage_monitor_state WHERE id = 1",
     )
     .first<StateRow>();
   return { config, state };
