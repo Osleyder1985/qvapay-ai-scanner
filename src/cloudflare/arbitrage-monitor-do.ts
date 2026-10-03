@@ -32,9 +32,16 @@ export class ArbitrageMonitor {
     if (url.pathname === "/internal/start") {
       const alarm = await this.ctx.storage.getAlarm();
       if (alarm === null) {
-        await this.ctx.storage.setAlarm(
-          Date.now() + (await getMonitorIntervalMs(this.env.DB)),
-        );
+        const state = await this.env.DB.prepare(
+          "SELECT next_run_at FROM arbitrage_monitor_state WHERE id = 1",
+        ).first<{ next_run_at: string | null }>();
+        const persistedNextRun = state?.next_run_at
+          ? Date.parse(state.next_run_at)
+          : Number.NaN;
+        const nextRunAt = Number.isFinite(persistedNextRun)
+          ? Math.max(Date.now(), persistedNextRun)
+          : Date.now() + (await getMonitorIntervalMs(this.env.DB));
+        await this.ctx.storage.setAlarm(nextRunAt);
         return new Response("started");
       }
       return new Response("already-running");
@@ -76,7 +83,13 @@ export class ArbitrageMonitor {
       } catch {
         // Keep the fail-safe 10-second cadence if configuration cannot be read.
       }
-      await this.ctx.storage.setAlarm(Date.now() + intervalMs);
+      const nextAlarmAt = Date.now() + intervalMs;
+      await this.ctx.storage.setAlarm(nextAlarmAt);
+      await this.env.DB.prepare(
+        "UPDATE arbitrage_monitor_state SET next_run_at = ?, updated_at = ? WHERE id = 1",
+      )
+        .bind(new Date(nextAlarmAt).toISOString(), new Date().toISOString())
+        .run();
     }
   }
 }

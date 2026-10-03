@@ -214,7 +214,7 @@ export async function handleArbitrageRoutes(
         const available =
           offerKind === "fixed"
             ? amount
-            : Number.isFinite(rawAvailable)
+            : Number.isFinite(rawAvailable) && rawAvailable > 0
               ? rawAvailable
               : amount;
         const receive = Number(offer.receive);
@@ -238,8 +238,8 @@ export async function handleArbitrageRoutes(
           availableQusd: quantity,
           purchaseRate: rate,
           saleRate: type === "buy" ? rate : null,
-          capitalRequiredFiat: capital,
-          capitalRequiredQusd: type === "buy" ? quantity : 0,
+          capitalRequiredFiat: type === "sell" ? capital : null,
+          capitalRequiredQusd: type === "sell" ? quantity : null,
           targetSaleRate: targetRate,
           targetSaleProceedsFiat: targetProceeds,
           projectedGrossProfitFiat: projectedProfit,
