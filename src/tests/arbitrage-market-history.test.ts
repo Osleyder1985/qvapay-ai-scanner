@@ -13,6 +13,7 @@ import {
   completedTradesFromEvents,
   deduplicateMarketEvents,
   normalizeMarketEvent,
+  reconcileMarketEventLifecycle,
   type NormalizedMarketEvent,
 } from "../backend/arbitrage-market-history.js";
 
@@ -138,6 +139,133 @@ test("conserva la creación más antigua aunque llegue después otra observació
   const result = deduplicateMarketEvents([later, earlier]);
   assert.equal(result.length, 1);
   assert.equal(result[0]?.eventAt, "2026-10-02T10:00:00Z");
+});
+
+test("reordena eventos fuera de orden por eventAt de forma determinista", () => {
+  const created = event({
+    offerUuid: "ordered",
+    event: "created",
+    status: "open",
+    eventAt: "2026-10-02T10:00:00Z",
+    observedAt: "2026-10-02T12:03:00Z",
+  });
+  const applied = event({
+    offerUuid: "ordered",
+    event: "applied",
+    status: "processing",
+    eventAt: "2026-10-02T11:00:00Z",
+    observedAt: "2026-10-02T12:02:00Z",
+  });
+  const completed = event({
+    offerUuid: "ordered",
+    event: "completed",
+    eventAt: "2026-10-02T12:00:00Z",
+    observedAt: "2026-10-02T12:01:00Z",
+  });
+
+  const result = reconcileMarketEventLifecycle([completed, created, applied]);
+  assert.deepEqual(
+    result.events.map((item) => item.event),
+    ["created", "applied", "completed"],
+  );
+  assert.equal(result.violations.length, 0);
+});
+
+test("rechaza regresiones de ciclo después de un estado terminal", () => {
+  const result = reconcileMarketEventLifecycle([
+    event({
+      offerUuid: "regression",
+      event: "created",
+      status: "open",
+      eventAt: "2026-10-02T10:00:00Z",
+    }),
+    event({
+      offerUuid: "regression",
+      event: "completed",
+      eventAt: "2026-10-02T11:00:00Z",
+    }),
+    event({
+      offerUuid: "regression",
+      event: "paid",
+      status: "paid",
+      eventAt: "2026-10-02T12:00:00Z",
+    }),
+  ]);
+
+  assert.deepEqual(result.events.map((item) => item.event), [
+    "created",
+    "completed",
+  ]);
+  assert.deepEqual(result.violations[0], {
+    offerUuid: "regression",
+    previousEvent: "completed",
+    event: "paid",
+    previousEventAt: "2026-10-02T11:00:00.000Z",
+    eventAt: "2026-10-02T12:00:00.000Z",
+    reason: "invalid_transition",
+  });
+});
+
+test("permite reabrir una oferta cancelada pero no completar directamente una cancelada", () => {
+  const result = reconcileMarketEventLifecycle([
+    event({
+      offerUuid: "reopened",
+      event: "created",
+      status: "open",
+      eventAt: "2026-10-02T10:00:00Z",
+    }),
+    event({
+      offerUuid: "reopened",
+      event: "cancelled",
+      status: "cancelled",
+      eventAt: "2026-10-02T11:00:00Z",
+    }),
+    event({
+      offerUuid: "reopened",
+      event: "reopened",
+      status: "open",
+      eventAt: "2026-10-02T12:00:00Z",
+    }),
+    event({
+      offerUuid: "reopened",
+      event: "completed",
+      eventAt: "2026-10-02T13:00:00Z",
+    }),
+  ]);
+
+  assert.deepEqual(result.events.map((item) => item.event), [
+    "created",
+    "cancelled",
+    "reopened",
+    "completed",
+  ]);
+  assert.equal(result.violations.length, 0);
+});
+
+test("marca completion posterior a completed como violación y conserva el evento original", () => {
+  const result = reconcileMarketEventLifecycle([
+    event({
+      offerUuid: "terminal",
+      event: "created",
+      status: "open",
+      eventAt: "2026-10-02T10:00:00Z",
+    }),
+    event({
+      offerUuid: "terminal",
+      event: "completed",
+      eventAt: "2026-10-02T11:00:00Z",
+    }),
+    event({
+      offerUuid: "terminal",
+      event: "completed",
+      dedupeKey: "terminal|completed-newer",
+      observedAt: "2026-10-02T12:00:00Z",
+      eventAt: "2026-10-02T12:00:00Z",
+    }),
+  ]);
+
+  assert.equal(result.events.filter((item) => item.event === "completed").length, 1);
+  assert.equal(result.violations.length, 0);
 });
 
 test("deduplica un completed aunque webhook y stream usen event IDs distintos", () => {
