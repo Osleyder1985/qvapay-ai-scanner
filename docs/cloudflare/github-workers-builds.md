@@ -43,7 +43,7 @@ En el Worker `qvapay-ai-scanner`:
 5. Build command:
    `npm run build`
 6. Deploy command:
-   `npx wrangler deploy`
+   `npx wrangler d1 migrations apply qvapay-ai-scanner --remote && npx wrangler deploy`
 
 Workers Builds ejecuta el build y posteriormente el deploy para los commits de la rama de producción.
 

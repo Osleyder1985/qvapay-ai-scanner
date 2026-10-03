@@ -101,6 +101,14 @@ jobs:
           npx wrangler secret list --name qvapay-ai-scanner > cloudflare-secret-list.json
           node -e 'const fs=require("node:fs"); const d=JSON.parse(fs.readFileSync("cloudflare-secret-list.json","utf8")); const names=(Array.isArray(d)?d:d?.secrets??[]).map(s=>s?.name).filter(Boolean); for (const required of ["AUTH_USERNAME","AUTH_PASSWORD"]) if (!names.includes(required)) throw new Error("Required Cloudflare production secret is missing: "+required); console.log("Required authentication secret names are present in Cloudflare.");'
 
+      - name: Apply production D1 migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx wrangler d1 migrations apply qvapay-ai-scanner --remote
+
       - name: Deploy Worker with Wrangler
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -139,6 +147,73 @@ jobs:
         env:
           SMOKE_BASE_URL: https://qvapay-ai-scanner.osleyder-gonzalez1985.workers.dev
         run: npm run smoke:cloudflare:production:auth-config
+
+      - name: Verify production arbitrage monitor and snapshot
+        env:
+          AI_AUDITOR_TOKEN: ${{ secrets.AI_AUDITOR_TOKEN }}
+          AI_AUDITOR_BASE_URL: https://qvapay-ai-scanner.osleyder-gonzalez1985.workers.dev
+        run: |
+          set -euo pipefail
+          if [ -z "${AI_AUDITOR_TOKEN}" ]; then
+            echo "Missing required repository secret: AI_AUDITOR_TOKEN" >&2
+            exit 1
+          fi
+          mkdir -p production-monitor-evidence
+          for attempt in {1..12}; do
+            curl --fail-with-body --silent --show-error --location \
+              --header "Authorization: Bearer ${AI_AUDITOR_TOKEN}" \
+              --header "Accept: application/json" \
+              --output production-monitor-evidence/health.json \
+              "${AI_AUDITOR_BASE_URL}/api/ai-audit/health"
+            curl --fail-with-body --silent --show-error --location \
+              --header "Authorization: Bearer ${AI_AUDITOR_TOKEN}" \
+              --header "Accept: application/json" \
+              --output production-monitor-evidence/monitor.json \
+              "${AI_AUDITOR_BASE_URL}/api/ai-audit/monitor"
+            curl --fail-with-body --silent --show-error --location \
+              --header "Authorization: Bearer ${AI_AUDITOR_TOKEN}" \
+              --header "Accept: application/json" \
+              --output production-monitor-evidence/arbitrage.json \
+              "${AI_AUDITOR_BASE_URL}/api/ai-audit/arbitrage"
+            node --input-type=module -e '
+              import fs from "node:fs";
+              const health=JSON.parse(fs.readFileSync("production-monitor-evidence/health.json","utf8"));
+              const monitor=JSON.parse(fs.readFileSync("production-monitor-evidence/monitor.json","utf8"));
+              const arbitrage=JSON.parse(fs.readFileSync("production-monitor-evidence/arbitrage.json","utf8"));
+              const running=monitor?.ok===true && monitor?.state?.status==="running" && Boolean(monitor?.state?.scannedAt);
+              const snapshot=arbitrage?.ok===true && Boolean(arbitrage?.scannedAt) && Array.isArray(arbitrage?.marketOffers) && Array.isArray(arbitrage?.opportunities);
+              const database=health?.checks?.database?.ok===true;
+              if(database && running && snapshot) {
+                console.log(JSON.stringify({
+                  database: health.checks.database,
+                  monitor: monitor.state,
+                  snapshot: {
+                    marketOffers: arbitrage.marketOffers.length,
+                    opportunities: arbitrage.opportunities.length,
+                    scannedAt: arbitrage.scannedAt
+                  }
+                }, null, 2));
+                process.exit(0);
+              }
+              console.log("Waiting for a healthy production monitor scan...");
+              process.exit(2);
+            ' && break
+            if [ "${attempt}" -eq 12 ]; then
+              echo "Production arbitrage monitor did not reach a healthy scanned state." >&2
+              exit 1
+            fi
+            sleep 10
+          done
+          unset AI_AUDITOR_TOKEN
+
+      - name: Upload production monitor evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-production-monitor-${{ github.sha }}
+          path: production-monitor-evidence/
+          if-no-files-found: warn
+          retention-days: 3
 
       - name: Upload production deployment evidence
         if: always()
