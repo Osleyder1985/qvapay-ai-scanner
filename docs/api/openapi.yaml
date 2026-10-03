@@ -564,6 +564,22 @@ components:
         pagesFetched: { type: integer }
         truncated: { type: boolean }
         persisted: { type: integer }
+    MarketStatisticsQuality:
+      type: object
+      required: [sampleCount, usableSampleCount, missingFieldCount, staleObservationCount, coverageStartAt, coverageEndAt, freshnessMs, lifecycleCompletenessPercent, excludedSampleCount, outlierExcludedCount, minimumSampleSize, belowMinimumSample]
+      properties:
+        sampleCount: { type: integer, minimum: 0 }
+        usableSampleCount: { type: integer, minimum: 0 }
+        missingFieldCount: { type: integer, minimum: 0 }
+        staleObservationCount: { type: integer, minimum: 0 }
+        coverageStartAt: { type: string, format: date-time, nullable: true }
+        coverageEndAt: { type: string, format: date-time, nullable: true }
+        freshnessMs: { type: number, minimum: 0, nullable: true }
+        lifecycleCompletenessPercent: { type: number, minimum: 0, maximum: 100, nullable: true }
+        excludedSampleCount: { type: integer, minimum: 0 }
+        outlierExcludedCount: { type: integer, minimum: 0 }
+        minimumSampleSize: { type: integer, minimum: 1 }
+        belowMinimumSample: { type: boolean }
     CurrencyReferencePriceStatistics:
       type: object
       required: [sampleCount, tradedVolumeQusd, minRate, maxRate, meanRate, medianRate, percentiles, vwap, newestEventAt, newestObservedAt, stale]
@@ -583,6 +599,7 @@ components:
         newestEventAt: { type: string, format: date-time, nullable: true }
         newestObservedAt: { type: string, format: date-time, nullable: true }
         stale: { type: boolean }
+        quality: { $ref: '#/components/schemas/MarketStatisticsQuality' }
     CurrencyExecutionAnalytics:
       type: object
       required: [coin, windowSize, completedCount, cancelledCount, terminalCount, completionRatePercent, cancellationRatePercent, minRate, maxRate, meanRate, medianRate, percentiles, vwap, tradedVolumeQusd, averageTimeToCompletionMs, newestEventAt, newestObservedAt, stale, referencePrices]
@@ -609,6 +626,7 @@ components:
         newestEventAt: { type: string, format: date-time, nullable: true }
         newestObservedAt: { type: string, format: date-time, nullable: true }
         stale: { type: boolean }
+        quality: { $ref: '#/components/schemas/MarketStatisticsQuality' }
         referencePrices:
           type: object
           required: [buy, sell]
