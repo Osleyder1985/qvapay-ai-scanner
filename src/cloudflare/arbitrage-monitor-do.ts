@@ -1,7 +1,7 @@
 /**
  * @file arbitrage-monitor-do.ts
  * @path src/cloudflare/arbitrage-monitor-do.ts
- * @description Durable Object que mantiene vivo el escaneo de arbitraje cada 10 segundos.
+ * @description Durable Object que mantiene vivo el escaneo de arbitraje con intervalo configurable.
  * @module cloudflare
  * @status active
  */
