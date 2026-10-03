@@ -10,10 +10,6 @@ permissions:
   contents: read
   checks: read
 
-concurrency:
-  group: cloudflare-production
-  cancel-in-progress: false
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
