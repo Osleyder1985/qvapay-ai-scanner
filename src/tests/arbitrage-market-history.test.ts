@@ -155,7 +155,7 @@ test("deduplica un completed aunque webhook y stream usen event IDs distintos", 
   assert.equal(deduplicateMarketEvents([webhook, stream]).length, 1);
 });
 
-test("aplica windowSize únicamente a operaciones completadas", () => {
+test("aplica windowSize a la ventana terminal", () => {
   const events = [
     event({
       offerUuid: "old-done",
@@ -185,11 +185,11 @@ test("aplica windowSize únicamente a operaciones completadas", () => {
   const result = calculateCurrencyAnalytics(events, "BANK_CUP", {
     windowSize: 2,
   });
-  assert.equal(result.completedCount, 2);
-  assert.equal(result.cancelledCount, 0);
+  assert.equal(result.completedCount, 1);
+  assert.equal(result.cancelledCount, 1);
   assert.equal(result.terminalCount, 2);
-  assert.equal(result.completionRatePercent, 100);
-  assert.equal(result.cancellationRatePercent, null);
+  assert.equal(result.completionRatePercent, 50);
+  assert.equal(result.cancellationRatePercent, 50);
 });
 
 test("incluye cancelaciones en la ventana terminal y calcula tasas reales", () => {
@@ -449,7 +449,7 @@ test("calcula mediana, percentiles y VWAP", () => {
   assert.equal(result.percentiles.p75, 250);
 });
 
-test("excluye canceladas de la ventana de operaciones completadas", () => {
+test("cuenta canceladas en la misma ventana terminal que las completadas", () => {
   const result = calculateCurrencyAnalytics(
     [
       event({ offerUuid: "done", dedupeKey: "done" }),
@@ -463,9 +463,10 @@ test("excluye canceladas de la ventana de operaciones completadas", () => {
     "BANK_CUP",
   );
   assert.equal(result.completedCount, 1);
-  assert.equal(result.cancelledCount, 0);
-  assert.equal(result.completionRatePercent, 100);
-  assert.equal(result.cancellationRatePercent, null);
+  assert.equal(result.cancelledCount, 1);
+  assert.equal(result.terminalCount, 2);
+  assert.equal(result.completionRatePercent, 50);
+  assert.equal(result.cancellationRatePercent, 50);
 });
 
 test("no cuenta una operación incompleta como ejecución", () => {
