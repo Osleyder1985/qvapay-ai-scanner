@@ -21,6 +21,10 @@ La organización del proyecto toma como referencia ISO/IEC/IEEE 12207 para proce
 
 Estas normas se utilizan como marco de buenas prácticas; no se declara conformidad o certificación del proyecto salvo que se realice una evaluación formal.
 
+## Fuente de verdad
+
+La rama de producción del Worker es `production/cloudflare`. El flujo de promoción, checks y despliegue está definido en `docs/governance/branch-strategy.md`. La rama `main` sigue siendo la rama por defecto histórica y su alineación con producción es una decisión de gobernanza pendiente.
+
 ## Estructura
 
 - `docs/`: documentación controlada del proyecto.
@@ -28,7 +32,7 @@ Estas normas se utilizan como marco de buenas prácticas; no se declara conformi
 - `architecture/`: arquitectura y decisiones técnicas.
 - `research/`: investigación y evidencia.
 - `src/`: código fuente.
-- `tests/`: pruebas automatizadas y evidencia de verificación.
+- `src/tests/`: pruebas automatizadas y evidencia de verificación.
 - `experiments/`: experimentos controlados.
 - `tools/`: herramientas auxiliares.
 - `config/`: configuraciones no sensibles y plantillas.
