@@ -166,8 +166,8 @@ export async function ensureArbitrageMonitorSchema(
   const seedResults = await db.batch([
     db.prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_config
-       (id, enabled, min_margin_percent, coin, schedule_enabled, timezone, active_days_json, updated_at)
-       VALUES (1, 1, 5, 'BANK_CUP', 0, 'UTC', '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
+       (id, enabled, min_margin_percent, coin, interval_seconds, schedule_enabled, timezone, active_days_json, updated_at)
+       VALUES (1, 1, 5, 'BANK_CUP', 10, 0, 'UTC', '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
     ),
     db.prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_state
@@ -368,7 +368,7 @@ export async function runArbitrageMonitor(
     status: "running",
     scanId,
     scannedAt,
-    nextRunAt: new Date(Date.now() + INTERVAL_MS).toISOString(),
+    nextRunAt: new Date(Date.now() + config.intervalSeconds * 1000).toISOString(),
     lastSuccessAt: scannedAt,
     lastError: null,
     payloadJson: JSON.stringify(payload),
