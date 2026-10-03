@@ -214,7 +214,7 @@ export async function handleArbitrageRoutes(
         const available =
           offerKind === "fixed"
             ? amount
-            : Number.isFinite(rawAvailable) && rawAvailable > 0
+            : Number.isFinite(rawAvailable)
               ? rawAvailable
               : amount;
         const receive = Number(offer.receive);
