@@ -209,6 +209,42 @@ jobs:
             sleep 10
           done
           unset AI_AUDITOR_TOKEN
+      - name: Publish monitor failure diagnostic
+        if: failure()
+        id: monitor_failure_diagnostic
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE' > monitor-failure-summary.txt
+          import fs from "node:fs";
+          const read = (path) => {
+            try { return JSON.parse(fs.readFileSync(path, "utf8")); } catch { return {}; }
+          };
+          const monitor = read("production-monitor-evidence/monitor.json");
+          const arbitrage = read("production-monitor-evidence/arbitrage.json");
+          const state = monitor?.state ?? {};
+          const lastError = typeof state.lastError === "string" ? state.lastError : "";
+          const upstream = lastError.match(/QvaPay HTTP (\d+)/)?.[1] ?? "none";
+          const code = lastError.match(/\b([A-Z][A-Z0-9_]{3,})\b/)?.[1] ?? "none";
+          const summary = [
+            "status=" + String(state.status ?? "unknown"),
+            "upstream_http=" + upstream,
+            "error_code=" + code,
+            "scanned_at=" + String(state.scannedAt ?? "none"),
+            "market_offers=" + String(arbitrage?.marketOffers?.length ?? 0),
+            "opportunities=" + String(arbitrage?.opportunities?.length ?? 0),
+          ].join(";");
+          console.log(summary);
+          NODE
+          echo "summary=$(cat monitor-failure-summary.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload monitor failure diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-monitor-failure-${{ steps.monitor_failure_diagnostic.outputs.summary }}
+          path: monitor-failure-summary.txt
+          retention-days: 7
+
       - name: Upload production monitor evidence
         if: always()
         uses: actions/upload-artifact@v4
