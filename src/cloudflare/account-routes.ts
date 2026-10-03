@@ -46,7 +46,9 @@ export async function handleAccountRoutes(
         ? parseQvaPayP2PCollection(ownOffersPayload, 0, 1)
         : null;
       const ownerUser =
-        ownCollection?.data?.[0]?.User ?? ownCollection?.data?.[0]?.Peer ?? null;
+        ownCollection?.data?.[0]?.User ??
+        ownCollection?.data?.[0]?.Peer ??
+        null;
       const contract = evaluateQvaPayAccountContract({
         identityStatus: info.status,
         identityPayload: ownerUser,
@@ -70,7 +72,8 @@ export async function handleAccountRoutes(
             uuid: parseQvaPayApplicationIdentity(infoPayload)?.uuid ?? null,
             name: parseQvaPayApplicationIdentity(infoPayload)?.name ?? null,
             active: parseQvaPayApplicationIdentity(infoPayload)?.active ?? null,
-            enabled: parseQvaPayApplicationIdentity(infoPayload)?.enabled ?? null,
+            enabled:
+              parseQvaPayApplicationIdentity(infoPayload)?.enabled ?? null,
           },
           balanceSource:
             contract.balanceUsd !== null
