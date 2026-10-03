@@ -1,7 +1,8 @@
 # Requirements Baseline
 
 **Status:** Active baseline  
-**Version:** 1.0  
+**Version:** 1.1  
+**Authority:** This directory is the single normative requirements baseline.  
 **Scope:** QvaPay AI Scanner  
 **Baseline issue:** #33
 
@@ -42,3 +43,20 @@ A missing implementation or test reference is recorded as **partial**, **planned
 ## Baseline governance
 
 Changes to requirement IDs or their acceptance criteria must be made through a reviewed repository change. Existing IDs should not be silently reused for a different requirement.
+
+
+## Requirement status terminology
+
+- **Active:** normative baseline requirement.
+- **Implemented:** repository evidence exists.
+- **Verified:** an executed verification result is explicitly identified.
+- **Unverified:** implementation may exist, but current execution evidence is insufficient.
+- **Superseded:** replaced by a newer baseline statement and retained for traceability.
+
+## Review procedure
+
+1. Review the requirement and acceptance summary.
+2. Verify implementation and evidence references in the traceability matrix.
+3. Execute applicable quality, security, integration, and runtime checks.
+4. Record exact evidence identifiers.
+5. Preserve unresolved gaps as **Unverified** rather than inferring success from code inspection.

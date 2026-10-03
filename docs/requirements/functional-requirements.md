@@ -16,3 +16,6 @@
 | FR-009 | The system shall maintain a local finance ledger from completed P2P operations. | Critical | Completed remote operations can be synchronized idempotently into the local ledger. |
 | FR-010 | The system shall expose account/balance information available through the configured QvaPay application credentials. | High | The account view reports balance and clearly identifies unavailable identity data rather than fabricating it. |
 | FR-011 | The system shall provide a dashboard with independent areas for market, Auto-Apply, operations, analytics, alerts, account and settings. | High | Navigation reaches each supported area without requiring a single-page monolithic information view. |
+
+
+| FR-012 | The system shall provide complete paginated operation history without treating a single upstream page as the full history. | Critical | The history view traverses supported pages and exposes truncation or synchronization gaps explicitly. |

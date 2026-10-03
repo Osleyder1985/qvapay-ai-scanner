@@ -10,7 +10,9 @@
 | FIN-003 | Settlement fee metadata shall be stored when QvaPay provides fee/gross/net data. | Critical | A received settlement persists gross amount, fee, net amount and fee source. |
 | FIN-004 | Unknown historical fee metadata shall remain explicitly unknown. | Critical | The ledger does not invent historical fee values when the available source does not provide them. |
 | FIN-005 | The system shall not convert QUSD-denominated fees into fiat profit without an explicit valuation source/rule. | Critical | Finance calculations preserve the distinction between recorded fee data and unsupported fiat valuation. |
+| FIN-006 | Operation-history persistence shall remain idempotent and reconcilable with finance evidence. | Critical | Repeated operation imports do not create duplicate financial records and cross-layer mismatches are observable. |
 | INT-001 | QvaPay P2P market reads shall use the documented application integration path configured by the backend. | Critical | The backend can read the P2P market through the configured QvaPay API integration. |
 | INT-002 | P2P application and operation mutations shall be proxied by the backend and use the documented QvaPay operation flow. | Critical | Controlled integration tests verify application and operation action routing. |
 | INT-003 | Upstream errors, including rate limiting and timeout, shall be surfaced as controlled application errors. | Critical | Integration tests cover 429 and timeout paths. |
 | INT-004 | The integration shall preserve QvaPay UUIDs as the stable external identity of P2P operations. | Critical | Operation tracking and finance reconciliation use the remote UUID. |
+| INT-005 | The internal HTTP API contract shall remain synchronized with implemented backend routes. | Critical | OpenAPI paths and schemas are reviewed against the route implementation and tests. |
