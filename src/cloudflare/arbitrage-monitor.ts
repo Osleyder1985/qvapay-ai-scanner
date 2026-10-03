@@ -25,6 +25,7 @@ interface MonitorConfig {
   enabled: boolean;
   minMarginPercent: number;
   coin: string;
+  intervalSeconds: number;
   scheduleEnabled: boolean;
   timezone: string;
   startLocal: string | null;
@@ -36,6 +37,7 @@ interface MonitorRow {
   enabled: number;
   min_margin_percent: number;
   coin: string;
+  interval_seconds: number;
   schedule_enabled: number;
   timezone: string;
   start_local: string | null;
@@ -91,6 +93,7 @@ export async function ensureArbitrageMonitorSchema(
         enabled INTEGER NOT NULL DEFAULT 1,
         min_margin_percent REAL NOT NULL DEFAULT 5,
         coin TEXT NOT NULL DEFAULT 'BANK_CUP',
+        interval_seconds INTEGER NOT NULL DEFAULT 10 CHECK (interval_seconds BETWEEN 5 AND 300),
         schedule_enabled INTEGER NOT NULL DEFAULT 0,
         timezone TEXT NOT NULL DEFAULT 'UTC',
         start_local TEXT,
@@ -163,8 +166,8 @@ export async function ensureArbitrageMonitorSchema(
   const seedResults = await db.batch([
     db.prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_config
-       (id, enabled, min_margin_percent, coin, schedule_enabled, timezone, active_days_json, updated_at)
-       VALUES (1, 1, 5, 'BANK_CUP', 0, 'UTC', '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
+       (id, enabled, min_margin_percent, coin, interval_seconds, schedule_enabled, timezone, active_days_json, updated_at)
+       VALUES (1, 1, 5, 'BANK_CUP', 10, 0, 'UTC', '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
     ),
     db.prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_state
@@ -177,46 +180,62 @@ export async function ensureArbitrageMonitorSchema(
   }
 }
 
-function readConfig(db: D1Database): Promise<MonitorConfig> {
-  return db
-    .prepare(
-      `SELECT enabled, min_margin_percent, coin, schedule_enabled, timezone,
-            start_local, end_local, active_days_json
-     FROM arbitrage_monitor_config WHERE id = 1`,
-    )
-    .first<MonitorRow>()
-    .then((row) => {
-      if (!row) {
-        return {
-          enabled: false,
-          minMarginPercent: 5,
-          coin: "BANK_CUP",
-          scheduleEnabled: false,
-          timezone: "UTC",
-          startLocal: null,
-          endLocal: null,
-          activeDays: [1, 2, 3, 4, 5, 6, 7],
-        };
-      }
-      let activeDays = [1, 2, 3, 4, 5, 6, 7];
-      try {
-        const parsed = JSON.parse(row.active_days_json);
-        if (Array.isArray(parsed))
-          activeDays = parsed.map(Number).filter((n) => n >= 1 && n <= 7);
-      } catch {
-        /* use all days */
-      }
-      return {
-        enabled: row.enabled === 1,
-        minMarginPercent: Number(row.min_margin_percent),
-        coin: String(row.coin).toUpperCase(),
-        scheduleEnabled: row.schedule_enabled === 1,
-        timezone: row.timezone || "UTC",
-        startLocal: row.start_local,
-        endLocal: row.end_local,
-        activeDays,
-      };
-    });
+async function readConfig(db: D1Database): Promise<MonitorConfig> {
+  let row: MonitorRow | null;
+  try {
+    row = await db
+      .prepare(
+        `SELECT enabled, min_margin_percent, coin, interval_seconds, schedule_enabled, timezone,
+              start_local, end_local, active_days_json
+         FROM arbitrage_monitor_config WHERE id = 1`,
+      )
+      .first<MonitorRow>();
+  } catch {
+    row = await db
+      .prepare(
+        `SELECT enabled, min_margin_percent, coin, schedule_enabled, timezone,
+              start_local, end_local, active_days_json
+         FROM arbitrage_monitor_config WHERE id = 1`,
+      )
+      .first<MonitorRow>();
+  }
+
+  if (!row) {
+    return {
+      enabled: false,
+      minMarginPercent: 5,
+      coin: "BANK_CUP",
+      intervalSeconds: 10,
+      scheduleEnabled: false,
+      timezone: "UTC",
+      startLocal: null,
+      endLocal: null,
+      activeDays: [1, 2, 3, 4, 5, 6, 7],
+    };
+  }
+
+  let activeDays = [1, 2, 3, 4, 5, 6, 7];
+  try {
+    const parsed = JSON.parse(row.active_days_json);
+    if (Array.isArray(parsed))
+      activeDays = parsed.map(Number).filter((n) => n >= 1 && n <= 7);
+  } catch {
+    /* use all days */
+  }
+  return {
+    enabled: row.enabled === 1,
+    minMarginPercent: Number(row.min_margin_percent),
+    coin: String(row.coin).toUpperCase(),
+    intervalSeconds: Math.min(
+      300,
+      Math.max(5, Number(row.interval_seconds) || 10),
+    ),
+    scheduleEnabled: row.schedule_enabled === 1,
+    timezone: row.timezone || "UTC",
+    startLocal: row.start_local,
+    endLocal: row.end_local,
+    activeDays,
+  };
 }
 
 function localParts(
@@ -349,7 +368,9 @@ export async function runArbitrageMonitor(
     await saveState(db, {
       status: "error",
       lastError: message,
-      nextRunAt: new Date(Date.now() + INTERVAL_MS).toISOString(),
+      nextRunAt: new Date(
+        Date.now() + config.intervalSeconds * 1000,
+      ).toISOString(),
     });
     return { ok: false, error: message };
   }
@@ -383,6 +404,12 @@ export async function monitorState(db: D1Database): Promise<{
     )
     .first<StateRow>();
   return { config, state };
+}
+
+export async function getMonitorIntervalMs(db: D1Database): Promise<number> {
+  await ensureArbitrageMonitorSchema(db);
+  const config = await readConfig(db);
+  return config.intervalSeconds * 1000;
 }
 
 export { INTERVAL_MS };
