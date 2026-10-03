@@ -87,7 +87,9 @@ export async function handleAccountRoutes(
         ? parseQvaPayP2PCollection(ownOffersPayload, 0, 1)
         : null;
       const ownerUser = parseP2POwnerIdentity(
-        ownCollection?.data?.[0]?.User ?? ownCollection?.data?.[0]?.Peer ?? null,
+        ownCollection?.data?.[0]?.User ??
+          ownCollection?.data?.[0]?.Peer ??
+          null,
       );
       const contract = evaluateQvaPayAccountContract({
         identityStatus: info.status,
