@@ -9,6 +9,7 @@
 import {
   monitorState,
   runArbitrageMonitor,
+  getMonitorIntervalMs,
   type ArbitrageMonitorEnv,
 } from "./arbitrage-monitor.js";
 import type { D1Database } from "./d1.js";
@@ -66,7 +67,8 @@ async function ensureMonitorProgress(env: Env) {
   const nextRunAt = current.state?.next_run_at
     ? Date.parse(current.state.next_run_at)
     : Number.NaN;
-  if (Number.isFinite(nextRunAt) && nextRunAt > Date.now()) {
+  const intervalMs = current.config.intervalSeconds * 1000;
+  if (Number.isFinite(nextRunAt) && nextRunAt > Date.now() && nextRunAt <= Date.now() + intervalMs) {
     return current;
   }
 
@@ -140,21 +142,24 @@ export async function handleArbitrageMonitorRoutes(
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const margin = Number(body.minMarginPercent ?? 5);
+    const intervalSeconds = Number(body.intervalSeconds ?? 10);
     const coin = String(body.coin ?? "BANK_CUP")
       .trim()
       .toUpperCase();
     if (!Number.isFinite(margin) || margin < 0)
       return json({ error: "minMarginPercent inválido." }, 400);
+    if (!Number.isInteger(intervalSeconds) || intervalSeconds < 5 || intervalSeconds > 300)
+      return json({ error: "intervalSeconds debe estar entre 5 y 300 segundos." }, 400);
     if (!/^[A-Z0-9_]{2,32}$/.test(coin))
       return json({ error: "coin inválida." }, 400);
 
     const now = new Date().toISOString();
     const result = await env.DB.prepare(
       `UPDATE arbitrage_monitor_config
-       SET min_margin_percent = ?, coin = ?, enabled = 1, updated_at = ?
+       SET min_margin_percent = ?, coin = ?, interval_seconds = ?, enabled = 1, updated_at = ?
        WHERE id = 1`,
     )
-      .bind(margin, coin, now)
+      .bind(margin, coin, intervalSeconds, now)
       .run();
 
     if (Number(result.meta?.changes ?? 0) !== 1) {
@@ -166,7 +171,8 @@ export async function handleArbitrageMonitorRoutes(
       ok: true,
       minMarginPercent: margin,
       coin,
-      nextRunAt: new Date(Date.now() + 10_000).toISOString(),
+      intervalSeconds,
+      nextRunAt: new Date(Date.now() + intervalSeconds * 1000).toISOString(),
     });
   } catch (error) {
     return operationalError("MONITOR_CONFIG_WRITE_FAILED", json);
