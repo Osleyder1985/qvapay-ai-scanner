@@ -199,19 +199,21 @@ export async function handleArbitrageMonitorRoutes(
     const now = new Date().toISOString();
     const result = await env.DB.prepare(
       `UPDATE arbitrage_monitor_config
-       SET min_margin_percent = ?, coin = ?, interval_seconds = ?, auto_enabled = ?, max_buy_rate = ?, min_sell_rate = ?, cup_budget = ?, enabled = 1, updated_at = ?
+       SET min_margin_percent = ?, coin = ?, interval_seconds = ?,
+           auto_enabled = ?, max_buy_rate = ?, min_sell_rate = ?,
+           cup_budget = ?, enabled = 1, updated_at = ?
        WHERE id = 1`,
     )
       .bind(
-      margin,
-      coin,
-      intervalSeconds,
-      autoEnabled ? 1 : 0,
-      maxBuyRate,
-      minSellRate,
-      cupBudget,
-      now,
-    )
+        margin,
+        coin,
+        intervalSeconds,
+        autoEnabled ? 1 : 0,
+        maxBuyRate,
+        minSellRate,
+        cupBudget,
+        now,
+      )
       .run();
 
     if (Number(result.meta?.changes ?? 0) !== 1) {
