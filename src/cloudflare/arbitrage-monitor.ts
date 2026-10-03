@@ -56,6 +56,81 @@ interface StateRow {
 
 const INTERVAL_MS = 10_000;
 
+/**
+ * Repairs the monitor singleton schema if a deployment reached the Worker
+ * before D1 migration 0006 was applied. The migration remains canonical;
+ * this guard is an idempotent production safety net and only writes when
+ * one of the two monitor tables is actually missing.
+ */
+export async function ensureArbitrageMonitorSchema(
+  db: D1Database,
+): Promise<void> {
+  const existing = await db
+    .prepare(
+      `SELECT name FROM sqlite_master
+       WHERE type = 'table'
+         AND name IN ('arbitrage_monitor_config', 'arbitrage_monitor_state')`,
+    )
+    .all<{ name: string }>();
+  const names = new Set(existing.results.map((row) => row.name));
+  if (names.has('arbitrage_monitor_config') && names.has('arbitrage_monitor_state')) {
+    return;
+  }
+
+  const results = await db.batch([
+    db.prepare(
+      `CREATE TABLE IF NOT EXISTS arbitrage_monitor_config (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        enabled INTEGER NOT NULL DEFAULT 1,
+        min_margin_percent REAL NOT NULL DEFAULT 5,
+        coin TEXT NOT NULL DEFAULT 'BANK_CUP',
+        schedule_enabled INTEGER NOT NULL DEFAULT 0,
+        timezone TEXT NOT NULL DEFAULT 'UTC',
+        start_local TEXT,
+        end_local TEXT,
+        active_days_json TEXT NOT NULL DEFAULT '[1,2,3,4,5,6,7]',
+        updated_at TEXT NOT NULL
+      )`,
+    ),
+    db.prepare(
+      `CREATE TABLE IF NOT EXISTS arbitrage_monitor_state (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        status TEXT NOT NULL DEFAULT 'starting',
+        scan_id TEXT,
+        scanned_at TEXT,
+        next_run_at TEXT,
+        last_success_at TEXT,
+        last_error TEXT,
+        payload_json TEXT,
+        updated_at TEXT NOT NULL
+      )`,
+    ),
+    db.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_arbitrage_monitor_state_scanned_at
+       ON arbitrage_monitor_state (scanned_at DESC)`,
+    ),
+  ]);
+  if (results.some((result) => result.success !== true)) {
+    throw new Error('ARBITRAGE_MONITOR_SCHEMA_ENSURE_FAILED');
+  }
+
+  const seedResults = await db.batch([
+    db.prepare(
+      `INSERT OR IGNORE INTO arbitrage_monitor_config
+       (id, enabled, min_margin_percent, coin, schedule_enabled, timezone, active_days_json, updated_at)
+       VALUES (1, 1, 5, 'BANK_CUP', 0, 'UTC', '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
+    ),
+    db.prepare(
+      `INSERT OR IGNORE INTO arbitrage_monitor_state
+       (id, status, updated_at)
+       VALUES (1, 'starting', CURRENT_TIMESTAMP)`,
+    ),
+  ]);
+  if (seedResults.some((result) => result.success !== true)) {
+    throw new Error('ARBITRAGE_MONITOR_SCHEMA_SEED_FAILED');
+  }
+}
+
 function readConfig(db: D1Database): Promise<MonitorConfig> {
   return db
     .prepare(
@@ -192,6 +267,7 @@ export async function runArbitrageMonitor(
   db: D1Database,
   env: ArbitrageMonitorEnv,
 ): Promise<{ ok: boolean; payload?: unknown; error?: string }> {
+  await ensureArbitrageMonitorSchema(db);
   const config = await readConfig(db);
   if (!config.enabled) {
     await saveState(db, { status: "disabled", lastError: null });
@@ -253,6 +329,7 @@ export async function monitorState(db: D1Database): Promise<{
   config: MonitorConfig;
   state: StateRow | null;
 }> {
+  await ensureArbitrageMonitorSchema(db);
   const config = await readConfig(db);
   const state = await db
     .prepare(
