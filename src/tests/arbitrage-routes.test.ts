@@ -144,7 +144,9 @@ test("sanitizes upstream/internal errors from the arbitrage scan response", asyn
 
   try {
     const response = await handleArbitrageRoutes(
-      new Request("https://example.workers.dev/api/arbitrage/scan?minMarginPercent=5"),
+      new Request(
+        "https://example.workers.dev/api/arbitrage/scan?minMarginPercent=5",
+      ),
       {
         DB: {} as never,
         QVAPAY_APP_ID: "test-app",
