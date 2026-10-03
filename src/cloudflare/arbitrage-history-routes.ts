@@ -43,6 +43,10 @@ function toEvent(row: MarketEventRow): NormalizedMarketEvent {
     eventAt: row.event_at,
     observedAt: row.observed_at,
     source: row.source as NormalizedMarketEvent["source"],
+    sourceEventAt: row.source_event_at,
+    sourceObservedAt: row.source_observed_at,
+    timestampQuality: row.timestamp_quality as NormalizedMarketEvent["timestampQuality"],
+    quarantined: row.quarantined === 1,
   };
 }
 
@@ -89,6 +93,7 @@ export async function handleArbitrageHistoryRoutes(
     lifecycle: {
       invalidTransitionCount: lifecycle.violations.length,
       invalidTransitions: lifecycle.violations,
+      quarantinedEventCount: lifecycle.quarantinedEvents.length,
     },
   });
 }
