@@ -27,7 +27,10 @@ function arbitragePercent(value) {
 function drawArbitrageMarket() {
   const box = $("arbitrageMarketResults");
   if (!box) return;
-  const offers = S.arbitrage?.marketOffers || [];
+  const offers = [
+    ...(S.arbitrage?.marketOffers || []),
+    ...(S.arbitrage?.marketBuyOffers || []),
+  ];
   const margin = Number(S.arbitrage?.marketSimulation?.minMarginPercent ?? S.arbitrage?.config?.minMarginPercent ?? 5);
 
   if (!offers.length) {
