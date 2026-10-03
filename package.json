@@ -23,7 +23,8 @@
     "smoke:cloudflare:local": "node scripts/cloudflare-local-runtime-smoke.mjs",
     "security:generate-ai-auditor-token": "node scripts/generate-ai-auditor-token.mjs",
     "governance:check": "node scripts/check-repository-governance.mjs",
-    "smoke:cloudflare:production:auth-config": "node scripts/cloudflare-production-auth-config-smoke.mjs"
+    "smoke:cloudflare:production:auth-config": "node scripts/cloudflare-production-auth-config-smoke.mjs",
+    "architecture:check": "node scripts/check-cloudflare-architecture.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
