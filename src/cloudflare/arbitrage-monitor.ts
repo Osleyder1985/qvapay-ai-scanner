@@ -4,6 +4,7 @@
  * @description Monitor persistente server-side de arbitraje. No depende del navegador.
  * @module cloudflare
  * @status active
+ * @notes Execution state is initialized lazily to keep read-only monitoring safe.
  */
 
 import { handleArbitrageRoutes } from "./arbitrage-routes.js";
