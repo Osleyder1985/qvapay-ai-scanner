@@ -300,7 +300,8 @@ export async function handleAiAuditRoutes(
     if (url.pathname === "/api/ai-audit/arbitrage") {
       return json(await auditArbitrage(env));
     }
-\n    if (url.pathname === "/api/ai-audit/arbitrage-scheduler") {
+
+    if (url.pathname === "/api/ai-audit/arbitrage-scheduler") {
       const current = await monitorState(env.DB);
       const alarm = await doAlarm(env);
       let payload: Record<string, unknown> = {};
