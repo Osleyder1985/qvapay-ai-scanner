@@ -6,7 +6,11 @@
  * @status active
  */
 
-import { monitorState } from "./arbitrage-monitor.js";
+import {
+  monitorState,
+  runArbitrageMonitor,
+  type ArbitrageMonitorEnv,
+} from "./arbitrage-monitor.js";
 import type { D1Database } from "./d1.js";
 import {
   logInternalError,
@@ -22,8 +26,7 @@ interface DurableObjectNamespaceLike {
   get(id: unknown): DurableObjectStub;
 }
 
-interface Env {
-  DB: D1Database;
+interface Env extends ArbitrageMonitorEnv {
   ARBITRAGE_MONITOR: DurableObjectNamespaceLike;
 }
 
@@ -50,6 +53,29 @@ function stub(env: Env) {
   return env.ARBITRAGE_MONITOR.get(id);
 }
 
+async function ensureMonitorProgress(
+  env: Env,
+): Promise<Awaited<ReturnType<typeof monitorState>>> {
+  const current = await monitorState(env.DB);
+  const alarmResponse = await stub(env).fetch(
+    new Request("https://internal/status"),
+  );
+  if (alarmResponse.ok) {
+    const alarmPayload = (await alarmResponse.json()) as { alarm?: unknown };
+    if (typeof alarmPayload.alarm === "number") return current;
+  }
+
+  const nextRunAt = current.state?.next_run_at
+    ? Date.parse(current.state.next_run_at)
+    : Number.NaN;
+  if (Number.isFinite(nextRunAt) && nextRunAt > Date.now()) {
+    return current;
+  }
+
+  await runArbitrageMonitor(env.DB, env);
+  return monitorState(env.DB);
+}
+
 function operationalError(
   code:
     | "MONITOR_STATE_READ_FAILED"
@@ -71,7 +97,7 @@ export async function handleArbitrageMonitorRoutes(
 
   if (request.method === "GET") {
     try {
-      const current = await monitorState(env.DB);
+      const current = await ensureMonitorProgress(env);
       try {
         await stub(env).fetch(new Request("https://internal/start"));
       } catch {

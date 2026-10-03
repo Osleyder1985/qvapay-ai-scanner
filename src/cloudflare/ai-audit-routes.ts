@@ -7,7 +7,10 @@
  */
 
 import { authorizeAiAuditor } from "./ai-audit-auth.js";
-import { monitorState } from "./arbitrage-monitor.js";
+import {
+  monitorState,
+  runArbitrageMonitor,
+} from "./arbitrage-monitor.js";
 import { d1Health, type D1Database } from "./d1.js";
 
 interface DurableObjectStub {
@@ -176,7 +179,18 @@ export async function auditHealth(
 }
 
 async function auditMonitor(env: AiAuditEnv) {
-  const current = await monitorState(env.DB);
+  let current = await monitorState(env.DB);
+  const alarm = await ensureAlarm(env);
+  const nextRunAt = current.state?.next_run_at
+    ? Date.parse(current.state.next_run_at)
+    : Number.NaN;
+  if (
+    alarm === null &&
+    (!Number.isFinite(nextRunAt) || nextRunAt <= Date.now())
+  ) {
+    await runArbitrageMonitor(env.DB, env);
+    current = await monitorState(env.DB);
+  }
   let payload: Record<string, unknown> = {};
   if (current.state?.payload_json) {
     try {
@@ -189,7 +203,7 @@ async function auditMonitor(env: AiAuditEnv) {
     }
   }
 
-  const alarm = await ensureAlarm(env);
+  const monitorAlarm = await ensureAlarm(env);
   const marketOffers = Array.isArray(payload.marketOffers)
     ? payload.marketOffers
     : [];
@@ -210,7 +224,7 @@ async function auditMonitor(env: AiAuditEnv) {
       lastError: current.state?.last_error ?? null,
       updatedAt: current.state?.updated_at ?? null,
     },
-    durableObject: { nextAlarmAt: alarm },
+    durableObject: { nextAlarmAt: monitorAlarm },
     snapshot: {
       marketOffers: marketOffers.length,
       opportunities: opportunities.length,
