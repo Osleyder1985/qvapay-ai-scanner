@@ -17,8 +17,8 @@ export interface QvaPayBalanceParseResult {
 }
 
 /**
- * Valida exclusivamente la respuesta documentada de POST /v2/balance:
- * { "balance": number }.
+ * Valida exclusivamente las formas documentadas de POST /v2/balance:
+ * { "balance": number } o { "message": string, "data": number }.
  *
  * El campo representa el balance actual en USD. No se aceptan strings,
  * booleanos, valores no finitos, valores negativos ni envelopes anidados.
@@ -35,23 +35,27 @@ export function parseQvaPayBalance(payload: unknown): QvaPayBalanceParseResult {
   const record = payload as Record<string, unknown>;
   const keys = Object.keys(record);
 
-  if (!Object.prototype.hasOwnProperty.call(record, "balance")) {
+  let value: unknown;
+
+  if (
+    keys.length === 1 &&
+    Object.prototype.hasOwnProperty.call(record, "balance")
+  ) {
+    value = record.balance;
+  } else if (
+    keys.length === 2 &&
+    typeof record.message === "string" &&
+    Object.prototype.hasOwnProperty.call(record, "data")
+  ) {
+    value = record.data;
+  } else {
     return {
       ok: false,
       balance: null,
-      reason: "Falta el campo balance requerido por el contrato.",
+      reason:
+        "La respuesta de balance no coincide con los contratos documentados.",
     };
   }
-
-  if (keys.length !== 1) {
-    return {
-      ok: false,
-      balance: null,
-      reason: "La respuesta de balance contiene campos no soportados.",
-    };
-  }
-
-  const value = record.balance;
 
   if (typeof value !== "number") {
     return {
