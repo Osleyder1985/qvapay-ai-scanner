@@ -83,16 +83,6 @@ export async function ensureArbitrageMonitorSchema(
     names.has("arbitrage_monitor_state") &&
     names.has("market_events")
   ) {
-    const columns = await db
-      .prepare("PRAGMA table_info(arbitrage_monitor_config)")
-      .all<{ name: string }>();
-    if (!columns.results.some((column) => column.name === "interval_seconds")) {
-      await db
-        .prepare(
-          "ALTER TABLE arbitrage_monitor_config ADD COLUMN interval_seconds INTEGER NOT NULL DEFAULT 10",
-        )
-        .run();
-    }
     return;
   }
 
@@ -190,21 +180,32 @@ export async function ensureArbitrageMonitorSchema(
   }
 }
 
-function readConfig(db: D1Database): Promise<MonitorConfig> {
-  return db
-    .prepare(
-      `SELECT enabled, min_margin_percent, coin, interval_seconds, schedule_enabled, timezone,
-            start_local, end_local, active_days_json
-     FROM arbitrage_monitor_config WHERE id = 1`,
-    )
-    .first<MonitorRow>()
-    .then((row) => {
+async function readConfig(db: D1Database): Promise<MonitorConfig> {
+  let row: MonitorRow | null;
+  try {
+    row = await db
+      .prepare(
+        `SELECT enabled, min_margin_percent, coin, interval_seconds, schedule_enabled, timezone,
+              start_local, end_local, active_days_json
+         FROM arbitrage_monitor_config WHERE id = 1`,
+      )
+      .first<MonitorRow>();
+  } catch {
+    row = (await db
+      .prepare(
+        `SELECT enabled, min_margin_percent, coin, schedule_enabled, timezone,
+              start_local, end_local, active_days_json
+         FROM arbitrage_monitor_config WHERE id = 1`,
+      )
+      .first<MonitorRow>()) as MonitorRow | null;
+  }
+
+  if (row) {
       if (!row) {
         return {
           enabled: false,
           minMarginPercent: 5,
           coin: "BANK_CUP",
-          intervalSeconds: 10,
           scheduleEnabled: false,
           timezone: "UTC",
           startLocal: null,
@@ -224,10 +225,7 @@ function readConfig(db: D1Database): Promise<MonitorConfig> {
         enabled: row.enabled === 1,
         minMarginPercent: Number(row.min_margin_percent),
         coin: String(row.coin).toUpperCase(),
-        intervalSeconds: Math.min(
-          300,
-          Math.max(5, Number(row.interval_seconds) || 10),
-        ),
+        intervalSeconds: Math.min(300, Math.max(5, Number(row.interval_seconds) || 10)),
         scheduleEnabled: row.schedule_enabled === 1,
         timezone: row.timezone || "UTC",
         startLocal: row.start_local,
@@ -367,9 +365,7 @@ export async function runArbitrageMonitor(
     await saveState(db, {
       status: "error",
       lastError: message,
-      nextRunAt: new Date(
-        Date.now() + config.intervalSeconds * 1000,
-      ).toISOString(),
+      nextRunAt: new Date(Date.now() + config.intervalSeconds * 1000).toISOString(),
     });
     return { ok: false, error: message };
   }
@@ -383,7 +379,7 @@ export async function runArbitrageMonitor(
     status: "running",
     scanId,
     scannedAt,
-    nextRunAt: new Date(Date.now() + config.intervalSeconds * 1000).toISOString(),
+    nextRunAt: new Date(Date.now() + INTERVAL_MS).toISOString(),
     lastSuccessAt: scannedAt,
     lastError: null,
     payloadJson: JSON.stringify(payload),
