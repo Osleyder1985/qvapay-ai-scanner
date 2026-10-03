@@ -44,15 +44,18 @@ interface MonitorRow {
   min_margin_percent: number;
   coin: string;
   interval_seconds: number;
-  auto_enabled: number;
-  max_buy_rate: number | null;
-  min_sell_rate: number | null;
-  cup_budget: number;
   schedule_enabled: number;
   timezone: string;
   start_local: string | null;
   end_local: string | null;
   active_days_json: string;
+}
+
+interface ExecutionConfigRow {
+  auto_enabled: number;
+  max_buy_rate: number | null;
+  min_sell_rate: number | null;
+  cup_budget: number;
 }
 
 interface StateRow {
@@ -74,33 +77,6 @@ interface StateRow {
 export async function ensureArbitrageMonitorSchema(
   db: D1Database,
 ): Promise<void> {
-  const existing = await db
-    .prepare(
-      `SELECT name FROM sqlite_master
-       WHERE type = 'table'
-         AND name IN (
-           'arbitrage_monitor_config',
-           'arbitrage_monitor_state',
-           'market_events'
-         )`,
-    )
-    .all<{ name: string }>();
-  const names = new Set(existing.results.map((row) => row.name));
-  if (names.has("arbitrage_monitor_config")) {
-    for (const statement of [
-      "ALTER TABLE arbitrage_monitor_config ADD COLUMN auto_enabled INTEGER NOT NULL DEFAULT 0",
-      "ALTER TABLE arbitrage_monitor_config ADD COLUMN max_buy_rate REAL",
-      "ALTER TABLE arbitrage_monitor_config ADD COLUMN min_sell_rate REAL",
-      "ALTER TABLE arbitrage_monitor_config ADD COLUMN cup_budget REAL NOT NULL DEFAULT 0",
-    ]) {
-      try {
-        await db.prepare(statement).run();
-      } catch {
-        // Column already exists; migrations remain canonical.
-      }
-    }
-  }
-
   const results = await db.batch([
     db.prepare(
       `CREATE TABLE IF NOT EXISTS arbitrage_monitor_config (
@@ -109,15 +85,21 @@ export async function ensureArbitrageMonitorSchema(
         min_margin_percent REAL NOT NULL DEFAULT 5,
         coin TEXT NOT NULL DEFAULT 'BANK_CUP',
         interval_seconds INTEGER NOT NULL DEFAULT 10 CHECK (interval_seconds BETWEEN 5 AND 300),
-        auto_enabled INTEGER NOT NULL DEFAULT 0 CHECK (auto_enabled IN (0,1)),
-        max_buy_rate REAL,
-        min_sell_rate REAL,
-        cup_budget REAL NOT NULL DEFAULT 0 CHECK (cup_budget >= 0),
         schedule_enabled INTEGER NOT NULL DEFAULT 0,
         timezone TEXT NOT NULL DEFAULT 'UTC',
         start_local TEXT,
         end_local TEXT,
         active_days_json TEXT NOT NULL DEFAULT '[1,2,3,4,5,6,7]',
+        updated_at TEXT NOT NULL
+      )`,
+    ),
+    db.prepare(
+      `CREATE TABLE IF NOT EXISTS arbitrage_execution_config (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        auto_enabled INTEGER NOT NULL DEFAULT 0 CHECK (auto_enabled IN (0,1)),
+        max_buy_rate REAL,
+        min_sell_rate REAL,
+        cup_budget REAL NOT NULL DEFAULT 0 CHECK (cup_budget >= 0),
         updated_at TEXT NOT NULL
       )`,
     ),
@@ -185,11 +167,15 @@ export async function ensureArbitrageMonitorSchema(
   const seedResults = await db.batch([
     db.prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_config
-       (id, enabled, min_margin_percent, coin, interval_seconds, auto_enabled,
-        max_buy_rate, min_sell_rate, cup_budget, schedule_enabled, timezone,
+       (id, enabled, min_margin_percent, coin, interval_seconds, schedule_enabled, timezone,
         active_days_json, updated_at)
-       VALUES (1, 1, 5, 'BANK_CUP', 10, 0, NULL, NULL, 0, 0, 'UTC',
+       VALUES (1, 1, 5, 'BANK_CUP', 10, 0, 'UTC',
                '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
+    ),
+    db.prepare(
+      `INSERT OR IGNORE INTO arbitrage_execution_config
+       (id, auto_enabled, max_buy_rate, min_sell_rate, cup_budget, updated_at)
+       VALUES (1, 0, NULL, NULL, 0, CURRENT_TIMESTAMP)`,
     ),
     db.prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_state
@@ -217,11 +203,20 @@ async function readConfig(db: D1Database): Promise<MonitorConfig> {
     row = await db
       .prepare(
         `SELECT enabled, min_margin_percent, coin, schedule_enabled, timezone,
-              start_local, end_local, active_days_json
-         FROM arbitrage_monitor_config WHERE id = 1`,
-      )
-      .first<MonitorRow>();
-  }
+              start_local, end_local,async function readConfig(db: D1Database): Promise<MonitorConfig> {
+  const row = await db
+    .prepare(
+      `SELECT enabled, min_margin_percent, coin, interval_seconds,
+              schedule_enabled, timezone, start_local, end_local, active_days_json
+       FROM arbitrage_monitor_config WHERE id = 1`,
+    )
+    .first<MonitorRow>();
+  const execution = await db
+    .prepare(
+      `SELECT auto_enabled, max_buy_rate, min_sell_rate, cup_budget
+       FROM arbitrage_execution_config WHERE id = 1`,
+    )
+    .first<ExecutionConfigRow>();
 
   if (!row) {
     return {
@@ -229,10 +224,10 @@ async function readConfig(db: D1Database): Promise<MonitorConfig> {
       minMarginPercent: 5,
       coin: "BANK_CUP",
       intervalSeconds: 10,
-      autoEnabled: false,
-      maxBuyRate: null,
-      minSellRate: null,
-      cupBudget: 0,
+      autoEnabled: execution?.auto_enabled === 1,
+      maxBuyRate: execution?.max_buy_rate == null ? null : Number(execution.max_buy_rate),
+      minSellRate: execution?.min_sell_rate == null ? null : Number(execution.min_sell_rate),
+      cupBudget: Math.max(0, Number(execution?.cup_budget) || 0),
       scheduleEnabled: false,
       timezone: "UTC",
       startLocal: null,
@@ -257,10 +252,10 @@ async function readConfig(db: D1Database): Promise<MonitorConfig> {
       300,
       Math.max(5, Number(row.interval_seconds) || 10),
     ),
-    autoEnabled: row.auto_enabled === 1,
-    maxBuyRate: row.max_buy_rate == null ? null : Number(row.max_buy_rate),
-    minSellRate: row.min_sell_rate == null ? null : Number(row.min_sell_rate),
-    cupBudget: Math.max(0, Number(row.cup_budget) || 0),
+    autoEnabled: execution?.auto_enabled === 1,
+    maxBuyRate: execution?.max_buy_rate == null ? null : Number(execution.max_buy_rate),
+    minSellRate: execution?.min_sell_rate == null ? null : Number(execution.min_sell_rate),
+    cupBudget: Math.max(0, Number(execution?.cup_budget) || 0),
     scheduleEnabled: row.schedule_enabled === 1,
     timezone: row.timezone || "UTC",
     startLocal: row.start_local,
