@@ -50,11 +50,13 @@ async function readExecutionState(db: D1Database): Promise<ExecutionStateRow> {
         "FROM arbitrage_execution_state WHERE id = 1",
     )
     .first<ExecutionStateRow>();
-  return row ?? {
-    apply_window_json: "[]",
-    last_action_at: null,
-    last_action: null,
-  };
+  return (
+    row ?? {
+      apply_window_json: "[]",
+      last_action_at: null,
+      last_action: null,
+    }
+  );
 }
 
 function recentApplyTimestamps(value: string): number[] {
@@ -192,10 +194,7 @@ export async function executeArbitrageCandidates(
   for (const candidate of sellQusdCandidates) {
     if (selected.length >= slots) break;
     const capital = Number(candidate.capitalRequiredFiat);
-    if (
-      !Number.isFinite(capital) ||
-      cupPlanned + capital > config.cupBudget
-    )
+    if (!Number.isFinite(capital) || cupPlanned + capital > config.cupBudget)
       continue;
     selected.push(candidate);
     cupPlanned += capital;
