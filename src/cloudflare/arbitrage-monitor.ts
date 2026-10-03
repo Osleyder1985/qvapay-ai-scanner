@@ -82,79 +82,78 @@ export async function ensureArbitrageMonitorSchema(
     !names.has("market_events")
   ) {
     const results = await db.batch([
-        db.prepare(
       db.prepare(
-      `CREATE TABLE IF NOT EXISTS arbitrage_monitor_config (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        enabled INTEGER NOT NULL DEFAULT 1,
-        min_margin_percent REAL NOT NULL DEFAULT 5,
-        coin TEXT NOT NULL DEFAULT 'BANK_CUP',
-        interval_seconds INTEGER NOT NULL DEFAULT 10 CHECK (interval_seconds BETWEEN 5 AND 300),
-        schedule_enabled INTEGER NOT NULL DEFAULT 0,
-        timezone TEXT NOT NULL DEFAULT 'UTC',
-        start_local TEXT,
-        end_local TEXT,
-        active_days_json TEXT NOT NULL DEFAULT '[1,2,3,4,5,6,7]',
-        updated_at TEXT NOT NULL
-      )`,
-    ),
+        `CREATE TABLE IF NOT EXISTS arbitrage_monitor_config (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          enabled INTEGER NOT NULL DEFAULT 1,
+          min_margin_percent REAL NOT NULL DEFAULT 5,
+          coin TEXT NOT NULL DEFAULT 'BANK_CUP',
+          interval_seconds INTEGER NOT NULL DEFAULT 10 CHECK (interval_seconds BETWEEN 5 AND 300),
+          schedule_enabled INTEGER NOT NULL DEFAULT 0,
+          timezone TEXT NOT NULL DEFAULT 'UTC',
+          start_local TEXT,
+          end_local TEXT,
+          active_days_json TEXT NOT NULL DEFAULT '[1,2,3,4,5,6,7]',
+          updated_at TEXT NOT NULL
+        )`,
+      ),
       db.prepare(
-      `CREATE TABLE IF NOT EXISTS arbitrage_monitor_state (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        status TEXT NOT NULL DEFAULT 'starting',
-        scan_id TEXT,
-        scanned_at TEXT,
-        next_run_at TEXT,
-        last_success_at TEXT,
-        last_error TEXT,
-        payload_json TEXT,
-        updated_at TEXT NOT NULL
-      )`,
-    ),
+        `CREATE TABLE IF NOT EXISTS arbitrage_monitor_state (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          status TEXT NOT NULL DEFAULT 'starting',
+          scan_id TEXT,
+          scanned_at TEXT,
+          next_run_at TEXT,
+          last_success_at TEXT,
+          last_error TEXT,
+          payload_json TEXT,
+          updated_at TEXT NOT NULL
+        )`,
+      ),
       db.prepare(
-      `CREATE TABLE IF NOT EXISTS market_events (
-        dedupe_key TEXT PRIMARY KEY,
-        event_id TEXT,
-        offer_uuid TEXT NOT NULL,
-        event TEXT NOT NULL,
-        status TEXT,
-        side TEXT,
-        coin TEXT NOT NULL,
-        amount REAL,
-        available_amount REAL,
-        receive REAL,
-        rate REAL,
-        event_at TEXT NOT NULL,
-        observed_at TEXT NOT NULL,
-        source TEXT NOT NULL CHECK (source IN ('stream', 'webhook', 'reconciliation')),
-        source_event_at TEXT,
-        source_observed_at TEXT,
-        timestamp_quality TEXT NOT NULL DEFAULT 'valid',
-        quarantined INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )`,
-    ),
+        `CREATE TABLE IF NOT EXISTS market_events (
+          dedupe_key TEXT PRIMARY KEY,
+          event_id TEXT,
+          offer_uuid TEXT NOT NULL,
+          event TEXT NOT NULL,
+          status TEXT,
+          side TEXT,
+          coin TEXT NOT NULL,
+          amount REAL,
+          available_amount REAL,
+          receive REAL,
+          rate REAL,
+          event_at TEXT NOT NULL,
+          observed_at TEXT NOT NULL,
+          source TEXT NOT NULL CHECK (source IN ('stream', 'webhook', 'reconciliation')),
+          source_event_at TEXT,
+          source_observed_at TEXT,
+          timestamp_quality TEXT NOT NULL DEFAULT 'valid',
+          quarantined INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )`,
+      ),
       db.prepare(
-      `CREATE INDEX IF NOT EXISTS idx_arbitrage_monitor_state_scanned_at
-       ON arbitrage_monitor_state (scanned_at DESC)`,
-    ),
+        `CREATE INDEX IF NOT EXISTS idx_arbitrage_monitor_state_scanned_at
+         ON arbitrage_monitor_state (scanned_at DESC)`,
+      ),
       db.prepare(
-      `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_at
-       ON market_events (coin, event_at DESC)`,
-    ),
+        `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_at
+         ON market_events (coin, event_at DESC)`,
+      ),
       db.prepare(
-      `CREATE INDEX IF NOT EXISTS idx_market_events_offer_uuid
-       ON market_events (offer_uuid)`,
-    ),
+        `CREATE INDEX IF NOT EXISTS idx_market_events_offer_uuid
+         ON market_events (offer_uuid)`,
+      ),
       db.prepare(
-      `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event
-       ON market_events (coin, event)`,
-    ),
+        `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event
+         ON market_events (coin, event)`,
+      ),
       db.prepare(
-      `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_completion
-       ON market_events (coin, event, event_at DESC, observed_at DESC, offer_uuid)`,
-    ),
-      ]);
+        `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_completion
+         ON market_events (coin, event, event_at DESC, observed_at DESC, offer_uuid)`,
+      ),
+    ]);
     if (results.some((result) => result.success !== true)) {
       throw new Error("ARBITRAGE_RUNTIME_SCHEMA_ENSURE_FAILED");
     }
