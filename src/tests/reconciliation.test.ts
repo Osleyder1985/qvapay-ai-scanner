@@ -157,7 +157,8 @@ test("emits machine-readable gap categories with source IDs and timestamps", () 
     assert.deepEqual(
       report.discrepancies.map((item) => item.category),
       [
-        "event_missing_operation",
+        "conflicting_identity",
+      "event_missing_operation",
         "finance_missing_operation",
         "market_history_unmatched_event",
         "operation_missing_event",
