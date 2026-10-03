@@ -32,6 +32,7 @@ jobs:
         run: |
           npx prettier --write src/cloudflare/account-routes.ts src/cloudflare/arbitrage-execution.ts src/cloudflare/arbitrage-monitor.ts src/cloudflare/qvapay-user.ts
           git diff -- src/cloudflare/account-routes.ts src/cloudflare/arbitrage-execution.ts src/cloudflare/arbitrage-monitor.ts src/cloudflare/qvapay-user.ts
+          exit 1
 
       - name: Verify Node.js support contract
         run: |
