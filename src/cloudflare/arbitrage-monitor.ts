@@ -101,7 +101,6 @@ export async function ensureArbitrageMonitorSchema(
     }
   }
 
-
   const results = await db.batch([
     db.prepare(
       `CREATE TABLE IF NOT EXISTS arbitrage_monitor_config (
