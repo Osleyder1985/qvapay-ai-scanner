@@ -107,6 +107,23 @@ La mediana y los percentiles son robustos frente a valores extremos; el VWAP con
 
 Estas estadísticas son evidencia descriptiva para análisis posterior. No seleccionan automáticamente un precio, no reprician ofertas y no ejecutan operaciones.
 
+## Calidad de evidencia
+
+Cada estadística agregada y cada referencia por lado incluye `quality` con:
+
+- `sampleCount`: observaciones de ciclo `completed` consideradas;
+- `usableSampleCount`: operaciones válidas que realmente entraron en la estadística;
+- `missingFieldCount`: cantidad de campos `amount`, `receive` o `rate` ausentes entre las observaciones candidatas;
+- `excludedSampleCount`: observaciones candidatas excluidas de la estadística;
+- `staleObservationCount`: observaciones cuyo `observed_at` supera `maxAgeMs`;
+- `coverageStartAt` / `coverageEndAt`: intervalo temporal cubierto por las operaciones utilizables;
+- `freshnessMs`: antigüedad de la observación más reciente;
+- `lifecycleCompletenessPercent`: porcentaje de operaciones utilizables que también tienen evidencia `created`;
+- `outlierExcludedCount`: actualmente `0`; no existe una política de exclusión de outliers implícita;
+- `minimumSampleSize` y `belowMinimumSample`: umbral determinista para identificar muestras pequeñas.
+
+No se calcula una probabilidad de confianza. Una muestra pequeña o stale queda explícitamente marcada como evidencia degradada, sin fabricar un valor de confianza.
+
 ## Limitaciones
 
 - La analítica describe observaciones y operaciones completadas; no demuestra por sí sola liquidez futura.
