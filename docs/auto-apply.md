@@ -43,3 +43,9 @@ La configuración y el estado operativo se guardan en data/auto-apply.json, que 
 7. Registra la oferta aceptada y el monto acumulado del día.
 
 El motor no realiza automáticamente el pago fiat ni otras acciones posteriores a apply.
+
+## Estado de Cloudflare
+
+En `production/cloudflare`, Auto-Apply está actualmente deshabilitado. `GET /api/auto-apply/config` devuelve `enabled: false` y las mutaciones `PUT/PATCH /api/auto-apply/config` responden `501` porque todavía no existe persistencia D1 ni scheduler productivo.
+
+Por tanto, el dashboard no debe presentar controles de configuración editables como si pudieran persistirse. La interfaz deshabilita los controles mientras el estado recibido indique que Auto-Apply está deshabilitado. Esta restricción es temporal y fail-closed; la capacidad sólo podrá volver a ser configurable cuando exista persistencia y ejecución verificables.
