@@ -75,24 +75,23 @@ Las ramas no productivas sólo deben utilizar previews si están explícitamente
 
 ## Estado de aceptación
 
-### Verificado
+### Evidencia verificada
 
-- [x] Worker desplegado y accesible mediante `workers.dev`.
-- [x] Frontend servido por el Worker.
-- [x] D1 binding `DB` configurado.
-- [x] Migraciones D1 `0001`, `0002` y `0003` aplicadas en producción.
-- [x] Secrets `QVAPAY_APP_ID` y `QVAPAY_APP_SECRET` configurados en producción.
-- [x] El dashboard obtiene datos P2P reales desde QvaPay mediante el Worker.
-- [x] Auto-Apply continúa deshabilitado.
+- [x] El Worker tiene un entrypoint Cloudflare válido y el runtime local smoke gate pasa en CI.
+- [x] La configuración del repositorio declara el binding D1 `DB` y los assets `ASSETS`.
+- [x] Los nombres de secrets requeridos están declarados sin valores en Git.
+- [x] Existe un workflow de verificación que correlaciona GitHub SHA → Cloudflare Workers Build → Version ID activo.
+- [x] El último despliegue cuya evidencia está registrada en el repositorio puede auditarse mediante sus artefactos de deployment.
 
 ### Pendiente de verificación en Cloudflare
 
-- [x] Workers Builds conectado al repositorio correcto.
-- [x] Rama de producción de Workers Builds = `production/cloudflare`.
-- [x] Build command = `npm run build`.
-- [x] Deploy command = `npx wrangler deploy`.
-- [x] Un build automático exitoso después de un push/merge a producción.
-- [x] El deployment automático corresponde al commit de `production/cloudflare`.
+- [ ] Un build automático exitoso posterior al merge más reciente de `production/cloudflare`.
+- [ ] El deployment activo actual corresponde al SHA actual de `production/cloudflare`.
+- [ ] La versión activa al 100% coincide con el Version ID reportado por Workers Build para ese SHA.
+- [ ] La evidencia del deployment actual está retenida como artefacto de GitHub Actions.
+- [ ] El estado actual de Workers Builds, secrets, D1 y Access ha sido comprobado directamente en Cloudflare.
+
+**Regla de auditoría:** no se considera verificado un deployment actual por el mero hecho de que exista la integración de Workers Builds. La aceptación requiere evidencia del SHA, build exitoso, Version ID y deployment activo.
 
 ## Seguridad
 
