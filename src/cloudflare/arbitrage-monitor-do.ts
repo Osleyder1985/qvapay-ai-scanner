@@ -8,7 +8,7 @@
 
 import {
   runArbitrageMonitor,
-  INTERVAL_MS,
+  getMonitorIntervalMs,
   type ArbitrageMonitorEnv,
 } from "./arbitrage-monitor.js";
 import { logInternalError } from "./error-contract.js";
@@ -56,13 +56,20 @@ export class ArbitrageMonitor {
       )
         .bind(
           "MONITOR_RUN_FAILED",
-          new Date(Date.now() + INTERVAL_MS).toISOString(),
+          new Date(Date.now() + (await getMonitorIntervalMs(this.env.DB))).toISOString(),
           new Date().toISOString(),
         )
         .run();
     } finally {
-      // Always schedule the next cycle, including upstream/API failures.
-      await this.ctx.storage.setAlarm(Date.now() + INTERVAL_MS);
+      // Always schedule the next cycle, including upstream/API failures. Read the
+      // persisted cadence so changing the configuration takes effect on the next cycle.
+      let intervalMs = 10_000;
+      try {
+        intervalMs = await getMonitorIntervalMs(this.env.DB);
+      } catch {
+        // Keep the fail-safe 10-second cadence if configuration cannot be read.
+      }
+      await this.ctx.storage.setAlarm(Date.now() + intervalMs);
     }
   }
 }
