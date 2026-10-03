@@ -24,68 +24,69 @@ export interface QvaPayBalanceParseResult {
  * booleanos, valores no finitos, valores negativos ni envelopes anidados.
  */
 export function parseQvaPayBalance(payload: unknown): QvaPayBalanceParseResult {
+  const normalize = (raw: unknown): QvaPayBalanceParseResult => {
+    const value =
+      typeof raw === "number"
+        ? raw
+        : typeof raw === "string" && raw.trim() !== ""
+          ? Number(raw.trim())
+          : NaN;
+
+    if (!Number.isFinite(value)) {
+      return {
+        ok: false,
+        balance: null,
+        reason: "El balance recibido no es un número finito.",
+      };
+    }
+
+    if (value < 0) {
+      return {
+        ok: false,
+        balance: null,
+        reason: "El balance USD no puede ser negativo.",
+      };
+    }
+
+    return {
+      ok: true,
+      balance: { balanceUsd: value },
+      reason: null,
+    };
+  };
+
+  if (typeof payload === "number" || typeof payload === "string") {
+    return normalize(payload);
+  }
+
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return {
       ok: false,
       balance: null,
-      reason: "La respuesta de balance no es un objeto JSON.",
+      reason: "La respuesta de balance no contiene un objeto JSON ni un valor numérico válido.",
     };
   }
 
   const record = payload as Record<string, unknown>;
-  const keys = Object.keys(record);
 
-  let value: unknown;
-
-  if (
-    keys.length === 1 &&
-    Object.prototype.hasOwnProperty.call(record, "balance")
-  ) {
-    value = record.balance;
-  } else if (
-    keys.length === 2 &&
-    typeof record.message === "string" &&
-    Object.prototype.hasOwnProperty.call(record, "data")
-  ) {
-    value = record.data;
-  } else {
-    return {
-      ok: false,
-      balance: null,
-      reason:
-        "La respuesta de balance no coincide con los contratos documentados.",
-    };
+  if (Object.prototype.hasOwnProperty.call(record, "balance")) {
+    return normalize(record.balance);
   }
 
-  if (typeof value !== "number") {
-    return {
-      ok: false,
-      balance: null,
-      reason: "El campo balance debe ser un número JSON.",
-    };
-  }
-
-  if (!Number.isFinite(value)) {
-    return {
-      ok: false,
-      balance: null,
-      reason: "El campo balance debe ser un número finito.",
-    };
-  }
-
-  if (value < 0) {
-    return {
-      ok: false,
-      balance: null,
-      reason: "El balance USD no puede ser negativo.",
-    };
+  if (Object.prototype.hasOwnProperty.call(record, "data")) {
+    const data = record.data;
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      const nested = data as Record<string, unknown>;
+      if (Object.prototype.hasOwnProperty.call(nested, "balance")) {
+        return normalize(nested.balance);
+      }
+    }
+    return normalize(data);
   }
 
   return {
-    ok: true,
-    balance: {
-      balanceUsd: value,
-    },
-    reason: null,
+    ok: false,
+    balance: null,
+    reason: "La respuesta de balance no contiene un campo balance reconocible.",
   };
 }
