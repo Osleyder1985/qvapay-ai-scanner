@@ -76,6 +76,20 @@ export interface MarketStatisticsQuality {
   belowMinimumSample: boolean;
 }
 
+export interface CurrencyReferencePriceQuality {
+  sampleCount: number;
+  usableSampleCount: number;
+  invalidFieldExcludedCount: number;
+  staleObservationCount: number;
+  lifecycleCompleteCount: number;
+  outlierExcludedCount: number;
+  excludedSampleCount: number;
+  firstEventAt: string | null;
+  lastEventAt: string | null;
+  timeSpanMs: number | null;
+  belowMinimumSample: boolean;
+}
+
 export interface CurrencyReferencePriceStatistics {
   sampleCount: number;
   tradedVolumeQusd: number;
@@ -88,6 +102,7 @@ export interface CurrencyReferencePriceStatistics {
   newestEventAt: string | null;
   newestObservedAt: string | null;
   stale: boolean;
+  quality: CurrencyReferencePriceQuality;
 }
 
 export interface CurrencyExecutionAnalytics {
