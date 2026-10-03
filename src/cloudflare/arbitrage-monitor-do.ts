@@ -32,7 +32,7 @@ export class ArbitrageMonitor {
     if (url.pathname === "/internal/start") {
       const alarm = await this.ctx.storage.getAlarm();
       if (alarm === null) {
-        await this.ctx.storage.setAlarm(Date.now());
+        await this.ctx.storage.setAlarm(Date.now() + (await getMonitorIntervalMs(this.env.DB)));
         return new Response("started");
       }
       return new Response("already-running");
