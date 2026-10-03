@@ -231,7 +231,10 @@ export function reconcileLayerState(input: {
       "operation_missing_event",
       id,
       [id],
-      [text(operation?.payload.updated_at), text(operation?.payload.created_at)],
+      [
+        text(operation?.payload.updated_at),
+        text(operation?.payload.created_at),
+      ],
     );
   }
   const operationMissingFinance = sorted(
@@ -243,7 +246,10 @@ export function reconcileLayerState(input: {
       "operation_missing_finance",
       id,
       [id],
-      [text(operation?.payload.updated_at), text(operation?.payload.created_at)],
+      [
+        text(operation?.payload.updated_at),
+        text(operation?.payload.created_at),
+      ],
     );
   }
   const financeMissingOperations = sorted(
