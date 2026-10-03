@@ -67,7 +67,7 @@ export async function handleAuthRoutes(
           : "";
 
       if (!env.AUTH_USERNAME || !env.AUTH_PASSWORD) {
-        logInternalError("auth.configuration_missing", "AUTH_SERVICE_UNAVAILABLE");
+        logInternalError(\n          "auth.configuration_missing",\n          "AUTH_SERVICE_UNAVAILABLE",\n        );
         return json(
           publicError("AUTH_SERVICE_UNAVAILABLE"),
           503,
@@ -103,7 +103,7 @@ export async function handleAuthRoutes(
             );
           }
         } catch (error) {
-          logInternalError("auth.rate_limiter_failed", "AUTH_SERVICE_UNAVAILABLE");
+          logInternalError(\n            "auth.rate_limiter_failed",\n            "AUTH_SERVICE_UNAVAILABLE",\n          );
           return json(
             publicError("AUTH_SERVICE_UNAVAILABLE"),
             503,
@@ -115,7 +115,7 @@ export async function handleAuthRoutes(
       try {
         await clearLoginRateLimit(env.DB, request, username, env.AUTH_PASSWORD);
       } catch (error) {
-        logInternalError("auth.rate_limiter_cleanup_failed", "AUTH_SERVICE_UNAVAILABLE");
+        logInternalError(\n          "auth.rate_limiter_cleanup_failed",\n          "AUTH_SERVICE_UNAVAILABLE",\n        );
         return json(
           { error: "El servicio de autenticación no está disponible." },
           503,
@@ -124,7 +124,7 @@ export async function handleAuthRoutes(
 
       return await createSession(request, env.DB, username);
     } catch (error) {
-      logInternalError("auth.session_creation_failed", "AUTH_SESSION_CREATE_FAILED");
+      logInternalError(\n        "auth.session_creation_failed",\n        "AUTH_SESSION_CREATE_FAILED",\n      );
       return json(
         publicError("AUTH_SESSION_CREATE_FAILED"),
         503,
