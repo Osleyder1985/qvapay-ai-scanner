@@ -45,7 +45,8 @@ function toEvent(row: MarketEventRow): NormalizedMarketEvent {
     source: row.source as NormalizedMarketEvent["source"],
     sourceEventAt: row.source_event_at,
     sourceObservedAt: row.source_observed_at,
-    timestampQuality: row.timestamp_quality as NormalizedMarketEvent["timestampQuality"],
+    timestampQuality:
+      row.timestamp_quality as NormalizedMarketEvent["timestampQuality"],
     quarantined: row.quarantined === 1,
   };
 }
