@@ -10,6 +10,7 @@ let arbitrageMonitorTimer = null;
 let arbitrageLastScanId = null;
 let arbitrageLoading = false;
 let arbitrageCountdownDeadline = null;
+let arbitrageServerClockOffsetMs = 0;
 
 function monitorIntervalSeconds() {
   const configured = Number(S.arbitrage?.config?.intervalSeconds ?? 10);
@@ -44,7 +45,7 @@ function drawArbitrageMarket() {
   box.innerHTML =
     '<div class="table-wrap arbitrage-table-wrap"><table class="market-table arbitrage-table">' +
     '<thead><tr>' +
-    '<th>Oferta</th><th>QUSD disponible</th><th>Tasa QUSD/CUP</th><th>Capital CUP</th>' +
+    '<th>Oferta</th><th>QUSD de la oferta</th><th>Tasa QUSD/CUP</th><th>Capital CUP requerido</th>' +
     '<th>Venta objetivo · QUSD/CUP</th><th>Retorno CUP</th><th>Ganancia CUP</th><th>Margen</th><th>Acción</th>' +
     '</tr></thead><tbody>' +
     offers.map((offer) => {
@@ -56,9 +57,9 @@ function drawArbitrageMarket() {
         : 'Sin límite adicional';
       return '<tr>' +
         '<td><span class="type ' + esc(String(offer.type || 'sell').toLowerCase()) + '">' + esc(String(offer.type || 'sell').toUpperCase()) + '</span><small>' + esc(offer.uuid) + '</small></td>' +
-        '<td><strong>' + arbitrageMoney(offer.availableQusd) + '</strong><small>' + esc(limitText) + '</small></td>' +
+        '<td><strong>' + arbitrageMoney(offer.availableQusd) + ' QUSD</strong><small>' + esc(String(offer.offerKind || "fixed").toUpperCase()) + ' · ' + esc(limitText) + '</small></td>' +
         '<td><strong>' + arbitrageMoney(offer.purchaseRate) + '</strong><small>CUP por 1 QUSD</small></td>' +
-        '<td><strong>' + arbitrageMoney(offer.capitalRequiredFiat) + '</strong><small>CUP</small></td>' +
+        '<td><strong>' + arbitrageMoney(offer.capitalRequiredFiat) + '</strong><small>CUP para tomar la oferta</small></td>' +
         '<td><strong class="arbitrage-target">' + arbitrageMoney(offer.targetSaleRate) + '</strong><small>+' + margin.toFixed(2) + '% objetivo</small></td>' +
         '<td><strong>' + arbitrageMoney(offer.targetSaleProceedsFiat) + '</strong><small>CUP</small></td>' +
         '<td><strong class="arbitrage-profit">+' + arbitrageMoney(offer.projectedGrossProfitFiat) + '</strong><small>CUP</small></td>' +
@@ -82,6 +83,10 @@ function drawArbitrageSignals() {
 }
 
 function syncCountdownDeadline() {
+  if (S.arbitrage?.state?.status === "scanning") {
+    arbitrageCountdownDeadline = null;
+    return;
+  }
   const next = S.arbitrage?.state?.nextRunAt
     ? Date.parse(S.arbitrage.state.nextRunAt)
     : NaN;
@@ -96,8 +101,16 @@ function syncCountdownDeadline() {
 
 function nextSeconds() {
   syncCountdownDeadline();
+  if (S.arbitrage?.state?.status === "scanning") return 0;
   return Number.isFinite(arbitrageCountdownDeadline)
-    ? Math.max(0, Math.ceil((arbitrageCountdownDeadline - Date.now()) / 1000))
+    ? Math.max(
+        0,
+        Math.ceil(
+          (arbitrageCountdownDeadline -
+            (Date.now() + arbitrageServerClockOffsetMs)) /
+            1000,
+        ),
+      )
     : null;
 }
 
@@ -109,7 +122,9 @@ function drawArbitrage() {
   const countdown = nextSeconds();
   const state = S.arbitrage?.state;
   if (status) {
-    if (state?.status === "error") {
+    if (state?.status === "scanning") {
+      status.textContent = "MONITOR SERVER · escaneando mercado…";
+    } else if (state?.status === "error") {
       const detail = state?.lastError ? " · " + state.lastError : "";
       status.textContent = "⚠ ERROR" + detail + " · reintentando en " + (countdown ?? 10) + " s";
     } else if (countdown !== null) {
@@ -122,7 +137,11 @@ function drawArbitrage() {
   }
 
   const countdownBox = $("arbitrageCountdown");
-  if (countdownBox) countdownBox.textContent = countdown === null ? "—" : String(countdown);
+  if (countdownBox) {
+    countdownBox.textContent =
+      countdown === null && state?.status === "scanning" ? "0" :
+      countdown === null ? "—" : String(countdown);
+  }
 }
 
 async function fetchArbitrageMonitor({ silent = true } = {}) {
@@ -131,6 +150,12 @@ async function fetchArbitrageMonitor({ silent = true } = {}) {
   try {
     const previousScan = S.arbitrage?.state?.scanId;
     const data = await api("/api/arbitrage/monitor");
+    if (data.serverNow) {
+      const serverNow = Date.parse(data.serverNow);
+      if (Number.isFinite(serverNow)) {
+        arbitrageServerClockOffsetMs = serverNow - Date.now();
+      }
+    }
     S.arbitrage = data;
     syncCountdownDeadline();
     if (data.state?.scanId && data.state.scanId !== previousScan) {
