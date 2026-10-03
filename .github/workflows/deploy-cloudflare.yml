@@ -1,4 +1,4 @@
-name: Verify Cloudflare Production Deployment
+name: Deploy and Verify Cloudflare Production
 
 on:
   push:
@@ -15,193 +15,82 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  verify:
+  deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Wait for Cloudflare Workers Build
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy with Wrangler
         env:
-          GH_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          cloudflare_build_failed=false
-          for attempt in {1..60}; do
-            response="$(curl --fail-with-body --silent --show-error \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "X-GitHub-Api-Version: 2026-03-10" \
-              "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=Workers%20Builds%3A%20qvapay-ai-scanner")"
+          npx wrangler deploy --json > cloudflare-deploy.json
+          node <<'NODE'
+          const fs = require("node:fs");
+          const data = JSON.parse(fs.readFileSync("cloudflare-deploy.json", "utf8"));
+          const versionId =
+            data.version_id ??
+            data.versionId ??
+            data?.deployment?.version_id ??
+            data?.deployment?.versionId ??
+            "";
+          if (!versionId) {
+            throw new Error("Wrangler deployment did not return a version ID.");
+          }
+          fs.writeFileSync("cloudflare-deployed-version.txt", String(versionId) + "\n");
+          console.log("Deployed Cloudflare Worker version " + versionId);
+          NODE
 
-            status="$(printf '%s' "$response" | jq -r '.check_runs[0].status // "missing"')"
-            conclusion="$(printf '%s' "$response" | jq -r '.check_runs[0].conclusion // ""')"
-
-            if [ "$status" = "completed" ]; then
-              printf '%s' "$response" > cloudflare-build-check.json
-
-              if [ "$conclusion" != "success" ]; then
-                build_id="$(printf '%s' "$response" | jq -r '.check_runs[0].external_id // ""')"
-                echo "Cloudflare Workers Build failed with conclusion: $conclusion"
-                if [ -n "$build_id" ] && [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
-                  curl --fail-with-body --silent --show-error \
-                    -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-                    "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/builds/builds/$build_id" \
-                    > cloudflare-build.json || true
-                  curl --fail-with-body --silent --show-error \
-                    -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-                    "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/builds/builds/$build_id/logs" \
-                    > cloudflare-build-logs.json || true
-                  if [ -s cloudflare-build.json ]; then
-                    echo "Cloudflare build metadata:"
-                    jq '{success,errors,messages,result:{build_outcome,build_uuid,status,build_trigger_metadata,trigger,created_on,modified_on,stopped_on}}' cloudflare-build.json || true
-                  fi
-                  if [ -s cloudflare-build-logs.json ]; then
-                    echo "Cloudflare build logs:"
-                    jq -r '.result.lines[]? | if type == "array" then .[-1] else . end' cloudflare-build-logs.json || true
-                  fi
-                fi
-                cloudflare_build_failed=true
-                break
-              fi
-
-              echo "Cloudflare Workers Build completed successfully for $GITHUB_SHA."
-              break
+      - name: Wait for Cloudflare deployment to become active
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          expected="$(cat cloudflare-deployed-version.txt)"
+          for attempt in {1..30}; do
+            npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-status.json
+            active="$(node -e 'const fs=require("node:fs"); const d=JSON.parse(fs.readFileSync("deployment-status.json","utf8")); const a=(d.versions??[]).filter(v=>Number(v?.percentage)===100).map(v=>v?.version_id).filter(Boolean); process.stdout.write(a.length===1?a[0]:"");')"
+            if [ "$active" = "$expected" ]; then
+              echo "Cloudflare version $active is active at 100%."
+              exit 0
             fi
-
-            echo "Waiting for Cloudflare Workers Build for $GITHUB_SHA (attempt $attempt/60; status=$status)."
+            echo "Waiting for active Cloudflare version (attempt $attempt/30; expected=$expected; active=$active)."
             sleep 10
           done
+          echo "Cloudflare deployment did not become the single 100% active version."
+          exit 1
 
-          if [ "$cloudflare_build_failed" = true ]; then
-            echo "CLOUDFLARE_BUILD_FAILED=true" >> "$GITHUB_ENV"
-            echo "Managed Cloudflare Build failed; production deployment will use the authenticated Wrangler fallback."
-          elif [ "$status" != "completed" ]; then
-            echo "Timed out waiting for the Cloudflare Workers Build check."
-            exit 1
-          else
-            echo "CLOUDFLARE_BUILD_FAILED=false" >> "$GITHUB_ENV"
-          fi
-
-      - name: Deploy with Wrangler fallback
-        if: env.CLOUDFLARE_BUILD_FAILED == 'true'
+      - name: Capture managed Cloudflare Build status
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          npm ci
-          npx wrangler deploy --json > cloudflare-fallback-deploy.json
-          node <<'NODE'
-          const fs = require("node:fs");
-          const raw = fs.readFileSync("cloudflare-fallback-deploy.json", "utf8");
-          const data = JSON.parse(raw);
-          const versionId = data.version_id ?? data.versionId ?? data?.deployment?.version_id ?? "";
-          if (!versionId) {
-            throw new Error("Wrangler fallback deployment did not return a version ID.");
-          }
-          fs.writeFileSync("cloudflare-fallback-version.txt", String(versionId) + "\n");
-          console.log("Wrangler fallback deployed version " + versionId);
-          NODE
+          curl --fail-with-body --silent --show-error             -H "Accept: application/vnd.github+json"             -H "Authorization: Bearer $GH_TOKEN"             -H "X-GitHub-Api-Version: 2026-03-10"             "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=Workers%20Builds%3A%20qvapay-ai-scanner"             > cloudflare-build-check.json || printf '{"check_runs":[]}' > cloudflare-build-check.json
 
-      - name: Verify active production deployment
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Write deployment evidence
         run: |
           set -euo pipefail
-          npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-status.json
-
-          node <<'NODE'
-          const fs = require("node:fs");
-
-          const expectedSha = process.env.GITHUB_SHA;
-          const status = JSON.parse(fs.readFileSync("deployment-status.json", "utf8"));
-          const buildCheck = JSON.parse(
-            fs.readFileSync("cloudflare-build-check.json", "utf8"),
-          );
-          const check = buildCheck?.check_runs?.[0];
-          const fallbackUsed = process.env.CLOUDFLARE_BUILD_FAILED === "true";
-          const fallbackVersion = fallbackUsed
-            ? fs.readFileSync("cloudflare-fallback-version.txt", "utf8").trim()
-            : "";
-
-          const activeVersions = (status?.versions ?? [])
-            .filter((entry) => Number(entry?.percentage) === 100)
-            .map((entry) => entry?.version_id)
-            .filter(Boolean);
-
-          if (activeVersions.length !== 1) {
-            throw new Error(
-              `Expected exactly one 100% active Worker version, found ${activeVersions.length}.`,
-            );
-          }
-
-          if (fallbackUsed) {
-            if (!fallbackVersion || activeVersions[0] !== fallbackVersion) {
-              throw new Error(
-                `Cloudflare active version ${activeVersions[0]} does not match the Wrangler fallback version ${fallbackVersion}.`,
-              );
-            }
-
-            fs.writeFileSync(
-              "deployment-evidence.txt",
-              [
-                `github_commit=${expectedSha}`,
-                `cloudflare_deployment_id=${status?.id ?? ""}`,
-                `cloudflare_active_version_id=${activeVersions[0]}`,
-                `cloudflare_build_id=${check?.external_id ?? ""}`,
-                `cloudflare_build_conclusion=${check?.conclusion ?? ""}`,
-                "deployment_method=wrangler_fallback",
-                `cloudflare_build_url=${check?.details_url ?? ""}`,
-                "cloudflare_build_failure=managed_build_initialization_timeout_or_failure",
-                "",
-              ].join("\n"),
-            );
-
-            console.log(
-              `Verified Wrangler fallback deployment for GitHub commit ${expectedSha}; active version ${activeVersions[0]} is 100%.`,
-            );
-            process.exit(0);
-          }
-
-          if (!check || check.head_sha !== expectedSha || check.conclusion !== "success") {
-            throw new Error(
-              `Cloudflare Workers Build check is not a successful build for GitHub commit ${expectedSha}.`,
-            );
-          }
-
-          const summary = String(check.output?.summary ?? "");
-          const versionMatch = summary.match(/Version ID:\s*([0-9a-f-]{36})/i);
-
-          if (!versionMatch || versionMatch[1] !== activeVersions[0]) {
-            throw new Error(
-              `Cloudflare active version ${activeVersions[0]} does not match the version reported by the successful build check.`,
-            );
-          }
-
-          fs.writeFileSync(
-            "deployment-evidence.txt",
-            [
-              `github_commit=${expectedSha}`,
-              `cloudflare_deployment_id=${status?.id ?? ""}`,
-              `cloudflare_active_version_id=${activeVersions[0]}`,
-              `cloudflare_build_id=${check.external_id ?? ""}`,
-              `cloudflare_build_url=${check.details_url ?? ""}`,
-              `cloudflare_check_head_sha=${check.head_sha}`,
-              `cloudflare_check_conclusion=${check.conclusion}`,
-              "deployment_method=managed_cloudflare_build",
-              "",
-            ].join("\n"),
-          );
-
-          console.log(
-            `Verified Cloudflare build ${check.external_id ?? "unknown"} for GitHub commit ${expectedSha}; active version ${activeVersions[0]} matches the build-reported version.`,
-          );
-          NODE
+          active="$(node -e 'const fs=require("node:fs"); const d=JSON.parse(fs.readFileSync("deployment-status.json","utf8")); const a=(d.versions??[]).filter(v=>Number(v?.percentage)===100).map(v=>v?.version_id).filter(Boolean); process.stdout.write(a.length===1?a[0]:"");')"
+          build_id="$(jq -r '.check_runs[0].external_id // ""' cloudflare-build-check.json)"
+          build_conclusion="$(jq -r '.check_runs[0].conclusion // ""' cloudflare-build-check.json)"
+          build_url="$(jq -r '.check_runs[0].details_url // ""' cloudflare-build-check.json)"
+          {
+            echo "github_commit=$GITHUB_SHA"
+            echo "cloudflare_active_version_id=$active"
+            echo "cloudflare_deployed_version_id=$(cat cloudflare-deployed-version.txt)"
+            echo "cloudflare_build_id=$build_id"
+            echo "cloudflare_build_conclusion=$build_conclusion"
+            echo "cloudflare_build_url=$build_url"
+            echo "deployment_method=wrangler_direct"
+          } > deployment-evidence.txt
 
       - name: Upload deployment evidence
         if: always()
@@ -209,11 +98,9 @@ jobs:
         with:
           name: cloudflare-deployment-evidence-${{ github.sha }}
           path: |
+            cloudflare-deploy.json
+            cloudflare-deployed-version.txt
             cloudflare-build-check.json
-            cloudflare-build.json
-            cloudflare-build-logs.json
-            cloudflare-fallback-deploy.json
-            cloudflare-fallback-version.txt
             deployment-status.json
             deployment-evidence.txt
           if-no-files-found: warn
