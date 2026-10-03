@@ -97,7 +97,7 @@ async function readQusdBalance(env: QvaPayHttpEnv): Promise<number | null> {
   if (!response.ok) return null;
   const payload = await readQvaPayPayload(response);
   const parsed = parseQvaPayBalance(payload);
-  return parsed.ok ? parsed.balance?.balanceUsd ?? null : null;
+  return parsed.ok ? (parsed.balance?.balanceUsd ?? null) : null;
 }
 
 async function applyOffer(
