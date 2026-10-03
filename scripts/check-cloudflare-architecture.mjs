@@ -12,9 +12,10 @@ function exists(relative) {
   return fs.existsSync(path.join(root, relative));
 }
 
-const wrangler = JSON.parse(read("wrangler.jsonc"));
-if (wrangler.main !== "src/worker.ts") {
-  failures.push(`El único entrypoint Wrangler esperado es src/worker.ts; encontrado: ${wrangler.main ?? "ausente"}`);
+const wranglerSource = read("wrangler.jsonc");
+const mainMatch = wranglerSource.match(/\bmain\s*:\s*"([^"]+)"/);
+if (mainMatch?.[1] !== "src/worker.ts") {
+  failures.push(`El único entrypoint Wrangler esperado es src/worker.ts; encontrado: ${mainMatch?.[1] ?? "ausente"}`);
 }
 
 const forbiddenPaths = [
@@ -41,10 +42,10 @@ if (!monitorDo.includes("export class ArbitrageMonitor")) {
   failures.push("ArbitrageMonitor no está definido en su único adaptador Durable Object.");
 }
 
-const monitorBinding = (wrangler.durable_objects?.bindings ?? []).find(
-  (binding) => binding.name === "ARBITRAGE_MONITOR",
+const monitorBindingMatch = wranglerSource.match(
+  /name\s*:\s*"ARBITRAGE_MONITOR"[^}]*class_name\s*:\s*"([^"]+)"/s,
 );
-if (monitorBinding?.class_name !== "ArbitrageMonitor") {
+if (monitorBindingMatch?.[1] !== "ArbitrageMonitor") {
   failures.push("El binding ARBITRAGE_MONITOR no apunta a ArbitrageMonitor.");
 }
 
