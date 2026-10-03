@@ -4,6 +4,7 @@
  * @description Ejecución controlada de aplicaciones P2P para el módulo de arbitraje.
  * @module cloudflare
  * @status active
+ * @notes La disponibilidad QUSD se valida contra el contrato financiero de QvaPay antes de vender.
  */
 
 import {
