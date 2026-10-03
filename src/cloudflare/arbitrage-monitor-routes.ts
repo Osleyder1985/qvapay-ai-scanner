@@ -6,7 +6,11 @@
  * @status active
  */
 
-import { authorizeAiAuditor } from "./ai-audit-auth.js";\nimport {\n  monitorState,\n  type ArbitrageMonitorEnv,\n} from "./arbitrage-monitor.js";
+import { authorizeAiAuditor } from "./ai-audit-auth.js";
+import {
+  monitorState,
+  type ArbitrageMonitorEnv,
+} from "./arbitrage-monitor.js";
 import {
   logInternalError,
   publicError,
@@ -22,6 +26,7 @@ interface DurableObjectNamespaceLike {
 }
 
 interface Env extends ArbitrageMonitorEnv {
+  AI_AUDITOR_TOKEN_HASH?: string;
   ARBITRAGE_MONITOR: DurableObjectNamespaceLike;
 }
 
@@ -79,6 +84,12 @@ export async function handleArbitrageMonitorRoutes(
   if (url.pathname !== "/api/arbitrage/monitor") return null;
 
   if (request.method === "GET") {
+    const auditor = await authorizeAiAuditor(
+      request,
+      env.AI_AUDITOR_TOKEN_HASH,
+    );
+    if (!auditor.ok) return json({ error: auditor.error }, auditor.status);
+
     try {
       const current = await monitorState(env.DB);
       const alarm = await readMonitorAlarm(env);
