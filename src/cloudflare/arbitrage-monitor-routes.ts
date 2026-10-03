@@ -166,12 +166,7 @@ export async function handleArbitrageMonitorRoutes(
     const now = new Date().toISOString();
     const result = await env.DB.prepare(
       `UPDATE arbitrage_monitor_config
-       SET
-         min_margin_percent = ?,
-         coin = ?,
-         interval_seconds = ?,
-         enabled = 1,
-         updated_at = ?
+       SET min_margin_percent = ?, coin = ?, interval_seconds = ?, enabled = 1, updated_at = ?
        WHERE id = 1`,
     )
       .bind(margin, coin, intervalSeconds, now)
