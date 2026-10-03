@@ -88,6 +88,7 @@ export interface CurrencyReferencePriceStatistics {
   newestEventAt: string | null;
   newestObservedAt: string | null;
   stale: boolean;
+  quality: MarketStatisticsQuality;
 }
 
 export interface CurrencyExecutionAnalytics {
