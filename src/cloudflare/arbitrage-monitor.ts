@@ -56,7 +56,6 @@ interface StateRow {
   updated_at: string;
 }
 
-const INTERVAL_MS = 10_000;
 
 /**
  * Repairs the monitor/runtime event schema if a deployment reached the Worker
