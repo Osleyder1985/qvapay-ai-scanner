@@ -34,7 +34,6 @@ function operationalError(code: string, error: unknown, json: Json): Response {
     {
       error: "No se pudo completar la solicitud.",
       code,
-      detail: error instanceof Error ? error.message : String(error),
     },
     503,
   );
