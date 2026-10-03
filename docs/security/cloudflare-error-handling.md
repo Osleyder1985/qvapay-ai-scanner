@@ -37,7 +37,9 @@ La sanitización es fail-closed: si un estado persistente contiene un valor hist
 
 ## Diagnóstico de despliegue
 
-Si el check `Workers Builds: qvapay-ai-scanner` falla antes de compilar, el workflow de producción conserva la evidencia del build y sus logs. Un timeout durante la inicialización del entorno de Cloudflare se trata como un fallo de infraestructura del proveedor, no como evidencia de un error de aplicación. El despliegue debe volver a intentarse y verificarse contra la versión activa antes de considerar completado un cambio de producción.
+Si el check Workers Builds: qvapay-ai-scanner falla antes de compilar, el workflow de producción conserva la evidencia del build y sus logs. Un timeout durante la inicialización del entorno de Cloudflare se trata como un fallo de infraestructura del proveedor, no como evidencia de un error de aplicación. El despliegue debe volver a intentarse y verificarse contra la versión activa antes de considerar completado un cambio de producción.
+
+El reintento de infraestructura debe conservar el mismo commit funcional; cualquier modificación adicional de código debe pasar nuevamente los gates de calidad, seguridad y runtime antes del despliegue.
 
 ## Trazabilidad
 
