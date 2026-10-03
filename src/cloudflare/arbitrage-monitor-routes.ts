@@ -54,24 +54,40 @@ function stub(env: Env) {
 }
 
 async function ensureMonitorProgress(env: Env) {
-  const current = await monitorState(env.DB);
+  let current = await monitorState(env.DB);
   const now = Date.now();
-  const nextRunAt = current.state?.next_run_at
-    ? Date.parse(current.state.next_run_at)
-    : Number.NaN;
-  const hasFreshSchedule = Number.isFinite(nextRunAt) && nextRunAt > now;
+  const alarmResponse = await stub(env).fetch(
+    new Request("https://internal/status"),
+  );
+  const alarmPayload = (await alarmResponse.json()) as { alarm?: number | null };
+  const alarm =
+    typeof alarmPayload.alarm === "number" && Number.isFinite(alarmPayload.alarm)
+      ? alarmPayload.alarm
+      : null;
 
-  // A read must never postpone the Durable Object alarm. The old implementation
-  // called /start on every GET, which reset the alarm continuously while the UI
-  // polled every second; that could freeze the scanner and the countdown.
-  if (!hasFreshSchedule || !current.state?.scanned_at) {
+  // Browser reads are observational. The Durable Object alarm is the scheduler;
+  // GET must never run a market scan just because the countdown reached zero.
+  if (!current.state?.scanned_at) {
     await runArbitrageMonitor(env.DB, env);
     await stub(env).fetch(new Request("https://internal/start"));
-    return monitorState(env.DB);
+    current = await monitorState(env.DB);
+  } else if (alarm === null) {
+    const persistedNextRun = current.state.next_run_at
+      ? Date.parse(current.state.next_run_at)
+      : Number.NaN;
+    if (!Number.isFinite(persistedNextRun) || persistedNextRun <= now) {
+      await runArbitrageMonitor(env.DB, env);
+    }
+    await stub(env).fetch(new Request("https://internal/start"));
+    current = await monitorState(env.DB);
   }
 
-  await stub(env).fetch(new Request("https://internal/start"));
-  return current;
+  return {
+    ...current,
+    alarm: (await stub(env).fetch(new Request("https://internal/status"))).ok
+      ? (((await (await stub(env).fetch(new Request("https://internal/status"))).json()) as { alarm?: number | null }).alarm ?? null)
+      : alarm,
+  };
 }
 
 function operationalError(
@@ -107,15 +123,28 @@ export async function handleArbitrageMonitorRoutes(
           payload = {};
         }
       }
+      const serverNow = new Date().toISOString();
+      const alarmNextRunAt =
+        typeof current.alarm === "number" && Number.isFinite(current.alarm)
+          ? current.alarm > Date.parse(serverNow)
+            ? new Date(current.alarm).toISOString()
+            : null
+          : null;
+      const stateStatus =
+        alarmNextRunAt === null && current.state?.scanned_at
+          ? "scanning"
+          : (current.state?.status ?? "starting");
+
       return json({
         mode: "read-only",
+        serverNow,
         executionEnabled: false,
         config: current.config,
         state: {
-          status: current.state?.status ?? "starting",
+          status: stateStatus,
           scanId: current.state?.scan_id ?? null,
           scannedAt: current.state?.scanned_at ?? null,
-          nextRunAt: current.state?.next_run_at ?? null,
+          nextRunAt: alarmNextRunAt,
           lastSuccessAt: current.state?.last_success_at ?? null,
           lastError: sanitizeMonitorError(current.state?.last_error),
           updatedAt: current.state?.updated_at ?? null,
