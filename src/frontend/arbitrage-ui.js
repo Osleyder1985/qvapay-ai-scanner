@@ -1,7 +1,7 @@
 /**
  * @file arbitrage-ui.js
  * @path src/frontend/arbitrage-ui.js
- * @description Visualización del monitor server-side de arbitraje y cuenta regresiva de 10 segundos.
+ * @description Visualización del monitor server-side de arbitraje y cuenta regresiva configurable.
  * @module frontend/arbitrage
  * @status active
  */
