@@ -55,7 +55,9 @@ jobs:
             );
           }
 
-          const deploymentsList = deployments?.deployments ?? deployments?.result?.deployments ?? [];
+          const deploymentsList = Array.isArray(deployments)
+            ? deployments
+            : deployments?.deployments ?? deployments?.result?.deployments ?? [];
           const latestDeployment = deploymentsList[0];
 
           if (!latestDeployment) {
