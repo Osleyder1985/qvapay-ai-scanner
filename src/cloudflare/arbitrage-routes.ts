@@ -268,8 +268,7 @@ export async function handleArbitrageRoutes(
     return json(
       {
         error: "No se pudo completar el escaneo de arbitraje.",
-        code: error instanceof Error ? error.message : "UNKNOWN_SCAN_ERROR",
-        detail: error instanceof Error ? error.message : String(error),
+        code: "ARBITRAGE_SCAN_FAILED",
       },
       errorStatus(error),
     );
