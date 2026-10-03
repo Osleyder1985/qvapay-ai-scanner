@@ -56,6 +56,8 @@ interface StateRow {
   updated_at: string;
 }
 
+const INTERVAL_MS = 10_000;
+
 /**
  * Repairs the monitor/runtime event schema if a deployment reached the Worker
  * before the corresponding D1 migrations were applied. Migrations remain the
@@ -77,13 +79,26 @@ export async function ensureArbitrageMonitorSchema(
     .all<{ name: string }>();
   const names = new Set(existing.results.map((row) => row.name));
   if (
-    !names.has("arbitrage_monitor_config") ||
-    !names.has("arbitrage_monitor_state") ||
-    !names.has("market_events")
+    names.has("arbitrage_monitor_config") &&
+    names.has("arbitrage_monitor_state") &&
+    names.has("market_events")
   ) {
-    const results = await db.batch([
-      db.prepare(
-        `CREATE TABLE IF NOT EXISTS arbitrage_monitor_config (
+    const columns = await db
+      .prepare("PRAGMA table_info(arbitrage_monitor_config)")
+      .all<{ name: string }>();
+    if (!columns.results.some((column) => column.name === "interval_seconds")) {
+      await db
+        .prepare(
+          "ALTER TABLE arbitrage_monitor_config ADD COLUMN interval_seconds INTEGER NOT NULL DEFAULT 10",
+        )
+        .run();
+    }
+    return;
+  }
+
+  const results = await db.batch([
+    db.prepare(
+      `CREATE TABLE IF NOT EXISTS arbitrage_monitor_config (
         id INTEGER PRIMARY KEY CHECK (id = 1),
         enabled INTEGER NOT NULL DEFAULT 1,
         min_margin_percent REAL NOT NULL DEFAULT 5,
@@ -95,10 +110,10 @@ export async function ensureArbitrageMonitorSchema(
         end_local TEXT,
         active_days_json TEXT NOT NULL DEFAULT '[1,2,3,4,5,6,7]',
         updated_at TEXT NOT NULL
-        )`,
+      )`,
     ),
-      db.prepare(
-        `CREATE TABLE IF NOT EXISTS arbitrage_monitor_state (
+    db.prepare(
+      `CREATE TABLE IF NOT EXISTS arbitrage_monitor_state (
         id INTEGER PRIMARY KEY CHECK (id = 1),
         status TEXT NOT NULL DEFAULT 'starting',
         scan_id TEXT,
@@ -108,10 +123,10 @@ export async function ensureArbitrageMonitorSchema(
         last_error TEXT,
         payload_json TEXT,
         updated_at TEXT NOT NULL
-        )`,
+      )`,
     ),
-      db.prepare(
-        `CREATE TABLE IF NOT EXISTS market_events (
+    db.prepare(
+      `CREATE TABLE IF NOT EXISTS market_events (
         dedupe_key TEXT PRIMARY KEY,
         event_id TEXT,
         offer_uuid TEXT NOT NULL,
@@ -131,43 +146,31 @@ export async function ensureArbitrageMonitorSchema(
         timestamp_quality TEXT NOT NULL DEFAULT 'valid',
         quarantined INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )`,
+      )`,
     ),
-      db.prepare(
-        `CREATE INDEX IF NOT EXISTS idx_arbitrage_monitor_state_scanned_at
+    db.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_arbitrage_monitor_state_scanned_at
        ON arbitrage_monitor_state (scanned_at DESC)`,
     ),
-      db.prepare(
-        `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_at
+    db.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_at
        ON market_events (coin, event_at DESC)`,
     ),
-      db.prepare(
-        `CREATE INDEX IF NOT EXISTS idx_market_events_offer_uuid
+    db.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_market_events_offer_uuid
        ON market_events (offer_uuid)`,
     ),
-      db.prepare(
-        `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event
+    db.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event
        ON market_events (coin, event)`,
     ),
-      db.prepare(
-        `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_completion
+    db.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_completion
        ON market_events (coin, event, event_at DESC, observed_at DESC, offer_uuid)`,
     ),
-    ]);
-    if (results.some((result) => result.success !== true)) {
-      throw new Error("ARBITRAGE_RUNTIME_SCHEMA_ENSURE_FAILED");
-    }
-  }
-
-  const columns = await db
-    .prepare("PRAGMA table_info(arbitrage_monitor_config)")
-    .all<{ name: string }>();
-  if (!columns.results.some((column) => column.name === "interval_seconds")) {
-    await db
-      .prepare(
-        "ALTER TABLE arbitrage_monitor_config ADD COLUMN interval_seconds INTEGER NOT NULL DEFAULT 10",
-      )
-      .run();
+  ]);
+  if (results.some((result) => result.success !== true)) {
+    throw new Error("ARBITRAGE_RUNTIME_SCHEMA_ENSURE_FAILED");
   }
 
   const seedResults = await db.batch([
@@ -221,10 +224,7 @@ function readConfig(db: D1Database): Promise<MonitorConfig> {
         enabled: row.enabled === 1,
         minMarginPercent: Number(row.min_margin_percent),
         coin: String(row.coin).toUpperCase(),
-        intervalSeconds: Math.min(
-          300,
-          Math.max(5, Number(row.interval_seconds) || 10),
-        ),
+        intervalSeconds: Math.min(300, Math.max(5, Number(row.interval_seconds) || 10)),
         scheduleEnabled: row.schedule_enabled === 1,
         timezone: row.timezone || "UTC",
         startLocal: row.start_local,
@@ -364,9 +364,7 @@ export async function runArbitrageMonitor(
     await saveState(db, {
       status: "error",
       lastError: message,
-      nextRunAt: new Date(
-        Date.now() + config.intervalSeconds * 1000,
-      ).toISOString(),
+      nextRunAt: new Date(Date.now() + config.intervalSeconds * 1000).toISOString(),
     });
     return { ok: false, error: message };
   }
@@ -380,9 +378,7 @@ export async function runArbitrageMonitor(
     status: "running",
     scanId,
     scannedAt,
-    nextRunAt: new Date(
-      Date.now() + config.intervalSeconds * 1000,
-    ).toISOString(),
+    nextRunAt: new Date(Date.now() + INTERVAL_MS).toISOString(),
     lastSuccessAt: scannedAt,
     lastError: null,
     payloadJson: JSON.stringify(payload),
@@ -410,4 +406,4 @@ export async function getMonitorIntervalMs(db: D1Database): Promise<number> {
   return config.intervalSeconds * 1000;
 }
 
-export const INTERVAL_MS = 10_000;
+export { INTERVAL_MS };
