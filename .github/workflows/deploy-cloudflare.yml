@@ -62,76 +62,72 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-status.json
-          npx wrangler deployments list --name qvapay-ai-scanner --json > deployment-list.json
+          for attempt in {1..12}; do
+            npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-status.json
+            npx wrangler deployments list --name qvapay-ai-scanner --json > deployment-list.json
 
-          node <<'NODE'
-          const fs = require("node:fs");
+            if EXPECTED_SHA="$GITHUB_SHA" node <<'NODE'
+            const fs = require("node:fs");
 
-          const expectedSha = process.env.GITHUB_SHA;
-          const status = JSON.parse(fs.readFileSync("deployment-status.json", "utf8"));
-          const deployments = JSON.parse(fs.readFileSync("deployment-list.json", "utf8"));
+            const expectedSha = process.env.EXPECTED_SHA;
+            const status = JSON.parse(fs.readFileSync("deployment-status.json", "utf8"));
+            const deployments = JSON.parse(fs.readFileSync("deployment-list.json", "utf8"));
 
-          const activeVersionIds = (status?.versions ?? [])
-            .filter((entry) => Number(entry?.percentage) === 100)
-            .map((entry) => entry?.version_id)
-            .filter(Boolean);
+            const activeVersionIds = (status?.versions ?? [])
+              .filter((entry) => Number(entry?.percentage) === 100)
+              .map((entry) => entry?.version_id)
+              .filter(Boolean);
 
-          if (activeVersionIds.length !== 1) {
-            throw new Error(
-              `Expected exactly one 100% active Worker version, found ${activeVersionIds.length}.`,
+            const deploymentsList = Array.isArray(deployments)
+              ? deployments
+              : deployments?.deployments ?? deployments?.result?.deployments ?? [];
+
+            const matchingDeployment = deploymentsList.find((deployment) => {
+              const versionIds = (deployment?.versions ?? [])
+                .filter((entry) => Number(entry?.percentage) === 100)
+                .map((entry) => entry?.version_id)
+                .filter(Boolean);
+              const message =
+                deployment?.annotations?.["workers/message"] ??
+                deployment?.message ??
+                "";
+              return (
+                activeVersionIds.length === 1 &&
+                versionIds.length === 1 &&
+                versionIds[0] === activeVersionIds[0] &&
+                String(message).includes(expectedSha)
+              );
+            });
+
+            if (!matchingDeployment) {
+              process.exit(1);
+            }
+
+            fs.writeFileSync(
+              "deployment-evidence.txt",
+              [
+                `github_commit=${expectedSha}`,
+                `cloudflare_deployment_id=${matchingDeployment.id ?? ""}`,
+                `cloudflare_version_id=${activeVersionIds[0]}`,
+                `cloudflare_deployment_message=${matchingDeployment?.annotations?.["workers/message"] ?? matchingDeployment?.message ?? ""}`,
+                "",
+              ].join("\n"),
             );
-          }
 
-          const deploymentsList = Array.isArray(deployments)
-            ? deployments
-            : deployments?.deployments ?? deployments?.result?.deployments ?? [];
-          const latestDeployment = deploymentsList[0];
-
-          if (!latestDeployment) {
-            throw new Error("Cloudflare returned no Worker deployments.");
-          }
-
-          const deploymentVersionIds = (latestDeployment.versions ?? [])
-            .filter((entry) => Number(entry?.percentage) === 100)
-            .map((entry) => entry?.version_id)
-            .filter(Boolean);
-
-          if (
-            deploymentVersionIds.length !== 1 ||
-            deploymentVersionIds[0] !== activeVersionIds[0]
-          ) {
-            throw new Error(
-              `Latest deployment does not match the active 100% Worker version. latest=${JSON.stringify(deploymentVersionIds)}, active=${JSON.stringify(activeVersionIds)}.`,
+            console.log(
+              `Verified Cloudflare deployment ${matchingDeployment.id} and version ${activeVersionIds[0]} are traceable to GitHub commit ${expectedSha}.`,
             );
-          }
+            NODE
+            then
+              exit 0
+            fi
 
-          const message =
-            latestDeployment?.annotations?.["workers/message"] ??
-            latestDeployment?.message ??
-            "";
+            echo "Waiting for Cloudflare deployment state to converge (attempt $attempt/12)."
+            sleep 5
+          done
 
-          if (!String(message).includes(expectedSha)) {
-            throw new Error(
-              `Latest Cloudflare deployment ${latestDeployment.id ?? "unknown"} is not traceable to GitHub commit ${expectedSha}; message=${JSON.stringify(message)}.`,
-            );
-          }
-
-          fs.writeFileSync(
-            "deployment-evidence.txt",
-            [
-              `github_commit=${expectedSha}`,
-              `cloudflare_deployment_id=${latestDeployment.id ?? ""}`,
-              `cloudflare_version_id=${activeVersionIds[0]}`,
-              `cloudflare_deployment_message=${message}`,
-              "",
-            ].join("\n"),
-          );
-
-          console.log(
-            `Verified Cloudflare deployment ${latestDeployment.id} and version ${activeVersionIds[0]} are traceable to GitHub commit ${expectedSha}.`,
-          );
-          NODE
+          echo "Timed out waiting for the active Cloudflare deployment to match the deployed commit."
+          exit 1
 
       - name: Upload deployment evidence
         if: always()
