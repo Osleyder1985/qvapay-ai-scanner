@@ -197,32 +197,18 @@ export async function handleArbitrageMonitorRoutes(
       return json({ error: "coin inválida." }, 400);
 
     await ensureArbitrageExecutionConfigColumns(db);
-
     const now = new Date().toISOString();
     const result = await env.DB.prepare(
       `UPDATE arbitrage_monitor_config
-       SET min_margin_percent = ?, coin = ?, interval_seconds = ?, enabled = 1, updated_at = ?
+       SET min_margin_percent = ?, coin = ?, interval_seconds = ?,
+           auto_enabled = ?, max_buy_rate = ?, min_sell_rate = ?,
+           cup_budget = ?, enabled = 1, updated_at = ?
        WHERE id = 1`,
     )
-      .bind(margin, coin, intervalSeconds, now)
-      .run();
-
-    if (Number(result.meta?.changes ?? 0) !== 1) {
-      return operationalError("MONITOR_CONFIG_ROW_MISSING", json);
-    }
-
-    const execution = await env.DB.prepare(
-      `INSERT INTO arbitrage_execution_config
-       (id, auto_enabled, max_buy_rate, min_sell_rate, cup_budget, updated_at)
-       VALUES (1, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET
-         auto_enabled = excluded.auto_enabled,
-         max_buy_rate = excluded.max_buy_rate,
-         min_sell_rate = excluded.min_sell_rate,
-         cup_budget = excluded.cup_budget,
-         updated_at = excluded.updated_at`,
-    )
       .bind(
+        margin,
+        coin,
+        intervalSeconds,
         autoEnabled ? 1 : 0,
         maxBuyRate,
         minSellRate,
@@ -231,8 +217,8 @@ export async function handleArbitrageMonitorRoutes(
       )
       .run();
 
-    if (Number(execution.meta?.changes ?? 0) < 1) {
-      return operationalError("MONITOR_CONFIG_WRITE_FAILED", json);
+    if (Number(result.meta?.changes ?? 0) !== 1) {
+      return operationalError("MONITOR_CONFIG_ROW_MISSING", json);
     }
 
     await stub(env).fetch(new Request("https://internal/start"));
