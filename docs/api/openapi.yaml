@@ -26,6 +26,7 @@ tags:
   - name: Finance
   - name: Automation
   - name: Account
+  - name: Arbitrage
 paths:
   /api/health:
     get:
@@ -420,6 +421,28 @@ paths:
                 properties:
                   status: { $ref: '#/components/schemas/FreeformObject' }
 
+  /api/arbitrage/history:
+    get:
+      tags: [Arbitrage]
+      summary: Consultar analítica histórica por moneda
+      parameters:
+        - name: coin
+          in: query
+          required: true
+          schema: { type: string }
+        - name: window
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 500 }
+      responses:
+        '200':
+          description: Analítica determinista de ejecuciones y precios de referencia
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArbitrageHistoryResponse'
+        '400': { $ref: '#/components/responses/ValidationError' }
+
   /api/arbitrage/reconciliation:
     get:
       tags: [Arbitrage]
@@ -541,6 +564,73 @@ components:
         pagesFetched: { type: integer }
         truncated: { type: boolean }
         persisted: { type: integer }
+    CurrencyReferencePriceStatistics:
+      type: object
+      required: [sampleCount, tradedVolumeQusd, minRate, maxRate, meanRate, medianRate, percentiles, vwap, newestEventAt, newestObservedAt, stale]
+      properties:
+        sampleCount: { type: integer, minimum: 0 }
+        tradedVolumeQusd: { type: number, minimum: 0 }
+        minRate: { type: number, nullable: true }
+        maxRate: { type: number, nullable: true }
+        meanRate: { type: number, nullable: true }
+        medianRate: { type: number, nullable: true }
+        percentiles:
+          type: object
+          additionalProperties:
+            type: number
+            nullable: true
+        vwap: { type: number, nullable: true }
+        newestEventAt: { type: string, format: date-time, nullable: true }
+        newestObservedAt: { type: string, format: date-time, nullable: true }
+        stale: { type: boolean }
+    CurrencyExecutionAnalytics:
+      type: object
+      required: [coin, windowSize, completedCount, cancelledCount, terminalCount, completionRatePercent, cancellationRatePercent, minRate, maxRate, meanRate, medianRate, percentiles, vwap, tradedVolumeQusd, averageTimeToCompletionMs, newestEventAt, newestObservedAt, stale, referencePrices]
+      properties:
+        coin: { type: string }
+        windowSize: { type: integer }
+        completedCount: { type: integer }
+        cancelledCount: { type: integer }
+        terminalCount: { type: integer }
+        completionRatePercent: { type: number, nullable: true }
+        cancellationRatePercent: { type: number, nullable: true }
+        minRate: { type: number, nullable: true }
+        maxRate: { type: number, nullable: true }
+        meanRate: { type: number, nullable: true }
+        medianRate: { type: number, nullable: true }
+        percentiles:
+          type: object
+          additionalProperties:
+            type: number
+            nullable: true
+        vwap: { type: number, nullable: true }
+        tradedVolumeQusd: { type: number }
+        averageTimeToCompletionMs: { type: number, nullable: true }
+        newestEventAt: { type: string, format: date-time, nullable: true }
+        newestObservedAt: { type: string, format: date-time, nullable: true }
+        stale: { type: boolean }
+        referencePrices:
+          type: object
+          required: [buy, sell]
+          properties:
+            buy:
+              allOf:
+                - $ref: '#/components/schemas/CurrencyReferencePriceStatistics'
+              nullable: true
+            sell:
+              allOf:
+                - $ref: '#/components/schemas/CurrencyReferencePriceStatistics'
+              nullable: true
+    ArbitrageHistoryResponse:
+      type: object
+      required: [coin, analytics, eventCount, lifecycle]
+      properties:
+        coin: { type: string }
+        analytics: { $ref: '#/components/schemas/CurrencyExecutionAnalytics' }
+        eventCount: { type: integer }
+        lifecycle:
+          type: object
+          additionalProperties: true
     ReconciliationDiscrepancy:
       type: object
       required: [category, identity, sourceIds, timestamps]
