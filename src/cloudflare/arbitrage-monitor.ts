@@ -73,104 +73,123 @@ interface StateRow {
 export async function ensureArbitrageMonitorSchema(
   db: D1Database,
 ): Promise<void> {
-  const results = await db.batch([
-    db.prepare(
-      `CREATE TABLE IF NOT EXISTS arbitrage_monitor_config (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        enabled INTEGER NOT NULL DEFAULT 1,
-        min_margin_percent REAL NOT NULL DEFAULT 5,
-        coin TEXT NOT NULL DEFAULT 'BANK_CUP',
-        interval_seconds INTEGER NOT NULL DEFAULT 10 CHECK (interval_seconds BETWEEN 5 AND 300),
-        auto_enabled INTEGER NOT NULL DEFAULT 0 CHECK (auto_enabled IN (0,1)),
-        max_buy_rate REAL,
-        min_sell_rate REAL,
-        cup_budget REAL NOT NULL DEFAULT 0 CHECK (cup_budget >= 0),
-        schedule_enabled INTEGER NOT NULL DEFAULT 0,
-        timezone TEXT NOT NULL DEFAULT 'UTC',
-        start_local TEXT,
-        end_local TEXT,
-        active_days_json TEXT NOT NULL DEFAULT '[1,2,3,4,5,6,7]',
-        updated_at TEXT NOT NULL
-      )`,
-    ),
-    db.prepare(
-      `CREATE TABLE IF NOT EXISTS arbitrage_monitor_state (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        status TEXT NOT NULL DEFAULT 'starting',
-        scan_id TEXT,
-        scanned_at TEXT,
-        next_run_at TEXT,
-        last_success_at TEXT,
-        last_error TEXT,
-        payload_json TEXT,
-        updated_at TEXT NOT NULL
-      )`,
-    ),
-    db.prepare(
-      `CREATE TABLE IF NOT EXISTS market_events (
-        dedupe_key TEXT PRIMARY KEY,
-        event_id TEXT,
-        offer_uuid TEXT NOT NULL,
-        event TEXT NOT NULL,
-        status TEXT,
-        side TEXT,
-        coin TEXT NOT NULL,
-        amount REAL,
-        available_amount REAL,
-        receive REAL,
-        rate REAL,
-        event_at TEXT NOT NULL,
-        observed_at TEXT NOT NULL,
-        source TEXT NOT NULL CHECK (source IN ('stream', 'webhook', 'reconciliation')),
-        source_event_at TEXT,
-        source_observed_at TEXT,
-        timestamp_quality TEXT NOT NULL DEFAULT 'valid',
-        quarantined INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )`,
-    ),
-    db.prepare(
-      `CREATE INDEX IF NOT EXISTS idx_arbitrage_monitor_state_scanned_at
-       ON arbitrage_monitor_state (scanned_at DESC)`,
-    ),
-    db.prepare(
-      `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_at
-       ON market_events (coin, event_at DESC)`,
-    ),
-    db.prepare(
-      `CREATE INDEX IF NOT EXISTS idx_market_events_offer_uuid
-       ON market_events (offer_uuid)`,
-    ),
-    db.prepare(
-      `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event
-       ON market_events (coin, event)`,
-    ),
-    db.prepare(
-      `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_completion
-       ON market_events (coin, event, event_at DESC, observed_at DESC, offer_uuid)`,
-    ),
-  ]);
-  if (results.some((result) => result.success !== true)) {
-    throw new Error("ARBITRAGE_RUNTIME_SCHEMA_ENSURE_FAILED");
+  // D1 schema migrations are canonical. The runtime repair path must not issue
+  // DDL on every health/monitor read because DDL inside a batch can make an
+  // otherwise healthy production monitor fail with a generic 503.
+  const tableResult = await db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?, ?)",
+    )
+    .bind(
+      "arbitrage_monitor_config",
+      "arbitrage_monitor_state",
+      "market_events",
+    )
+    .all<{ name: string }>();
+  const tables = new Set(tableResult.results.map((row) => row.name));
+
+  if (!tables.has("arbitrage_monitor_config")) {
+    await db
+      .prepare(
+        `CREATE TABLE arbitrage_monitor_config (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          enabled INTEGER NOT NULL DEFAULT 1,
+          min_margin_percent REAL NOT NULL DEFAULT 5,
+          coin TEXT NOT NULL DEFAULT 'BANK_CUP',
+          interval_seconds INTEGER NOT NULL DEFAULT 10 CHECK (interval_seconds BETWEEN 5 AND 300),
+          auto_enabled INTEGER NOT NULL DEFAULT 0 CHECK (auto_enabled IN (0,1)),
+          max_buy_rate REAL,
+          min_sell_rate REAL,
+          cup_budget REAL NOT NULL DEFAULT 0 CHECK (cup_budget >= 0),
+          schedule_enabled INTEGER NOT NULL DEFAULT 0,
+          timezone TEXT NOT NULL DEFAULT 'UTC',
+          start_local TEXT,
+          end_local TEXT,
+          active_days_json TEXT NOT NULL DEFAULT '[1,2,3,4,5,6,7]',
+          updated_at TEXT NOT NULL
+        )`,
+      )
+      .run();
   }
 
-  const seedResults = await db.batch([
-    db.prepare(
+  if (!tables.has("arbitrage_monitor_state")) {
+    await db
+      .prepare(
+        `CREATE TABLE arbitrage_monitor_state (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          status TEXT NOT NULL DEFAULT 'starting',
+          scan_id TEXT,
+          scanned_at TEXT,
+          next_run_at TEXT,
+          last_success_at TEXT,
+          last_error TEXT,
+          payload_json TEXT,
+          updated_at TEXT NOT NULL
+        )`,
+      )
+      .run();
+  }
+
+  if (!tables.has("market_events")) {
+    await db
+      .prepare(
+        `CREATE TABLE market_events (
+          dedupe_key TEXT PRIMARY KEY,
+          event_id TEXT,
+          offer_uuid TEXT NOT NULL,
+          event TEXT NOT NULL,
+          status TEXT,
+          side TEXT,
+          coin TEXT NOT NULL,
+          amount REAL,
+          available_amount REAL,
+          receive REAL,
+          rate REAL,
+          event_at TEXT NOT NULL,
+          observed_at TEXT NOT NULL,
+          source TEXT NOT NULL CHECK (source IN ('stream', 'webhook', 'reconciliation')),
+          source_event_at TEXT,
+          source_observed_at TEXT,
+          timestamp_quality TEXT NOT NULL DEFAULT 'valid',
+          quarantined INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )`,
+      )
+      .run();
+  }
+
+  // Index creation is deliberately sequential and idempotent as well.
+  for (const statement of [
+    `CREATE INDEX IF NOT EXISTS idx_arbitrage_monitor_state_scanned_at
+       ON arbitrage_monitor_state (scanned_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_at
+       ON market_events (coin, event_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_market_events_offer_uuid
+       ON market_events (offer_uuid)`,
+    `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event
+       ON market_events (coin, event)`,
+    `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_completion
+       ON market_events (coin, event, event_at DESC, observed_at DESC, offer_uuid)`,
+  ]) {
+    await db.prepare(statement).run();
+  }
+
+  await db
+    .prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_config
        (id, enabled, min_margin_percent, coin, interval_seconds,
         schedule_enabled, timezone, active_days_json, updated_at)
        VALUES (1, 1, 5, 'BANK_CUP', 10, 0, 'UTC',
                '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
-    ),
-    db.prepare(
+    )
+    .run();
+  await db
+    .prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_state
        (id, status, updated_at)
        VALUES (1, 'starting', CURRENT_TIMESTAMP)`,
-    ),
-  ]);
-  if (seedResults.some((result) => result.success !== true)) {
-    throw new Error("ARBITRAGE_MONITOR_SCHEMA_SEED_FAILED");
-  }
+    )
+    .run();
 }
 
 export async function ensureArbitrageExecutionConfigColumns(
