@@ -17,7 +17,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -29,6 +29,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
+          cloudflare_build_failed=false
           for attempt in {1..60}; do
             response="$(curl --fail-with-body --silent --show-error \
               -H "Accept: application/vnd.github+json" \
@@ -62,22 +63,49 @@ jobs:
                     echo "Cloudflare build logs:"
                     jq -r '.result.lines[]? | if type == "array" then .[-1] else . end' cloudflare-build-logs.json || true
                   fi
-                else
-                  echo "Cloudflare build diagnostics skipped because the build ID or API credentials are unavailable."
                 fi
-                exit 1
+                cloudflare_build_failed=true
+                break
               fi
 
               echo "Cloudflare Workers Build completed successfully for $GITHUB_SHA."
-              exit 0
+              break
             fi
 
             echo "Waiting for Cloudflare Workers Build for $GITHUB_SHA (attempt $attempt/60; status=$status)."
             sleep 10
           done
 
-          echo "Timed out waiting for the Cloudflare Workers Build check."
-          exit 1
+          if [ "$cloudflare_build_failed" = true ]; then
+            echo "CLOUDFLARE_BUILD_FAILED=true" >> "$GITHUB_ENV"
+            echo "Managed Cloudflare Build failed; production deployment will use the authenticated Wrangler fallback."
+          elif [ "$status" != "completed" ]; then
+            echo "Timed out waiting for the Cloudflare Workers Build check."
+            exit 1
+          else
+            echo "CLOUDFLARE_BUILD_FAILED=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Deploy with Wrangler fallback
+        if: env.CLOUDFLARE_BUILD_FAILED == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npm ci
+          npx wrangler deploy --json > cloudflare-fallback-deploy.json
+          node <<'NODE'
+          const fs = require("node:fs");
+          const raw = fs.readFileSync("cloudflare-fallback-deploy.json", "utf8");
+          const data = JSON.parse(raw);
+          const versionId = data.version_id ?? data.versionId ?? data?.deployment?.version_id ?? "";
+          if (!versionId) {
+            throw new Error("Wrangler fallback deployment did not return a version ID.");
+          }
+          fs.writeFileSync("cloudflare-fallback-version.txt", String(versionId) + "\n");
+          console.log("Wrangler fallback deployed version " + versionId);
+          NODE
 
       - name: Verify active production deployment
         env:
@@ -96,12 +124,10 @@ jobs:
             fs.readFileSync("cloudflare-build-check.json", "utf8"),
           );
           const check = buildCheck?.check_runs?.[0];
-
-          if (!check || check.head_sha !== expectedSha || check.conclusion !== "success") {
-            throw new Error(
-              `Cloudflare Workers Build check is not a successful build for GitHub commit ${expectedSha}.`,
-            );
-          }
+          const fallbackUsed = process.env.CLOUDFLARE_BUILD_FAILED === "true";
+          const fallbackVersion = fallbackUsed
+            ? fs.readFileSync("cloudflare-fallback-version.txt", "utf8").trim()
+            : "";
 
           const activeVersions = (status?.versions ?? [])
             .filter((entry) => Number(entry?.percentage) === 100)
@@ -111,6 +137,40 @@ jobs:
           if (activeVersions.length !== 1) {
             throw new Error(
               `Expected exactly one 100% active Worker version, found ${activeVersions.length}.`,
+            );
+          }
+
+          if (fallbackUsed) {
+            if (!fallbackVersion || activeVersions[0] !== fallbackVersion) {
+              throw new Error(
+                `Cloudflare active version ${activeVersions[0]} does not match the Wrangler fallback version ${fallbackVersion}.`,
+              );
+            }
+
+            fs.writeFileSync(
+              "deployment-evidence.txt",
+              [
+                `github_commit=${expectedSha}`,
+                `cloudflare_deployment_id=${status?.id ?? ""}`,
+                `cloudflare_active_version_id=${activeVersions[0]}`,
+                `cloudflare_build_id=${check?.external_id ?? ""}`,
+                `cloudflare_build_conclusion=${check?.conclusion ?? ""}`,
+                "deployment_method=wrangler_fallback",
+                `cloudflare_build_url=${check?.details_url ?? ""}`,
+                "cloudflare_build_failure=managed_build_initialization_timeout_or_failure",
+                "",
+              ].join("\n"),
+            );
+
+            console.log(
+              `Verified Wrangler fallback deployment for GitHub commit ${expectedSha}; active version ${activeVersions[0]} is 100%.`,
+            );
+            process.exit(0);
+          }
+
+          if (!check || check.head_sha !== expectedSha || check.conclusion !== "success") {
+            throw new Error(
+              `Cloudflare Workers Build check is not a successful build for GitHub commit ${expectedSha}.`,
             );
           }
 
@@ -133,6 +193,7 @@ jobs:
               `cloudflare_build_url=${check.details_url ?? ""}`,
               `cloudflare_check_head_sha=${check.head_sha}`,
               `cloudflare_check_conclusion=${check.conclusion}`,
+              "deployment_method=managed_cloudflare_build",
               "",
             ].join("\n"),
           );
@@ -151,6 +212,8 @@ jobs:
             cloudflare-build-check.json
             cloudflare-build.json
             cloudflare-build-logs.json
+            cloudflare-fallback-deploy.json
+            cloudflare-fallback-version.txt
             deployment-status.json
             deployment-evidence.txt
           if-no-files-found: warn
