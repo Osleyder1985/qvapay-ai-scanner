@@ -35,7 +35,8 @@ El cliente recibe solamente el código y el mensaje público. Para investigar un
 
 La sanitización es fail-closed: si un estado persistente contiene un valor histórico que no pertenece al catálogo, la API lo sustituye por MONITOR_RUN_FAILED en lugar de devolver el texto histórico.
 
-
 ## Trazabilidad
 
 Issue #136: contrato de errores públicos y sanitización de diagnósticos verificados mediante CI.
+
+Los fallos de inicialización del build de Cloudflare se diagnostican mediante deploy-cloudflare.yml; un timeout de inicialización del proveedor se trata como un fallo de infraestructura y debe reintentarse antes de atribuirlo al código del Worker.
