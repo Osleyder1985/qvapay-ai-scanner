@@ -84,6 +84,12 @@ jobs:
           npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-before.json
           node -e 'const fs=require("node:fs"); const d=JSON.parse(fs.readFileSync("deployment-before.json","utf8")); const a=(d.versions??[]).filter(v=>Number(v?.percentage)===100).map(v=>v?.version_id).filter(Boolean); if(a.length>1) throw new Error("Expected at most one active 100% version before deployment."); fs.writeFileSync("cloudflare-previous-version.txt",(a[0]??"")+"\n"); console.log("Previous active version:",a[0]??"none");'
 
+      - name: Verify Cloudflare Worker configuration contract
+        run: |
+          set -euo pipefail
+          node -e 'const fs=require("node:fs"); const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8")); const d=(c.d1_databases??[]).find(x=>x.binding==="DB"); if(!d?.database_id || d.database_name!=="qvapay-ai-scanner") throw new Error("Required D1 binding DB is missing or misconfigured."); const a=(c.durable_objects?.bindings??[]).find(x=>x.name==="ARBITRAGE_MONITOR"); if(a?.class_name!=="ArbitrageMonitor") throw new Error("Required Durable Object binding is missing or misconfigured."); if(!c.triggers?.crons?.includes("* * * * *")) throw new Error("Expected production monitor cron is missing."); console.log("Cloudflare Worker configuration contract: PASS");'
+          node -e 'const fs=require("node:fs"); const c=fs.readFileSync("src/cloudflare/auto-apply-routes.ts","utf8"); if(!c.includes("status: 501") || !c.includes("Auto-Apply no puede persistir")) throw new Error("Auto-Apply fail-closed contract is missing."); console.log("Auto-Apply fail-closed contract: PASS");'
+
       - name: Verify Cloudflare production secret bindings
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
