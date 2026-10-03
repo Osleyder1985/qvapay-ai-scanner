@@ -7,10 +7,7 @@
  */
 
 import { authorizeAiAuditor } from "./ai-audit-auth.js";
-import {
-  monitorState,
-  runArbitrageMonitor,
-} from "./arbitrage-monitor.js";
+import { monitorState, runArbitrageMonitor } from "./arbitrage-monitor.js";
 import { d1Health, type D1Database } from "./d1.js";
 
 interface DurableObjectStub {
