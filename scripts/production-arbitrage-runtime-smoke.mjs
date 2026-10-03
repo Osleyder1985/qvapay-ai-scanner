@@ -95,7 +95,7 @@ if (!initialSchedulerDeadline || Number.isNaN(Date.parse(initialSchedulerDeadlin
   throw new Error("Scheduler audit did not expose a valid nextRunAt/nextAlarmAt.");
 }
 console.log("Authoritative scheduler deadline:", initialSchedulerDeadline);
-const deadline = Date.now() + (interval + 15) * 1000;
+const deadline = Date.now() + (interval + 75) * 1000;
 let previous = b;
 let observedTransition = false;
 let finalSchedulerDeadline = initialSchedulerDeadline;
@@ -141,7 +141,7 @@ while (Date.now() < deadline) {
 
 if (!observedTransition) {
   throw new Error(
-    "No new production scan was observed within configured interval + 15s. " +
+    "No new production scan was observed within configured interval + 75s (Cloudflare alarm tolerance). " +
     "intervalSeconds=" + interval + ", last scannedAt=" + String(previous.scannedAt) +
     ", nextRunAt=" + String(previous.nextRunAt),
   );
