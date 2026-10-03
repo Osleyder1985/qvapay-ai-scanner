@@ -57,10 +57,9 @@ interface StateRow {
 const INTERVAL_MS = 10_000;
 
 /**
- * Repairs the monitor singleton schema if a deployment reached the Worker
- * before D1 migration 0006 was applied. The migration remains canonical;
- * this guard is an idempotent production safety net and only writes when
- * one of the two monitor tables is actually missing.
+ * Repairs the monitor/runtime event schema if a deployment reached the Worker
+ * before the corresponding D1 migrations were applied. Migrations remain the
+ * canonical schema; this idempotent safety net writes only when tables are absent.
  */
 export async function ensureArbitrageMonitorSchema(
   db: D1Database,
@@ -69,13 +68,18 @@ export async function ensureArbitrageMonitorSchema(
     .prepare(
       `SELECT name FROM sqlite_master
        WHERE type = 'table'
-         AND name IN ('arbitrage_monitor_config', 'arbitrage_monitor_state')`,
+         AND name IN (
+           'arbitrage_monitor_config',
+           'arbitrage_monitor_state',
+           'market_events'
+         )`,
     )
     .all<{ name: string }>();
   const names = new Set(existing.results.map((row) => row.name));
   if (
     names.has("arbitrage_monitor_config") &&
-    names.has("arbitrage_monitor_state")
+    names.has("arbitrage_monitor_state") &&
+    names.has("market_events")
   ) {
     return;
   }
@@ -109,12 +113,51 @@ export async function ensureArbitrageMonitorSchema(
       )`,
     ),
     db.prepare(
+      `CREATE TABLE IF NOT EXISTS market_events (
+        dedupe_key TEXT PRIMARY KEY,
+        event_id TEXT,
+        offer_uuid TEXT NOT NULL,
+        event TEXT NOT NULL,
+        status TEXT,
+        side TEXT,
+        coin TEXT NOT NULL,
+        amount REAL,
+        available_amount REAL,
+        receive REAL,
+        rate REAL,
+        event_at TEXT NOT NULL,
+        observed_at TEXT NOT NULL,
+        source TEXT NOT NULL CHECK (source IN ('stream', 'webhook', 'reconciliation')),
+        source_event_at TEXT,
+        source_observed_at TEXT,
+        timestamp_quality TEXT NOT NULL DEFAULT 'valid',
+        quarantined INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )`,
+    ),
+    db.prepare(
       `CREATE INDEX IF NOT EXISTS idx_arbitrage_monitor_state_scanned_at
        ON arbitrage_monitor_state (scanned_at DESC)`,
     ),
+    db.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_at
+       ON market_events (coin, event_at DESC)`,
+    ),
+    db.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_market_events_offer_uuid
+       ON market_events (offer_uuid)`,
+    ),
+    db.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event
+       ON market_events (coin, event)`,
+    ),
+    db.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_completion
+       ON market_events (coin, event, event_at DESC, observed_at DESC, offer_uuid)`,
+    ),
   ]);
   if (results.some((result) => result.success !== true)) {
-    throw new Error("ARBITRAGE_MONITOR_SCHEMA_ENSURE_FAILED");
+    throw new Error("ARBITRAGE_RUNTIME_SCHEMA_ENSURE_FAILED");
   }
 
   const seedResults = await db.batch([
