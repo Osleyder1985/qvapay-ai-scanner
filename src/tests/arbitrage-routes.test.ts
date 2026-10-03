@@ -136,7 +136,9 @@ test("valida el margen mínimo antes de consultar QvaPay", async () => {
 });
 
 
-test("sanitizes upstream/internal errors from the arbitrage scan response", async () => {
+test(
+  "sanitizes upstream/internal errors from the arbitrage scan response",
+  async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => {
     throw new Error("QVAPAY_INTERNAL_SECRET_OR_TOKEN");
