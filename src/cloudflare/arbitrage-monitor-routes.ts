@@ -66,6 +66,7 @@ async function ensureMonitorProgress(env: Env) {
   // polled every second; that could freeze the scanner and the countdown.
   if (!hasFreshSchedule || !current.state?.scanned_at) {
     await runArbitrageMonitor(env.DB, env);
+    await stub(env).fetch(new Request("https://internal/start"));
     return monitorState(env.DB);
   }
 
