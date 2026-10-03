@@ -35,14 +35,14 @@ jobs:
         run: |
           set -euo pipefail
           npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-status.json
-          npx wrangler versions list --name qvapay-ai-scanner --json > deployment-versions.json
+          npx wrangler deployments list --name qvapay-ai-scanner --json > deployment-list.json
 
           node <<'NODE'
           const fs = require("node:fs");
 
           const expectedSha = process.env.GITHUB_SHA;
           const status = JSON.parse(fs.readFileSync("deployment-status.json", "utf8"));
-          const versions = JSON.parse(fs.readFileSync("deployment-versions.json", "utf8"));
+          const deployments = JSON.parse(fs.readFileSync("deployment-list.json", "utf8"));
 
           const activeVersionIds = (status?.versions ?? [])
             .filter((entry) => Number(entry?.percentage) === 100)
@@ -55,22 +55,35 @@ jobs:
             );
           }
 
-          const activeVersionId = activeVersionIds[0];
-          const deployedVersion = (versions?.items ?? versions?.versions ?? [])
-            .find((version) => version?.id === activeVersionId || version?.version_id === activeVersionId);
+          const deploymentsList = deployments?.deployments ?? deployments?.result?.deployments ?? [];
+          const latestDeployment = deploymentsList[0];
 
-          if (!deployedVersion) {
+          if (!latestDeployment) {
+            throw new Error("Cloudflare returned no Worker deployments.");
+          }
+
+          const deploymentVersionIds = (latestDeployment.versions ?? [])
+            .filter((entry) => Number(entry?.percentage) === 100)
+            .map((entry) => entry?.version_id)
+            .filter(Boolean);
+
+          if (
+            deploymentVersionIds.length !== 1 ||
+            deploymentVersionIds[0] !== activeVersionIds[0]
+          ) {
             throw new Error(
-              `Active Worker version ${activeVersionId} was not present in the version inventory.`,
+              `Latest deployment does not match the active 100% Worker version. latest=${JSON.stringify(deploymentVersionIds)}, active=${JSON.stringify(activeVersionIds)}.`,
             );
           }
 
-          const tag = deployedVersion.tag ?? deployedVersion?.annotations?.["workers/tag"];
-          const message = deployedVersion.message ?? deployedVersion?.annotations?.["workers/message"] ?? "";
+          const message =
+            latestDeployment?.annotations?.["workers/message"] ??
+            latestDeployment?.message ??
+            "";
 
-          if (tag !== expectedSha && !String(message).includes(expectedSha)) {
+          if (!String(message).includes(expectedSha)) {
             throw new Error(
-              `Cloudflare version ${activeVersionId} is not traceable to GitHub commit ${expectedSha}; tag=${JSON.stringify(tag)}, message=${JSON.stringify(message)}.`,
+              `Latest Cloudflare deployment ${latestDeployment.id ?? "unknown"} is not traceable to GitHub commit ${expectedSha}; message=${JSON.stringify(message)}.`,
             );
           }
 
@@ -78,15 +91,15 @@ jobs:
             "deployment-evidence.txt",
             [
               `github_commit=${expectedSha}`,
-              `cloudflare_version_id=${activeVersionId}`,
-              `cloudflare_version_tag=${tag ?? ""}`,
-              `cloudflare_version_message=${message}`,
+              `cloudflare_deployment_id=${latestDeployment.id ?? ""}`,
+              `cloudflare_version_id=${activeVersionIds[0]}`,
+              `cloudflare_deployment_message=${message}`,
               "",
             ].join("\n"),
           );
 
           console.log(
-            `Verified Cloudflare version ${activeVersionId} is traceable to GitHub commit ${expectedSha}.`,
+            `Verified Cloudflare deployment ${latestDeployment.id} and version ${activeVersionIds[0]} are traceable to GitHub commit ${expectedSha}.`,
           );
           NODE
 
