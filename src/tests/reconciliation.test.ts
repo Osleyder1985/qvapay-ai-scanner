@@ -55,6 +55,7 @@ test("reconciles complete event, operation, finance and market-history evidence"
   assert.deepEqual(report.marketHistoryMatchedCompletedEvents, ["offer-1"]);
   assert.deepEqual(report.marketHistoryUnmatchedCompletedEvents, []);
   assert.equal(report.idempotent, true);
+  assert.deepEqual(report.discrepancies, []);
 });
 
 test("detects delayed or missing counterparts without mutating any layer", () => {
@@ -122,5 +123,104 @@ test("reconciliation output is deterministic across input order", () => {
     marketHistory: [],
   });
 
+  assert.deepEqual(second, first);
+});
+
+
+test("emits machine-readable gap categories with source IDs and timestamps", () => {
+  const report = reconcileLayerState({
+    events: [event("event-only")],
+    operations: [
+      {
+        uuid: "operation-only",
+        payload: {
+          uuid: "conflicting-payload-id",
+          status: "completed",
+          updated_at: "2026-10-02T12:04:00.000Z",
+        },
+      },
+    ],
+    finance: [{ uuid: "finance-only", status: "completed", timestamp: "2026-10-02T12:05:00.000Z" }],
+    marketHistory: [],
+    now: "2026-10-02T12:20:00.000Z",
+  });
+
+  assert.deepEqual(
+    report.discrepancies.map((item) => item.category),
+    [
+      "event_missing_operation",
+      "finance_missing_operation",
+      "market_history_unmatched_event",
+      "operation_missing_event",
+      "operation_missing_finance",
+      "stale_lifecycle",
+    ],
+  );
+  assert.ok(
+    report.discrepancies.some(
+      (item) =>
+        item.category === "event_missing_operation" &&
+        item.sourceIds.includes("event-only"),
+    ),
+  );
+  assert.ok(
+    report.discrepancies.every(
+      (item) =>
+        item.sourceIds.length > 0 &&
+        item.timestamps.every((value) => Number.isFinite(Date.parse(value))),
+    ),
+  );
+});
+
+test("detects conflicting operation identity", () => {
+  const report = reconcileLayerState({
+    events: [],
+    operations: [
+      {
+        uuid: "operation-1",
+        payload: {
+          uuid: "operation-2",
+          status: "completed",
+          created_at: "2026-10-02T12:00:00.000Z",
+        },
+      },
+    ],
+    finance: [],
+    marketHistory: [],
+  });
+
+  assert.deepEqual(
+    report.discrepancies.filter((item) => item.category === "conflicting_identity"),
+    [
+      {
+        category: "conflicting_identity",
+        identity: "operation-1",
+        sourceIds: ["operation-1", "operation-2"],
+        timestamps: ["2026-10-02T12:00:00.000Z"],
+      },
+    ],
+  );
+});
+
+test("detects duplicate identities without mutating source layers", () => {
+  const input = {
+    events: [],
+    operations: [
+      { uuid: "operation-1", payload: { status: "completed" } },
+      { uuid: "operation-1", payload: { status: "completed" } },
+    ],
+    finance: [
+      { uuid: "finance-1", status: "completed" },
+      { uuid: "finance-1", status: "completed" },
+    ],
+    marketHistory: [],
+  };
+  const first = reconcileLayerState(input);
+  const second = reconcileLayerState(input);
+
+  assert.equal(
+    first.discrepancies.filter((item) => item.category === "duplicate_identity").length,
+    2,
+  );
   assert.deepEqual(second, first);
 });
