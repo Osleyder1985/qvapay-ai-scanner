@@ -69,9 +69,7 @@ interface StateRow {
 }
 
 /**
- * Repairs the monitor/runtime event schema if a deployment reached the Worker
- * before the corresponding D1 migrations were applied. Migrations remain the
- * canonical schema; this idempotent safety net writes only when tables are absent.
+ * Reads monitor and execution configuration from the canonical D1 schema.
  */
 async function readConfig(db: D1Database): Promise<MonitorConfig> {
   const row = await db
