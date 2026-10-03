@@ -80,7 +80,9 @@ export async function handleAccountRoutes(
         qvapay(env, "/v2/info", { method: "POST" }),
         qvapay(env, "/p2p?my=1&take=1&page=1", { method: "GET" }),
       ]);
-      const balancePayload = await readQvaPayPayload(balance);
+      const balancePayload = await readQvaPayPayload(balance, {
+        scalarAsBalance: true,
+      });
       const infoPayload = await readQvaPayPayload(info);
       const ownOffersPayload = await readQvaPayPayload(ownOffers);
       const ownCollection = ownOffers.ok
