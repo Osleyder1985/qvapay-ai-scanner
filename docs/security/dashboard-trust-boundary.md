@@ -1,41 +1,36 @@
 # Dashboard trust boundary
 
-## Current security boundary
+**Baseline:** 2026-10-03
 
-QvaPay AI Scanner exposes routes that can perform or proxy financial/operational actions. The dashboard therefore **must run local-only** until application-level authentication and authorization are implemented.
+## Current production boundary
 
-The default configuration is:
+The Cloudflare Worker is the primary application security boundary. Cloudflare Access is not assumed as the primary authentication layer.
 
-`DASHBOARD_HOST=127.0.0.1`
+Application controls:
+1. AUTH_USERNAME and AUTH_PASSWORD are runtime-only Worker secrets.
+2. Login requires same-origin and valid credentials.
+3. Successful login creates a random session token; only its SHA-256 hash is stored in D1.
+4. qvas_session is HttpOnly, SameSite=Strict, Secure on HTTPS, Path=/ and expires after seven days.
+5. Logout deletes the session hash.
+6. Expired sessions are rejected and removed.
+7. Private API routes are session-gated centrally.
+8. Browser state-changing requests require same-origin.
+9. Login attempts are rate-limited.
+10. Security headers and CSP are attached by the Worker.
 
-The backend now rejects non-loopback bind addresses at startup. Accepted local bind hosts are:
+## Cloudflare account responsibility
 
-- `127.0.0.1`
-- `::1`
-- `localhost`
+Repository code cannot prove account-level settings. Production evidence must record:
+- Worker name and active deployment version;
+- route or custom-domain mapping;
+- D1 binding;
+- required runtime secret bindings, without secret values;
+- Access/WAF/rate-limit policies, if any;
+- emergency rollback procedure.
 
-Addresses such as `0.0.0.0`, a LAN IP, or a public IP are rejected.
+## Runtime verification
 
-## Why
+Use the smoke test with runtime-only values:
+SMOKE_BASE_URL=<production-origin> AUTH_USERNAME=<runtime-secret> AUTH_PASSWORD=<runtime-secret> npm run smoke:cloudflare
 
-The current frontend has no independent user authentication system. A network-accessible dashboard would otherwise expose backend routes that can invoke QvaPay actions using the server-side application credentials.
-
-This control is a deliberate **fail-closed deployment boundary**, not a claim that the application already has LAN/Internet authentication.
-
-## Future LAN/Internet mode
-
-Remote exposure requires a separate implementation of:
-
-- authentication;
-- authorization;
-- session/token lifecycle;
-- CSRF protection where applicable;
-- audit logging;
-- secret rotation;
-- security tests.
-
-That work must be completed and reviewed before the local-only restriction is relaxed.
-
-## Verification
-
-The trust-boundary module has automated tests for supported loopback hosts and rejected non-loopback hosts.
+Never commit credentials.

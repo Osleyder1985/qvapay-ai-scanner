@@ -1,1 +1,25 @@
-# Internal API Contract\n\nThis directory contains the OpenAPI contract for the HTTP API served by the local QvaPay AI Scanner dashboard.\n\n## Contract\n\n- `openapi.yaml` — OpenAPI 3.1 contract for the implemented `/api/*` routes.\n- The contract is descriptive: it documents the current implementation and does not grant capabilities that the server does not implement.\n\n## Security boundary\n\nThe current deployment is **local-only**. The server rejects non-loopback dashboard hosts. There is no remote user authentication scheme in this baseline.\n\nSensitive routes include:\n\n- `POST /api/p2p/{uuid}/apply`\n- `POST /api/operations/{uuid}/paid`\n- `POST /api/operations/{uuid}/received`\n- `POST /api/operations/{uuid}/cancel`\n- `POST /api/operations/{uuid}/chat`\n- `POST /api/operations/{uuid}/rate`\n- `PUT/PATCH /api/auto-apply/config`\n\nThese routes are documented with their effects and validation rules. A future remote deployment must introduce explicit authentication and authorization before the local-only boundary is relaxed.\n\n## Maintenance rule\n\nAny change to a backend HTTP route, method, parameter, response shape, validation rule, or security effect must update `docs/api/openapi.yaml` in the same change.
+# Internal API Contract
+
+This directory contains the OpenAPI contract for the Cloudflare Worker HTTP API.
+
+## Security boundary
+
+Production uses the Worker as the primary application authentication boundary. Private routes require a D1-backed session and state-changing browser requests require same-origin validation.
+
+Cloudflare Access is not assumed as primary authentication. Any Access, WAF or edge rate-limit control is defense-in-depth and must be recorded as external account-level evidence.
+
+## Private mutations
+
+- POST /api/p2p/{uuid}/apply
+- POST /api/operations/{uuid}/paid
+- POST /api/operations/{uuid}/received
+- POST /api/operations/{uuid}/cancel
+- POST /api/operations/{uuid}/chat
+- POST /api/operations/{uuid}/rate
+- PUT/PATCH /api/auto-apply/config (disabled; returns 501)
+
+The Worker authenticates the dashboard operator; QvaPay remains responsible for operation-level authorization.
+
+## Maintenance rule
+
+Route, contract or security-boundary changes must update docs/api/openapi.yaml and the security baseline in the same change.
