@@ -123,3 +123,6 @@ export class ArbitrageMonitor {
     }
   }
 }
+
+/** Fresh scheduler namespace used to recover stale alarm state from the legacy class. */
+export class ArbitrageMonitorV2 extends ArbitrageMonitor {}
