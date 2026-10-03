@@ -118,6 +118,11 @@ jobs:
           echo "Cloudflare did not expose a new single 100% active version after deployment."
           exit 1
 
+      - name: Verify production authentication configuration
+        env:
+          SMOKE_BASE_URL: https://qvapay-ai-scanner.osleyder-gonzalez1985.workers.dev
+        run: npm run smoke:cloudflare:production:auth-config
+
       - name: Upload production deployment evidence
         if: always()
         uses: actions/upload-artifact@v4
