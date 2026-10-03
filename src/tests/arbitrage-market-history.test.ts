@@ -520,6 +520,34 @@ test("la ventana cuenta operaciones únicas y válidas", () => {
   assert.equal(result.maxRate, 1000);
 });
 
+test("marca exclusiones e insuficiencia de evidencia", () => {
+  const result = calculateCurrencyAnalytics(
+    [
+      event({
+        offerUuid: "valid",
+        amount: 2,
+        receive: 200,
+        rate: 100,
+      }),
+      event({
+        offerUuid: "missing-fields",
+        amount: null,
+        receive: null,
+        rate: null,
+      }),
+    ],
+    "BANK_CUP",
+    { now: NOW, minimumSampleSize: 2 },
+  );
+
+  assert.equal(result.quality.sampleCount, 2);
+  assert.equal(result.quality.usableSampleCount, 1);
+  assert.equal(result.quality.missingFieldCount, 3);
+  assert.equal(result.quality.excludedSampleCount, 1);
+  assert.equal(result.quality.outlierExcludedCount, 0);
+  assert.equal(result.quality.belowMinimumSample, true);
+});
+
 test("rechaza silenciosamente métricas numéricas inválidas", () => {
   const result = calculateCurrencyAnalytics(
     [
@@ -681,6 +709,14 @@ test("separa precios de referencia por lado y conserva freshness", () => {
   assert.equal(result.referencePrices.sell?.vwap, 350);
   assert.equal(result.referencePrices.buy?.stale, false);
   assert.equal(result.referencePrices.sell?.stale, true);
+  assert.equal(result.quality.usableSampleCount, 5);
+  assert.equal(result.quality.sampleCount, 5);
+  assert.equal(result.quality.missingFieldCount, 0);
+  assert.equal(result.quality.staleObservationCount, 2);
+  assert.equal(result.quality.lifecycleCompletenessPercent, 0);
+  assert.equal(result.quality.belowMinimumSample, true);
+  assert.equal(result.referencePrices.buy?.quality.belowMinimumSample, true);
+  assert.equal(result.referencePrices.sell?.quality.staleObservationCount, 2);
 });
 
 test("cuenta canceladas en la misma ventana terminal que las completadas", () => {
