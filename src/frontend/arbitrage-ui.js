@@ -83,6 +83,10 @@ function drawArbitrageSignals() {
 }
 
 function syncCountdownDeadline() {
+  if (S.arbitrage?.state?.status === "scanning") {
+    arbitrageCountdownDeadline = null;
+    return;
+  }
   const next = S.arbitrage?.state?.nextRunAt
     ? Date.parse(S.arbitrage.state.nextRunAt)
     : NaN;
@@ -97,6 +101,7 @@ function syncCountdownDeadline() {
 
 function nextSeconds() {
   syncCountdownDeadline();
+  if (S.arbitrage?.state?.status === "scanning") return 0;
   return Number.isFinite(arbitrageCountdownDeadline)
     ? Math.max(
         0,
