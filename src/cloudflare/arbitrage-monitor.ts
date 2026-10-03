@@ -26,6 +26,10 @@ interface MonitorConfig {
   minMarginPercent: number;
   coin: string;
   intervalSeconds: number;
+  autoEnabled: boolean;
+  maxBuyRate: number | null;
+  minSellRate: number | null;
+  cupBudget: number;
   scheduleEnabled: boolean;
   timezone: string;
   startLocal: string | null;
@@ -38,6 +42,10 @@ interface MonitorRow {
   min_margin_percent: number;
   coin: string;
   interval_seconds: number;
+  auto_enabled: number;
+  max_buy_rate: number | null;
+  min_sell_rate: number | null;
+  cup_budget: number;
   schedule_enabled: number;
   timezone: string;
   start_local: string | null;
@@ -56,7 +64,6 @@ interface StateRow {
   updated_at: string;
 }
 
-const INTERVAL_MS = 10_000;
 
 /**
  * Repairs the monitor/runtime event schema if a deployment reached the Worker
@@ -94,6 +101,10 @@ export async function ensureArbitrageMonitorSchema(
         min_margin_percent REAL NOT NULL DEFAULT 5,
         coin TEXT NOT NULL DEFAULT 'BANK_CUP',
         interval_seconds INTEGER NOT NULL DEFAULT 10 CHECK (interval_seconds BETWEEN 5 AND 300),
+        auto_enabled INTEGER NOT NULL DEFAULT 0 CHECK (auto_enabled IN (0,1)),
+        max_buy_rate REAL,
+        min_sell_rate REAL,
+        cup_budget REAL NOT NULL DEFAULT 0 CHECK (cup_budget >= 0),
         schedule_enabled INTEGER NOT NULL DEFAULT 0,
         timezone TEXT NOT NULL DEFAULT 'UTC',
         start_local TEXT,
@@ -166,8 +177,8 @@ export async function ensureArbitrageMonitorSchema(
   const seedResults = await db.batch([
     db.prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_config
-       (id, enabled, min_margin_percent, coin, interval_seconds, schedule_enabled, timezone, active_days_json, updated_at)
-       VALUES (1, 1, 5, 'BANK_CUP', 10, 0, 'UTC', '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
+       (id, enabled, min_margin_percent, coin, interval_seconds, auto_enabled, max_buy_rate, min_sell_rate, cup_budget, schedule_enabled, timezone, active_days_json, updated_at)
+       VALUES (1, 1, 5, 'BANK_CUP', 10, 0, NULL, NULL, 0, 0, 'UTC', '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
     ),
     db.prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_state
@@ -206,6 +217,10 @@ async function readConfig(db: D1Database): Promise<MonitorConfig> {
       minMarginPercent: 5,
       coin: "BANK_CUP",
       intervalSeconds: 10,
+      autoEnabled: false,
+      maxBuyRate: null,
+      minSellRate: null,
+      cupBudget: 0,
       scheduleEnabled: false,
       timezone: "UTC",
       startLocal: null,
@@ -230,6 +245,10 @@ async function readConfig(db: D1Database): Promise<MonitorConfig> {
       300,
       Math.max(5, Number(row.interval_seconds) || 10),
     ),
+    autoEnabled: row.auto_enabled === 1,
+    maxBuyRate: row.max_buy_rate == null ? null : Number(row.max_buy_rate),
+    minSellRate: row.min_sell_rate == null ? null : Number(row.min_sell_rate),
+    cupBudget: Math.max(0, Number(row.cup_budget) || 0),
     scheduleEnabled: row.schedule_enabled === 1,
     timezone: row.timezone || "UTC",
     startLocal: row.start_local,
@@ -413,5 +432,3 @@ export async function getMonitorIntervalMs(db: D1Database): Promise<number> {
   const config = await readConfig(db);
   return config.intervalSeconds * 1000;
 }
-
-export { INTERVAL_MS };
