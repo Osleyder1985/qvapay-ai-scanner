@@ -111,7 +111,7 @@ jobs:
             throw new Error("Required D1 binding DB is missing or misconfigured.");
           }
           const durableObject = config.durable_objects?.bindings?.find((entry) => entry?.name === "ARBITRAGE_MONITOR");
-          if (durableObject?.class_name !== "ArbitrageMonitor") {
+          if (durableObject?.class_name !== "ArbitrageMonitorV2") {
             throw new Error("Required Durable Object binding is missing or misconfigured.");
           }
           if (!config.triggers?.crons?.includes("* * * * *")) {
