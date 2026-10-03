@@ -202,10 +202,11 @@ export async function handleArbitrageRoutes(
     const marketOffers = offers
       .filter(
         (offer) =>
-          String(offer.type).toLowerCase() === "sell" &&
+          ["sell", "buy"].includes(String(offer.type).toLowerCase()) &&
           (!selectedCoin || String(offer.coin).toUpperCase() === selectedCoin),
       )
       .map((offer) => {
+        const type = String(offer.type).toLowerCase();
         const amount = Number(offer.amount);
         const available =
           offer.available_amount == null
@@ -213,11 +214,17 @@ export async function handleArbitrageRoutes(
             : Number(offer.available_amount);
         const receive = Number(offer.receive);
         const rate = amount > 0 ? receive / amount : NaN;
-        const targetRate = rate * (1 + minMarginPercent / 100);
         const quantity =
           Number.isFinite(available) && available > 0 ? available : 0;
-        const capital = quantity * rate;
-        const targetProceeds = quantity * targetRate;
+        const capital = type === "sell" ? quantity * rate : 0;
+        const targetRate =
+          type === "sell" ? rate * (1 + minMarginPercent / 100) : null;
+        const targetProceeds =
+          type === "sell" && targetRate !== null ? quantity * targetRate : null;
+        const projectedProfit =
+          type === "sell" && targetProceeds !== null
+            ? targetProceeds - capital
+            : null;
         return {
           uuid: offer.uuid,
           coin: offer.coin,
@@ -225,15 +232,20 @@ export async function handleArbitrageRoutes(
           amountQusd: amount,
           availableQusd: quantity,
           purchaseRate: rate,
+          saleRate: type === "buy" ? rate : null,
           capitalRequiredFiat: capital,
+          capitalRequiredQusd: type === "buy" ? quantity : 0,
           targetSaleRate: targetRate,
           targetSaleProceedsFiat: targetProceeds,
-          projectedGrossProfitFiat: targetProceeds - capital,
+          projectedGrossProfitFiat: projectedProfit,
           projectedGrossMarginPercent:
-            capital > 0 ? ((targetProceeds - capital) / capital) * 100 : 0,
+            type === "sell" && capital > 0 && projectedProfit !== null
+              ? (projectedProfit / capital) * 100
+              : null,
           offerKind: offer.offer_kind ?? null,
           orderMinQusd: offer.order_min ?? null,
           orderMaxQusd: offer.order_max ?? null,
+          onlyVip: Boolean(offer.only_vip),
           updatedAt: offer.updated_at ?? offer.created_at ?? null,
         };
       })
@@ -241,7 +253,13 @@ export async function handleArbitrageRoutes(
         (offer) =>
           Number.isFinite(offer.purchaseRate) && offer.purchaseRate > 0,
       )
-      .sort((a, b) => a.purchaseRate - b.purchaseRate);
+      .sort((a, b) => {
+        const aRate = Number(a.purchaseRate);
+        const bRate = Number(b.purchaseRate);
+        if (a.type === "sell" && b.type === "sell") return aRate - bRate;
+        if (a.type === "buy" && b.type === "buy") return bRate - aRate;
+        return a.type === "sell" ? -1 : 1;
+      });
 
     return json({
       mode: "read-only",
