@@ -9,6 +9,7 @@
 import { evaluateQvaPayAccountContract } from "./qvapay-account-contract.js";
 import { parseQvaPayApplicationIdentity } from "./qvapay-identity.js";
 import { parseQvaPayP2PCollection } from "./qvapay-contracts.js";
+import { parseQvaPayUserIdentity } from "./qvapay-user.js";
 import {
   qvapay,
   readQvaPayPayload,
@@ -45,10 +46,9 @@ export async function handleAccountRoutes(
       const ownCollection = ownOffers.ok
         ? parseQvaPayP2PCollection(ownOffersPayload, 0, 1)
         : null;
-      const ownerUser =
-        ownCollection?.data?.[0]?.User ??
-        ownCollection?.data?.[0]?.Peer ??
-        null;
+      const ownerUser = parseQvaPayUserIdentity(
+        ownCollection?.data?.[0]?.User ?? ownCollection?.data?.[0]?.Peer ?? null,
+      );
       const contract = evaluateQvaPayAccountContract({
         identityStatus: info.status,
         identityPayload: infoPayload,
