@@ -18,9 +18,25 @@ auto_apply_execution_lease.
 
 market_history y operations_ledger.
 
+### 0004_auth_sessions.sql
+
+sessions de autenticación persistentes.
+
+### 0005_market_events.sql
+
+market_events para conservar eventos de lifecycle P2P y su identidad de origen.
+
 ### 0006_arbitrage_monitor.sql
 
 arbitrage_monitor_config y arbitrage_monitor_state.
+
+### 0007_finance_ledger_remove_legacy_fk.sql
+
+Elimina la relación FK histórica de `finance_ledger` hacia `p2p_operations` y añade índices para consultas financieras por actualización/tipo.
+
+### 0008_market_event_timestamp_policy.sql
+
+Añade `source_event_at`, `source_observed_at`, `timestamp_quality` y `quarantined` a `market_events`, incluyendo índice de eventos puestos en cuarentena por skew temporal.
 
 ## 3. arbitrage_monitor_config
 
@@ -44,4 +60,4 @@ No se ejecutan purgas automáticas. El monitor conserva únicamente el último s
 
 ## 7. Estado productivo
 
-Para production/cloudflare: D1 está configurado, 0006 está incluido en el despliegue y ArbitrageMonitor está registrado en Wrangler. Auto-Apply continúa deshabilitado.
+Para production/cloudflare: D1 está configurado y las migraciones versionadas del repositorio cubren el esquema actual hasta 0008. El binding `DB` y `migrations_dir` están declarados en `wrangler.jsonc`. ArbitrageMonitor está registrado en Wrangler. Auto-Apply continúa deshabilitado.
