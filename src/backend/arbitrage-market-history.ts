@@ -84,7 +84,10 @@ const EVENTS = new Set<MarketEventType>([
   "cancelled",
 ]);
 
-const LIFECYCLE_TRANSITIONS: Record<MarketEventType, ReadonlySet<MarketEventType>> = {
+const LIFECYCLE_TRANSITIONS: Record<
+  MarketEventType,
+  ReadonlySet<MarketEventType>
+> = {
   created: new Set(["reopened", "applied", "paid", "completed", "cancelled"]),
   reopened: new Set(["applied", "paid", "completed", "cancelled"]),
   applied: new Set(["paid", "completed", "cancelled"]),
@@ -294,10 +297,7 @@ export function reconcileMarketEventLifecycle(
     );
     let previous: NormalizedMarketEvent | null = null;
     for (const event of offerEvents) {
-      if (
-        previous &&
-        !LIFECYCLE_TRANSITIONS[previous.event].has(event.event)
-      ) {
+      if (previous && !LIFECYCLE_TRANSITIONS[previous.event].has(event.event)) {
         violations.push({
           offerUuid: event.offerUuid,
           previousEvent: previous.event,
@@ -332,8 +332,8 @@ export function reconcileMarketEventLifecycle(
 export function completedTradesFromEvents(
   events: NormalizedMarketEvent[],
 ): CompletedTrade[] {
-  return reconcileMarketEventLifecycle(events).events
-    .filter(
+  return reconcileMarketEventLifecycle(events)
+    .events.filter(
       (event) => event.event === "completed" && isValidCompletedTrade(event),
     )
     .map((event) => ({

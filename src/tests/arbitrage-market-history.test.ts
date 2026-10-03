@@ -192,10 +192,10 @@ test("rechaza regresiones de ciclo después de un estado terminal", () => {
     }),
   ]);
 
-  assert.deepEqual(result.events.map((item) => item.event), [
-    "created",
-    "completed",
-  ]);
+  assert.deepEqual(
+    result.events.map((item) => item.event),
+    ["created", "completed"],
+  );
   assert.deepEqual(result.violations[0], {
     offerUuid: "regression",
     previousEvent: "completed",
@@ -233,12 +233,10 @@ test("permite reabrir una oferta cancelada pero no completar directamente una ca
     }),
   ]);
 
-  assert.deepEqual(result.events.map((item) => item.event), [
-    "created",
-    "cancelled",
-    "reopened",
-    "completed",
-  ]);
+  assert.deepEqual(
+    result.events.map((item) => item.event),
+    ["created", "cancelled", "reopened", "completed"],
+  );
   assert.equal(result.violations.length, 0);
 });
 
@@ -264,7 +262,10 @@ test("marca completion posterior a completed como violación y conserva el event
     }),
   ]);
 
-  assert.equal(result.events.filter((item) => item.event === "completed").length, 1);
+  assert.equal(
+    result.events.filter((item) => item.event === "completed").length,
+    1,
+  );
   assert.equal(result.violations.length, 0);
 });
 
