@@ -40,8 +40,8 @@ function drawArbitrageMarket() {
   box.innerHTML =
     '<div class="table-wrap arbitrage-table-wrap"><table class="market-table arbitrage-table">' +
     '<thead><tr>' +
-    '<th>Oferta SELL</th><th>QUSD disponible</th><th>Compra · QUSD/CUP</th><th>Capital CUP</th>' +
-    '<th>Venta objetivo · QUSD/CUP</th><th>Retorno CUP</th><th>Ganancia CUP</th><th>Margen</th>' +
+    '<th>Oferta</th><th>QUSD disponible</th><th>Tasa QUSD/CUP</th><th>Capital CUP</th>' +
+    '<th>Venta objetivo · QUSD/CUP</th><th>Retorno CUP</th><th>Ganancia CUP</th><th>Margen</th><th>Acción</th>' +
     '</tr></thead><tbody>' +
     offers.map((offer) => {
       const min = Number(offer.orderMinQusd);
@@ -51,7 +51,7 @@ function drawArbitrageMarket() {
           ' — ' + (Number.isFinite(max) ? arbitrageMoney(max) : 'sin máximo') + ' QUSD'
         : 'Sin límite adicional';
       return '<tr>' +
-        '<td><span class="type sell">SELL</span><small>' + esc(offer.uuid) + '</small></td>' +
+        '<td><span class="type ' + esc(String(offer.type || 'sell').toLowerCase()) + '">' + esc(String(offer.type || 'sell').toUpperCase()) + '</span><small>' + esc(offer.uuid) + '</small></td>' +
         '<td><strong>' + arbitrageMoney(offer.availableQusd) + '</strong><small>' + esc(limitText) + '</small></td>' +
         '<td><strong>' + arbitrageMoney(offer.purchaseRate) + '</strong><small>CUP por 1 QUSD</small></td>' +
         '<td><strong>' + arbitrageMoney(offer.capitalRequiredFiat) + '</strong><small>CUP</small></td>' +
@@ -59,6 +59,7 @@ function drawArbitrageMarket() {
         '<td><strong>' + arbitrageMoney(offer.targetSaleProceedsFiat) + '</strong><small>CUP</small></td>' +
         '<td><strong class="arbitrage-profit">+' + arbitrageMoney(offer.projectedGrossProfitFiat) + '</strong><small>CUP</small></td>' +
         '<td><strong class="arbitrage-profit">+' + arbitragePercent(offer.projectedGrossMarginPercent ?? margin) + '</strong><small>sobre capital</small></td>' +
+        '<td><button class="button primary compact" type="button" onclick="applyArbitrageOffer(\'' + esc(String(offer.uuid)) + '\')">Aceptar</button></td>' +
         '</tr>';
     }).join("") +
     '</tbody></table></div>';
@@ -155,6 +156,22 @@ async function fetchArbitrageMonitor({ silent = true } = {}) {
   }
 }
 
+async function applyArbitrageOffer(id) {
+  const offer = (S.arbitrage?.marketOffers || []).find((item) => String(item.uuid) === String(id));
+  if (!offer) return toast("La oferta ya no está disponible en el snapshot.", "error");
+  const rate = Number(offer.purchaseRate);
+  const side = String(offer.type || "sell").toLowerCase();
+  const action = side === "buy" ? "vender QUSD" : "comprar QUSD";
+  if (!confirm("Aceptar esta oferta para " + action + " a " + arbitrageMoney(rate) + "?")) return;
+  try {
+    await api("/api/p2p/" + encodeURIComponent(id) + "/apply", { method: "POST" });
+    toast("Oferta aceptada por QvaPay.", "success");
+    await fetchArbitrageMonitor({ silent: false });
+  } catch (e) {
+    toast("No se pudo aceptar la oferta: " + errorText(e), "error");
+  }
+}
+
 async function saveArbitrageConfig() {
   const margin = Number($("arbMargin")?.value || 5);
   const intervalSeconds = Number($("arbInterval")?.value || 10);
@@ -217,6 +234,7 @@ function bindArbitrage() {
 }
 
 window.loadArbitrage = fetchArbitrageMonitor;
+window.applyArbitrageOffer = applyArbitrageOffer;
 window.runArbitrageDemo = runArbitrageDemo;
 window.startArbitragePolling = startArbitragePolling;
 window.stopArbitragePolling = stopArbitragePolling;
