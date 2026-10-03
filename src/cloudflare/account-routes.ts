@@ -60,9 +60,7 @@ export async function handleAccountRoutes(
         account: {
           balanceUsd: contract.balanceUsd,
           user: contract.user,
-          identitySource: contract.user
-            ? "qvapay_p2p_owner"
-            : "unavailable",
+          identitySource: contract.user ? "qvapay_p2p_owner" : "unavailable",
           identityHttpStatus: ownOffers.status,
           identityOk: contract.user !== null,
           identityError: contract.identityError
