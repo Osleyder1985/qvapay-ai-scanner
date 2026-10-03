@@ -62,34 +62,30 @@ jobs:
           const fs = require("node:fs");
 
           const expectedSha = process.env.GITHUB_SHA;
-          const checks = JSON.parse(fs.readFileSync("cloudflare-build-check.json", "utf8"));
           const status = JSON.parse(fs.readFileSync("deployment-status.json", "utf8"));
-          const check = checks?.check_runs?.find(
-            (entry) => entry?.name === "Workers Builds: qvapay-ai-scanner",
-          );
 
-          if (!check || check.head_sha !== expectedSha || check.conclusion !== "success") {
-            throw new Error(
-              `Cloudflare Workers Build is not traceable to GitHub commit ${expectedSha}.`,
-            );
-          }
-
-          const activeVersionIds = (status?.versions ?? [])
+          const activeVersions = (status?.versions ?? [])
             .filter((entry) => Number(entry?.percentage) === 100)
             .map((entry) => entry?.version_id)
             .filter(Boolean);
 
-          if (activeVersionIds.length !== 1) {
+          if (activeVersions.length !== 1) {
             throw new Error(
-              `Expected exactly one active 100% Worker version, found ${activeVersionIds.length}.`,
+              `Expected exactly one 100% active Worker version, found ${activeVersions.length}.`,
             );
           }
 
-          const buildUrl = check?.details_url ?? check?.html_url ?? "";
-          const buildId =
-            check?.output?.summary?.match(/Build ID: \[([^\]]+)\]/)?.[1] ??
-            check?.external_id ??
+          const message =
+            status?.annotations?.["workers/message"] ??
+            status?.message ??
             "";
+
+          if (!String(message).includes(expectedSha)) {
+            throw new Error(
+              `Cloudflare deployment ${status?.id ?? "unknown"} is not traceable to GitHub commit ${expectedSha}; message=${JSON.stringify(message)}.`,
+            );
+          }
+
 
           fs.writeFileSync(
             "deployment-evidence.txt",
