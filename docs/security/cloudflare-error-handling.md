@@ -41,6 +41,8 @@ Si el check Workers Builds: qvapay-ai-scanner falla antes de compilar, el workfl
 
 El reintento de infraestructura debe conservar el mismo commit funcional; cualquier modificación adicional de código debe pasar nuevamente los gates de calidad, seguridad y runtime antes del despliegue.
 
+Cuando el build gestionado de Cloudflare falla, el pipeline puede ejecutar un despliegue autenticado mediante Wrangler y exige comprobar que la versión resultante sea la única versión activa al 100%.
+
 ## Trazabilidad
 
 Issue #136: contrato de errores públicos y sanitización de diagnósticos verificados mediante CI y evidencia de despliegue.
