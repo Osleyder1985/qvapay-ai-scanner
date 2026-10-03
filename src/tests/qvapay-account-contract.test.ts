@@ -8,8 +8,12 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { evaluateQvaPayAccountContract } from "../cloudflare/qvapay-account-contract.js";
-import { parseQvaPayApplicationIdentity } from "../cloudflare/qvapay-identity.js";
+import {
+  evaluateQvaPayAccountContract,
+} from "../cloudflare/qvapay-account-contract.js";
+import {
+  parseQvaPayApplicationIdentity,
+} from "../cloudflare/qvapay-identity.js";
 import { parseQvaPayBalance } from "../cloudflare/qvapay-balance.js";
 
 const identity = {
