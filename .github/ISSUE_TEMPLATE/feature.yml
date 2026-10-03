@@ -1,0 +1,39 @@
+name: Feature
+description: Proponer una capacidad nueva o una ampliación funcional.
+title: "feat: "
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objetivo
+      description: Qué capacidad se necesita y por qué.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexto y evidencia
+      description: Hallazgos, enlaces, logs o comportamiento reproducible.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Alcance
+      description: Incluido y explícitamente fuera de alcance.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Criterios de aceptación
+      description: Condiciones verificables de cierre.
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Pruebas y trazabilidad
+      description: Tests, CI, documentación y evidencia de producción cuando aplique.
+    validations:
+      required: true
