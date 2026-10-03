@@ -208,10 +208,15 @@ export async function handleArbitrageRoutes(
       .map((offer) => {
         const type = String(offer.type).toLowerCase();
         const amount = Number(offer.amount);
+        const offerKind = String(offer.offer_kind ?? "").toLowerCase();
+        const rawAvailable =
+          offer.available_amount == null ? NaN : Number(offer.available_amount);
         const available =
-          offer.available_amount == null
+          offerKind === "fixed"
             ? amount
-            : Number(offer.available_amount);
+            : Number.isFinite(rawAvailable) && rawAvailable > 0
+              ? rawAvailable
+              : amount;
         const receive = Number(offer.receive);
         const rate = amount > 0 ? receive / amount : NaN;
         const quantity =
@@ -242,7 +247,7 @@ export async function handleArbitrageRoutes(
             type === "sell" && capital > 0 && projectedProfit !== null
               ? (projectedProfit / capital) * 100
               : null,
-          offerKind: offer.offer_kind ?? null,
+          offerKind: offerKind || null,
           orderMinQusd: offer.order_min ?? null,
           orderMaxQusd: offer.order_max ?? null,
           onlyVip: Boolean(offer.only_vip),
