@@ -261,10 +261,10 @@ export async function handleArbitrageRoutes(
         return a.type === "sell" ? -1 : 1;
       });
     const marketOffers = normalizedMarketOffers.filter(
-      (offer) => offer.type.toLowerCase() === "sell",
+      (offer) => String(offer.type).toLowerCase() === "sell",
     );
     const marketBuyOffers = normalizedMarketOffers.filter(
-      (offer) => offer.type.toLowerCase() === "buy",
+      (offer) => String(offer.type).toLowerCase() === "buy",
     );
 
     return json({
