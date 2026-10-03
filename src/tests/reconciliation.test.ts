@@ -228,9 +228,8 @@ test("detects duplicate identities without mutating source layers", () => {
   const second = reconcileLayerState(input);
 
   assert.equal(
-    first.discrepancies.filter(
-      (item) => item.category === "duplicate_identity",
-    ).length,
+    first.discrepancies.filter((item) => item.category === "duplicate_identity")
+      .length,
     2,
   );
   assert.deepEqual(second, first);
