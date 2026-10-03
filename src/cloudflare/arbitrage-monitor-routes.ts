@@ -216,13 +216,7 @@ export async function handleArbitrageMonitorRoutes(
            cup_budget = ?, updated_at = ?
        WHERE id = 1`,
     )
-      .bind(
-        autoEnabled ? 1 : 0,
-        maxBuyRate,
-        minSellRate,
-        cupBudget,
-        now,
-      )
+      .bind(autoEnabled ? 1 : 0, maxBuyRate, minSellRate, cupBudget, now)
       .run();
 
     if (Number(executionResult.meta?.changes ?? 0) !== 1) {
