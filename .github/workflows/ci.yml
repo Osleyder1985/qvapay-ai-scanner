@@ -242,6 +242,20 @@ jobs:
             sleep 10
           done
           unset AI_AUDITOR_TOKEN
+
+      - name: Verify production arbitrage scheduler interval
+        env:
+          AI_AUDITOR_TOKEN: ${{ secrets.AI_AUDITOR_TOKEN }}
+          ARBITRAGE_SMOKE_BASE_URL: https://qvapay-ai-scanner.osleyder-gonzalez1985.workers.dev
+        run: |
+          set -euo pipefail
+          if [ -z "${AI_AUDITOR_TOKEN}" ]; then
+            echo "Missing required repository secret: AI_AUDITOR_TOKEN" >&2
+            exit 1
+          fi
+          npm run smoke:cloudflare:production:arbitrage-scheduler
+          unset AI_AUDITOR_TOKEN
+
       - name: Publish monitor failure diagnostic
         if: failure()
         id: monitor_failure_diagnostic
