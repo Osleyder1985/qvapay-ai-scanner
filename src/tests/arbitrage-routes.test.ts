@@ -139,13 +139,13 @@ test("valida el margen mínimo antes de consultar QvaPay", async () => {
 test(
   "sanitizes upstream/internal errors from the arbitrage scan response",
   async () => {
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => {
-    throw new Error("QVAPAY_INTERNAL_SECRET_OR_TOKEN");
-  };
+    const originalFetch = globalThis.fetch;
+      globalThis.fetch = async () => {
+      throw new Error("QVAPAY_INTERNAL_SECRET_OR_TOKEN");
+    };
 
-  try {
-    const response = await handleArbitrageRoutes(
+    try {
+      const response = await handleArbitrageRoutes(
       new Request(
         "https://example.workers.dev/api/arbitrage/scan?minMarginPercent=5",
       ),
@@ -161,21 +161,22 @@ test(
         new Response(JSON.stringify(payload), { status }),
     );
 
-    assert.ok(response);
-    assert.equal(response.status, 502);
-    const body = (await response.json()) as {
+      assert.ok(response);
+      assert.equal(response.status, 502);
+      const body = (await response.json()) as {
       error: string;
       code: string;
       detail?: string;
     };
-    assert.equal(body.error, "No se pudo completar el escaneo de arbitraje.");
-    assert.equal(body.code, "ARBITRAGE_SCAN_FAILED");
-    assert.equal("detail" in body, false);
-    assert.equal(
+      assert.equal(body.error, "No se pudo completar el escaneo de arbitraje.");
+      assert.equal(body.code, "ARBITRAGE_SCAN_FAILED");
+      assert.equal("detail" in body, false);
+      assert.equal(
       JSON.stringify(body).includes("QVAPAY_INTERNAL_SECRET_OR_TOKEN"),
       false,
     );
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  },
+);
