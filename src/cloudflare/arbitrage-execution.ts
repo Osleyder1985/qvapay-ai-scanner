@@ -41,22 +41,6 @@ interface ExecutionStateRow {
 const APPLY_LIMIT = 2;
 const APPLY_WINDOW_MS = 60_000;
 
-async function ensureExecutionState(db: D1Database): Promise<void> {
-  await db
-    .prepare(
-      "CREATE TABLE IF NOT EXISTS arbitrage_execution_state " +
-        "(id INTEGER PRIMARY KEY CHECK (id = 1), apply_window_json TEXT NOT NULL DEFAULT '[]', " +
-        "last_action_at TEXT, last_action TEXT, updated_at TEXT NOT NULL)",
-    )
-    .run();
-  await db
-    .prepare(
-      "INSERT OR IGNORE INTO arbitrage_execution_state (id, updated_at) " +
-        "VALUES (1, CURRENT_TIMESTAMP)",
-    )
-    .run();
-}
-
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -157,7 +141,6 @@ export async function executeArbitrageCandidates(
     };
   }
 
-  await ensureExecutionState(db);
   const state = await readExecutionState(db);
   const recent = recentApplyTimestamps(state.apply_window_json);
   let slots = Math.max(0, APPLY_LIMIT - recent.length);
@@ -237,7 +220,7 @@ export async function executeArbitrageCandidates(
       const remainingBudget = Math.max(0, config.cupBudget - spentCup);
       await db
         .prepare(
-          "UPDATE arbitrage_monitor_config " +
+          "UPDATE arbitrage_execution_config " +
             "SET cup_budget = ?, updated_at = ? WHERE id = 1",
         )
         .bind(remainingBudget, nowIso())

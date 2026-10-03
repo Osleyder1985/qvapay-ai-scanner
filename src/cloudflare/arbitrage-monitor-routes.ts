@@ -197,26 +197,29 @@ export async function handleArbitrageMonitorRoutes(
       return json({ error: "coin inválida." }, 400);
 
     const now = new Date().toISOString();
-    const result = await env.DB.prepare(
+    const monitorResult = await env.DB.prepare(
       `UPDATE arbitrage_monitor_config
        SET min_margin_percent = ?, coin = ?, interval_seconds = ?,
-           auto_enabled = ?, max_buy_rate = ?, min_sell_rate = ?,
-           cup_budget = ?, enabled = 1, updated_at = ?
+           enabled = 1, updated_at = ?
        WHERE id = 1`,
     )
-      .bind(
-        margin,
-        coin,
-        intervalSeconds,
-        autoEnabled ? 1 : 0,
-        maxBuyRate,
-        minSellRate,
-        cupBudget,
-        now,
-      )
+      .bind(margin, coin, intervalSeconds, now)
       .run();
 
-    if (Number(result.meta?.changes ?? 0) !== 1) {
+    if (Number(monitorResult.meta?.changes ?? 0) !== 1) {
+      return operationalError("MONITOR_CONFIG_ROW_MISSING", json);
+    }
+
+    const executionResult = await env.DB.prepare(
+      `UPDATE arbitrage_execution_config
+       SET auto_enabled = ?, max_buy_rate = ?, min_sell_rate = ?,
+           cup_budget = ?, updated_at = ?
+       WHERE id = 1`,
+    )
+      .bind(autoEnabled ? 1 : 0, maxBuyRate, minSellRate, cupBudget, now)
+      .run();
+
+    if (Number(executionResult.meta?.changes ?? 0) !== 1) {
       return operationalError("MONITOR_CONFIG_ROW_MISSING", json);
     }
 
