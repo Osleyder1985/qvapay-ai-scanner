@@ -25,6 +25,7 @@ interface MonitorConfig {
   enabled: boolean;
   minMarginPercent: number;
   coin: string;
+  intervalSeconds: number;
   scheduleEnabled: boolean;
   timezone: string;
   startLocal: string | null;
@@ -36,6 +37,7 @@ interface MonitorRow {
   enabled: number;
   min_margin_percent: number;
   coin: string;
+  interval_seconds: number;
   schedule_enabled: number;
   timezone: string;
   start_local: string | null;
@@ -76,13 +78,7 @@ export async function ensureArbitrageMonitorSchema(
     )
     .all<{ name: string }>();
   const names = new Set(existing.results.map((row) => row.name));
-  if (
-    names.has("arbitrage_monitor_config") &&
-    names.has("arbitrage_monitor_state") &&
-    names.has("market_events")
-  ) {
-    return;
-  }
+  if (!names.has("arbitrage_monitor_config") || !names.has("arbitrage_monitor_state") || !names.has("market_events")) {
 
   const results = await db.batch([
     db.prepare(
@@ -91,6 +87,7 @@ export async function ensureArbitrageMonitorSchema(
         enabled INTEGER NOT NULL DEFAULT 1,
         min_margin_percent REAL NOT NULL DEFAULT 5,
         coin TEXT NOT NULL DEFAULT 'BANK_CUP',
+        interval_seconds INTEGER NOT NULL DEFAULT 10 CHECK (interval_seconds BETWEEN 5 AND 300),
         schedule_enabled INTEGER NOT NULL DEFAULT 0,
         timezone TEXT NOT NULL DEFAULT 'UTC',
         start_local TEXT,
@@ -156,8 +153,14 @@ export async function ensureArbitrageMonitorSchema(
        ON market_events (coin, event, event_at DESC, observed_at DESC, offer_uuid)`,
     ),
   ]);
-  if (results.some((result) => result.success !== true)) {
-    throw new Error("ARBITRAGE_RUNTIME_SCHEMA_ENSURE_FAILED");
+    if (results.some((result) => result.success !== true)) {
+      throw new Error("ARBITRAGE_RUNTIME_SCHEMA_ENSURE_FAILED");
+    }
+  }
+
+  const columns = await db.prepare("PRAGMA table_info(arbitrage_monitor_config)").all<{ name: string }>();
+  if (!columns.results.some((column) => column.name === "interval_seconds")) {
+    await db.prepare("ALTER TABLE arbitrage_monitor_config ADD COLUMN interval_seconds INTEGER NOT NULL DEFAULT 10").run();
   }
 
   const seedResults = await db.batch([
@@ -180,7 +183,7 @@ export async function ensureArbitrageMonitorSchema(
 function readConfig(db: D1Database): Promise<MonitorConfig> {
   return db
     .prepare(
-      `SELECT enabled, min_margin_percent, coin, schedule_enabled, timezone,
+      `SELECT enabled, min_margin_percent, coin, interval_seconds, schedule_enabled, timezone,
             start_local, end_local, active_days_json
      FROM arbitrage_monitor_config WHERE id = 1`,
     )
@@ -191,6 +194,7 @@ function readConfig(db: D1Database): Promise<MonitorConfig> {
           enabled: false,
           minMarginPercent: 5,
           coin: "BANK_CUP",
+          intervalSeconds: 10,
           scheduleEnabled: false,
           timezone: "UTC",
           startLocal: null,
@@ -210,6 +214,7 @@ function readConfig(db: D1Database): Promise<MonitorConfig> {
         enabled: row.enabled === 1,
         minMarginPercent: Number(row.min_margin_percent),
         coin: String(row.coin).toUpperCase(),
+        intervalSeconds: Math.min(300, Math.max(5, Number(row.interval_seconds) || 10)),
         scheduleEnabled: row.schedule_enabled === 1,
         timezone: row.timezone || "UTC",
         startLocal: row.start_local,
@@ -349,7 +354,7 @@ export async function runArbitrageMonitor(
     await saveState(db, {
       status: "error",
       lastError: message,
-      nextRunAt: new Date(Date.now() + INTERVAL_MS).toISOString(),
+      nextRunAt: new Date(Date.now() + config.intervalSeconds * 1000).toISOString(),
     });
     return { ok: false, error: message };
   }
@@ -385,4 +390,10 @@ export async function monitorState(db: D1Database): Promise<{
   return { config, state };
 }
 
-export { INTERVAL_MS };
+export async function getMonitorIntervalMs(db: D1Database): Promise<number> {
+  await ensureArbitrageMonitorSchema(db);
+  const config = await readConfig(db);
+  return config.intervalSeconds * 1000;
+}
+
+export const INTERVAL_MS = 10_000;
