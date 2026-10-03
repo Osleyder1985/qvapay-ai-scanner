@@ -37,7 +37,10 @@
   "secrets": {
     "required": [
       "AUTH_USERNAME",
-      "AUTH_PASSWORD"
+      "AUTH_PASSWORD",
+      "AI_AUDITOR_TOKEN_HASH",
+      "QVAPAY_APP_ID",
+      "QVAPAY_APP_SECRET"
     ]
   },
   "previews": {},
