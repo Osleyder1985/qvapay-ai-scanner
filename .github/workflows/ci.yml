@@ -89,7 +89,26 @@ jobs:
       - name: Verify Cloudflare Worker configuration contract
         run: |
           set -euo pipefail
-          node --input-type=module -e 'import fs from "node:fs"; const c=fs.readFileSync("wrangler.jsonc","utf8"); const d=/["']?binding["']?\s*:\s*["']DB["'][^}]*["']database_name["']?\s*:\s*["']qvapay-ai-scanner["'][^}]*["']database_id["']?\s*:\s*["']([^"']+)["']/s.exec(c); if(!d?.[1]) throw new Error("Required D1 binding DB is missing or misconfigured."); const a=/["']?name["']?\s*:\s*["']ARBITRAGE_MONITOR["'][^}]*["']?class_name["']?\s*:\s*["']ArbitrageMonitor["']/s.test(c); if(!a) throw new Error("Required Durable Object binding is missing or misconfigured."); if(!/["']?crons["']?\s*:\s*\[[^\]]*["']\* \* \* \* \*["']/.test(c)) throw new Error("Expected production monitor cron is missing."); console.log("Cloudflare Worker configuration contract: PASS");'
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const source = fs.readFileSync("wrangler.jsonc", "utf8")
+            .replace(/\/\*[\s\S]*?\*\//g, "")
+            .replace(/(^|\s)\/\/.*$/gm, "$1")
+            .replace(/,\s*([}\]])/g, "$1");
+          const config = JSON.parse(source);
+          const database = config.d1_databases?.find((entry) => entry?.binding === "DB");
+          if (!database || database.database_name !== "qvapay-ai-scanner" || !database.database_id) {
+            throw new Error("Required D1 binding DB is missing or misconfigured.");
+          }
+          const durableObject = config.durable_objects?.bindings?.find((entry) => entry?.name === "ARBITRAGE_MONITOR");
+          if (durableObject?.class_name !== "ArbitrageMonitor") {
+            throw new Error("Required Durable Object binding is missing or misconfigured.");
+          }
+          if (!config.triggers?.crons?.includes("* * * * *")) {
+            throw new Error("Expected production monitor cron is missing.");
+          }
+          console.log("Cloudflare Worker configuration contract: PASS");
+          NODE
           node -e 'const fs=require("node:fs"); const c=fs.readFileSync("src/cloudflare/auto-apply-routes.ts","utf8"); if(!c.includes("501") || !c.includes("Auto-Apply permanece desactivado en Cloudflare") || !c.includes("Auto-Apply no puede persistir")) throw new Error("Auto-Apply fail-closed contract is missing."); console.log("Auto-Apply fail-closed contract: PASS");'
 
       - name: Verify Cloudflare production secret bindings
