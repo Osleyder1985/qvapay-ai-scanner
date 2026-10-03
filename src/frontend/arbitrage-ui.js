@@ -293,11 +293,21 @@ function bindArbitrageSettings() {
 }
 
 function monitorTick() {
+  const state = S.arbitrage?.state;
   const seconds = nextSeconds();
   drawArbitrage();
+
+  // A Cloudflare alarm temporarily has no scheduled timestamp while its
+  // handler is executing. Keep polling during that short transition so the
+  // browser cannot remain forever on "escaneando…0".
+  if (state?.status === "scanning" || seconds === null) {
+    void fetchArbitrageMonitor({ silent: true });
+    return;
+  }
+
   if (seconds === 0) {
-    // Do not manufacture a new 10-second deadline while the server is running.
-    // The next deadline must come from the persisted monitor state.
+    // Do not manufacture a new deadline. Wait for the server-side alarm to
+    // finish and then consume its persisted nextRunAt.
     arbitrageCountdownDeadline = null;
     void fetchArbitrageMonitor({ silent: true });
   }
