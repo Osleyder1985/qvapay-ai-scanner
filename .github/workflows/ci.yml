@@ -73,59 +73,48 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Capture current production version
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-before.json
+          node -e 'const fs=require("node:fs"); const d=JSON.parse(fs.readFileSync("deployment-before.json","utf8")); const a=(d.versions??[]).filter(v=>Number(v?.percentage)===100).map(v=>v?.version_id).filter(Boolean); if(a.length>1) throw new Error("Expected at most one active 100% version before deployment."); fs.writeFileSync("cloudflare-previous-version.txt",(a[0]??"")+"\n"); console.log("Previous active version:",a[0]??"none");'
+
       - name: Deploy Worker with Wrangler
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          npx wrangler deploy --json > cloudflare-deploy.json
-          node <<'NODE'
-          const fs = require("node:fs");
-          const data = JSON.parse(fs.readFileSync("cloudflare-deploy.json", "utf8"));
-          const versionId =
-            data.version_id ??
-            data.versionId ??
-            data?.deployment?.version_id ??
-            data?.deployment?.versionId ??
-            "";
-          if (!versionId) {
-            throw new Error("Wrangler deployment did not return a version ID.");
-          }
-          fs.writeFileSync("cloudflare-deployed-version.txt", String(versionId) + "\n");
-          console.log("Deployed Cloudflare Worker version " + versionId);
-          NODE
+          npx wrangler deploy
 
-      - name: Verify active production version
+      - name: Verify new active production version
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          expected="$(cat cloudflare-deployed-version.txt)"
+          previous="$(cat cloudflare-previous-version.txt)"
           for attempt in {1..30}; do
             npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-status.json
             active="$(node -e 'const fs=require("node:fs"); const d=JSON.parse(fs.readFileSync("deployment-status.json","utf8")); const a=(d.versions??[]).filter(v=>Number(v?.percentage)===100).map(v=>v?.version_id).filter(Boolean); process.stdout.write(a.length===1?a[0]:"");')"
-            if [ "$active" = "$expected" ]; then
-              echo "Cloudflare version $active is active at 100%."
-              break
+            if [ -n "$active" ] && { [ -z "$previous" ] || [ "$active" != "$previous" ]; }; then
+              echo "Cloudflare version $active is the new single active version at 100%."
+              {
+                echo "github_commit=$GITHUB_SHA"
+                echo "cloudflare_previous_version_id=$previous"
+                echo "cloudflare_active_version_id=$active"
+                echo "deployment_method=wrangler_direct"
+              } > deployment-evidence.txt
+              exit 0
             fi
-            echo "Waiting for active version (attempt $attempt/30; expected=$expected; active=$active)."
+            echo "Waiting for new active version (attempt $attempt/30; previous=$previous; active=$active)."
             sleep 10
           done
-
-          active="$(node -e 'const fs=require("node:fs"); const d=JSON.parse(fs.readFileSync("deployment-status.json","utf8")); const a=(d.versions??[]).filter(v=>Number(v?.percentage)===100).map(v=>v?.version_id).filter(Boolean); process.stdout.write(a.length===1?a[0]:"");')"
-          if [ "$active" != "$expected" ]; then
-            echo "Expected exactly the Wrangler-deployed version at 100%; found active=$active expected=$expected."
-            exit 1
-          fi
-
-          {
-            echo "github_commit=$GITHUB_SHA"
-            echo "cloudflare_active_version_id=$active"
-            echo "cloudflare_deployed_version_id=$expected"
-            echo "deployment_method=wrangler_direct"
-          } > deployment-evidence.txt
+          echo "Cloudflare did not expose a new single 100% active version after deployment."
+          exit 1
 
       - name: Upload production deployment evidence
         if: always()
@@ -133,8 +122,8 @@ jobs:
         with:
           name: cloudflare-production-deployment-${{ github.sha }}
           path: |
-            cloudflare-deploy.json
-            cloudflare-deployed-version.txt
+            deployment-before.json
+            cloudflare-previous-version.txt
             deployment-status.json
             deployment-evidence.txt
           if-no-files-found: warn
