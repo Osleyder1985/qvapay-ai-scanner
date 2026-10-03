@@ -3,21 +3,24 @@ info:
   title: QvaPay AI Scanner Internal API
   version: 0.1.0
   description: |
-    Contrato de la API HTTP interna del dashboard QvaPay AI Scanner.
+    Contrato de la API HTTP del Cloudflare Worker QvaPay AI Scanner.
     La API actúa como backend/proxy frente a QvaPay y no expone las credenciales
     de la aplicación al navegador.
 
-    Trust boundary actual:
-    - el dashboard solo puede iniciar en loopback (127.0.0.1, ::1 o localhost);
-    - no existe autenticación de usuario remoto en esta versión;
-    - las rutas sensibles dependen del boundary local y de la validación de
-      rol/estado antes de reenviar acciones a QvaPay.
+    Trust boundary de producción:
+    - el Worker es la frontera primaria de autenticación de la aplicación;
+    - las rutas privadas requieren una sesión D1-backed;
+    - las mutaciones de navegador requieren Origin same-origin;
+    - QvaPay conserva la autorización de operaciones y su estado;
+    - AI Auditor y el webhook firmado son límites de autenticación separados.
 
     Esta especificación describe el comportamiento implementado. No representa
     capacidades futuras no implementadas.
 servers:
-  - url: http://127.0.0.1:8080
-    description: Deployment local por defecto
+  - url: https://qvapay-ai-scanner.osleyder-gonzalez1985.workers.dev
+    description: Worker Cloudflare de producción
+security:
+  - sessionCookie: []
 tags:
   - name: System
   - name: Market
@@ -32,6 +35,7 @@ paths:
     get:
       tags: [System]
       summary: Health check
+      security: []
       responses:
         '200':
           description: Servicio disponible
@@ -462,6 +466,16 @@ paths:
                 $ref: '#/components/schemas/ReconciliationDiagnosticReport'
 
 components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: qvas_session
+      description: Sesión HttpOnly, SameSite=Strict emitida por /api/auth/login.
+    aiAuditorToken:
+      type: http
+      scheme: bearer
+      description: Token técnico de solo lectura para /api/ai-audit/*.
   parameters:
     Page: { name: page, in: query, schema: { type: integer, minimum: 1 } }
     Take: { name: take, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 100 } }

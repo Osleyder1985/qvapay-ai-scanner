@@ -142,3 +142,63 @@ test("logout invalidates the existing session token", async () => {
   await destroySession(logoutRequest, db);
   assert.equal(db.rows.size, 0);
 });
+
+test("central Cloudflare gate protects private routes and mutations", async () => {
+  const { routeRequest } = await import("../cloudflare/cloudflare-router.js");
+  const db = fakeDatabase();
+  const env = {
+    DB: db,
+    ASSETS: { fetch: async () => new Response("asset") },
+    ARBITRAGE_MONITOR: {
+      idFromName: () => "id",
+      get: () => ({ fetch: async () => new Response("{}") }),
+    },
+  } as unknown as Parameters<typeof routeRequest>[1];
+
+  const health = await routeRequest(
+    new Request("https://scanner.example.com/api/health"),
+    env,
+  );
+  assert.equal(health?.status, 200);
+
+  const privateRoute = await routeRequest(
+    new Request("https://scanner.example.com/api/p2p"),
+    env,
+  );
+  assert.equal(privateRoute?.status, 401);
+
+  const sessionResponse = await createSession(
+    new Request("https://scanner.example.com/login", { method: "POST" }),
+    db,
+    "admin",
+  );
+  const cookie = sessionResponse.headers.get("Set-Cookie") ?? "";
+  const token = cookie.match(/qvas_session=([^;]+)/)?.[1];
+  assert.ok(token);
+
+  const crossOriginMutation = await routeRequest(
+    new Request("https://scanner.example.com/api/auto-apply/config", {
+      method: "PUT",
+      headers: {
+        Cookie: `qvas_session=${token}`,
+        Origin: "https://evil.example",
+      },
+      body: "{}",
+    }),
+    env,
+  );
+  assert.equal(crossOriginMutation?.status, 403);
+
+  const sameOriginDisabledMutation = await routeRequest(
+    new Request("https://scanner.example.com/api/auto-apply/config", {
+      method: "PUT",
+      headers: {
+        Cookie: `qvas_session=${token}`,
+        Origin: "https://scanner.example.com",
+      },
+      body: "{}",
+    }),
+    env,
+  );
+  assert.equal(sameOriginDisabledMutation?.status, 501);
+});
