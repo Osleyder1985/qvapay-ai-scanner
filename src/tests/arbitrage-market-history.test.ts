@@ -828,6 +828,7 @@ test("excluye eventos en cuarentena de la reconciliación y los expone para obse
   assert.equal(result.events.length, 1);
   assert.equal(result.events[0]?.offerUuid, "valid");
   assert.equal(result.quarantinedEvents.length, 1);
+  assert.equal(result.futureSkewCount, 1);
   assert.equal(result.quarantinedEvents[0]?.offerUuid, "quarantined");
 });
 
