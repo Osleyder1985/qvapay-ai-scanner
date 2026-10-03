@@ -167,7 +167,10 @@ test("sanitizes upstream/internal errors from the arbitrage scan response", asyn
     assert.equal(body.error, "No se pudo completar el escaneo de arbitraje.");
     assert.equal(body.code, "ARBITRAGE_SCAN_FAILED");
     assert.equal("detail" in body, false);
-    assert.equal(JSON.stringify(body).includes("QVAPAY_INTERNAL_SECRET_OR_TOKEN"), false);
+    assert.equal(
+      JSON.stringify(body).includes("QVAPAY_INTERNAL_SECRET_OR_TOKEN"),
+      false,
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }
