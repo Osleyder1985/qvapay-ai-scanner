@@ -196,6 +196,8 @@ export async function handleArbitrageMonitorRoutes(
     if (!/^[A-Z0-9_]{2,32}$/.test(coin))
       return json({ error: "coin inválida." }, 400);
 
+    await ensureArbitrageExecutionConfigColumns(db);
+
     const now = new Date().toISOString();
     const result = await env.DB.prepare(
       `UPDATE arbitrage_monitor_config
