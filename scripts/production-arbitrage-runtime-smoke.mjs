@@ -8,11 +8,11 @@ if (!token) {
   throw new Error("AI_AUDITOR_TOKEN is required.");
 }
 
-async function getMonitor() {
+async function getJson(path) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(baseUrl + "/api/ai-audit/arbitrage-scheduler", {
+    const response = await fetch(baseUrl + path, {
       headers: { Authorization: "Bearer " + token, Accept: "application/json" },
       signal: controller.signal,
     });
@@ -21,15 +21,23 @@ async function getMonitor() {
     try {
       body = JSON.parse(text);
     } catch {
-      throw new Error("Monitor endpoint returned non-JSON response (HTTP " + response.status + ").");
+      throw new Error(path + " returned non-JSON response (HTTP " + response.status + ").");
     }
     if (!response.ok) {
-      throw new Error("Monitor endpoint returned HTTP " + response.status + ": " + JSON.stringify(body));
+      throw new Error(path + " returned HTTP " + response.status + ": " + JSON.stringify(body));
     }
     return body;
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function getMonitor() {
+  return getJson("/api/arbitrage/monitor");
+}
+
+async function getSchedulerAudit() {
+  return getJson("/api/ai-audit/arbitrage-scheduler");
 }
 
 function snapshot(body) {
@@ -64,9 +72,11 @@ function assertBase(body, label) {
 }
 
 const first = await getMonitor();
+const firstScheduler = await getSchedulerAudit();
 assertBase(first, "initial GET");
 const a = snapshot(first);
 console.log("Initial monitor state:", JSON.stringify(a, null, 2));
+console.log("Initial scheduler audit:", JSON.stringify(firstScheduler, null, 2));
 
 const second = await getMonitor();
 assertBase(second, "second GET");
@@ -80,6 +90,11 @@ if (Number.isFinite(firstDue) && firstDue > Date.now() && secondChanged) {
 }
 
 const interval = a.intervalSeconds;
+const initialSchedulerDeadline = firstScheduler?.state?.nextRunAt ?? firstScheduler?.durableObject?.nextAlarmAt ?? null;
+if (!initialSchedulerDeadline || Number.isNaN(Date.parse(initialSchedulerDeadline))) {
+  throw new Error("Scheduler audit did not expose a valid nextRunAt/nextAlarmAt.");
+}
+console.log("Authoritative scheduler deadline:", initialSchedulerDeadline);
 const deadline = Date.now() + (interval + 15) * 1000;
 let previous = b;
 let observedTransition = false;
@@ -87,8 +102,15 @@ let observedTransition = false;
 while (Date.now() < deadline) {
   await new Promise((resolve) => setTimeout(resolve, 2000));
   const current = await getMonitor();
+  const scheduler = await getSchedulerAudit();
   assertBase(current, "scheduler poll");
   const s = snapshot(current);
+  const schedulerState = scheduler?.state ?? {};
+  const schedulerDeadline = schedulerState.nextRunAt ?? scheduler?.durableObject?.nextAlarmAt ?? null;
+
+  if (schedulerState.lastError) {
+    throw new Error("Production scheduler audit reports lastError: " + schedulerState.lastError);
+  }
 
   if (s.lastError) {
     throw new Error("Production arbitrage monitor reports lastError: " + s.lastError);
@@ -134,5 +156,5 @@ console.log(JSON.stringify({
   initialScannedAt: a.scannedAt,
   completedScanId: previous.scanId,
   completedScannedAt: previous.scannedAt,
-  nextRunAt: previous.nextRunAt,
+  nextRunAt: schedulerDeadline,
 }, null, 2));
