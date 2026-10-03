@@ -57,7 +57,7 @@ export class ArbitrageMonitor {
         .bind(
           "MONITOR_RUN_FAILED",
           new Date(
-            Date.now() + (await getMonitorIntervalMs(this.env.DB))
+            Date.now() + (await getMonitorIntervalMs(this.env.DB)),
           ).toISOString(),
           new Date().toISOString(),
         )
