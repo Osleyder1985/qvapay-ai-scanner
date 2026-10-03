@@ -23,7 +23,7 @@ Estas normas se utilizan como marco de buenas prácticas; no se declara conformi
 
 ## Fuente de verdad
 
-La rama de producción del Worker es `production/cloudflare`. El flujo de promoción, checks y despliegue está definido en `docs/governance/branch-strategy.md`. La rama `main` sigue siendo la rama por defecto histórica y su alineación con producción es una decisión de gobernanza pendiente.
+La rama de producción del Worker y única fuente de verdad es `production/cloudflare`. El flujo de promoción, checks y despliegue está definido en `docs/governance/branch-strategy.md`. `main` es una rama histórica en proceso de retiro como integración y no es fuente de despliegue. La rama por defecto de GitHub debe alinearse administrativamente con `production/cloudflare` para que la baseline visible y la baseline desplegada sean la misma.
 
 ## Estructura
 
