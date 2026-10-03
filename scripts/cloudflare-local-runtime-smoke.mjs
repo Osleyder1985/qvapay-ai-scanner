@@ -167,6 +167,7 @@ writeFileSync(
     `QVAPAY_API_BASE_URL=${qvapayMockUrl}`,
     "QVAPAY_APP_ID=ci-smoke-app",
     "QVAPAY_APP_SECRET=ci-smoke-secret",
+    "AI_AUDITOR_TOKEN_HASH=" + "0".repeat(64),
     "",
   ].join("\n"),
   "utf8",
