@@ -222,6 +222,7 @@ export async function executeArbitrageCandidates(
 
   const applied: string[] = [];
   const skipped: string[] = [];
+  let spentCup = 0;
   for (const candidate of selected) {
     const result = await applyOffer(env, candidate);
     if (!result.ok) {
@@ -232,10 +233,8 @@ export async function executeArbitrageCandidates(
     recent.push(Date.now());
     slots -= 1;
     if (candidate.type.toLowerCase() === "sell") {
-      const remainingBudget = Math.max(
-        0,
-        config.cupBudget - Number(candidate.capitalRequiredFiat),
-      );
+      spentCup += Math.max(0, Number(candidate.capitalRequiredFiat) || 0);
+      const remainingBudget = Math.max(0, config.cupBudget - spentCup);
       await db
         .prepare(
           "UPDATE arbitrage_monitor_config " +
