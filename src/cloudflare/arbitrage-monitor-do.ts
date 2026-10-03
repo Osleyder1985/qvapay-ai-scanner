@@ -11,6 +11,7 @@ import {
   INTERVAL_MS,
   type ArbitrageMonitorEnv,
 } from "./arbitrage-monitor.js";
+import { logInternalError } from "./error-contract.js";
 
 interface AlarmStorage {
   setAlarm(timestamp: number): Promise<void>;
@@ -47,13 +48,14 @@ export class ArbitrageMonitor {
     try {
       await runArbitrageMonitor(this.env.DB, this.env);
     } catch (error) {
+      logInternalError("arbitrage_monitor.alarm_failed", "MONITOR_RUN_FAILED");
       await this.env.DB.prepare(
         `UPDATE arbitrage_monitor_state
          SET status = 'error', last_error = ?, next_run_at = ?, updated_at = ?
          WHERE id = 1`,
       )
         .bind(
-          error instanceof Error ? error.message : "Unknown monitor error",
+          "MONITOR_RUN_FAILED",
           new Date(Date.now() + INTERVAL_MS).toISOString(),
           new Date().toISOString(),
         )
