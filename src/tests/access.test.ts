@@ -36,22 +36,14 @@ function fakeDatabase(initial: SessionRow[] = []): SessionDatabase & {
               ) {
                 const [expiresAt, username] = values as [string, string];
                 for (const [key, row] of rows) {
-                  if (
-                    row.expiresAt <= expiresAt ||
-                    row.username === username
-                  )
+                  if (row.expiresAt <= expiresAt || row.username === username)
                     rows.delete(key);
                 }
                 return {};
               }
               if (query.startsWith("INSERT INTO auth_sessions")) {
-                const [
-                  tokenHash,
-                  username,
-                  ,
-                  expiresAt,
-                  lastSeenAt,
-                ] = values as [string, string, string, string, string];
+                const [tokenHash, username, , expiresAt, lastSeenAt] =
+                  values as [string, string, string, string, string];
                 rows.set(tokenHash, {
                   tokenHash,
                   username,
@@ -102,12 +94,9 @@ test("rejects an expired session and deletes its token", async () => {
     },
   ]);
 
-  const request = new Request(
-    "https://scanner.example.com/api/auth/session",
-    {
-      headers: { Cookie: "qvas_session=expired-token" },
-    },
-  );
+  const request = new Request("https://scanner.example.com/api/auth/session", {
+    headers: { Cookie: "qvas_session=expired-token" },
+  });
 
   const result = await requireSession(request, db);
   assert.equal(result.ok, false);
@@ -115,26 +104,17 @@ test("rejects an expired session and deletes its token", async () => {
 });
 
 test("requires an explicit matching Origin for mutations", () => {
-  const same = new Request(
-    "https://scanner.example.com/api/auth/logout",
-    {
-      method: "POST",
-      headers: { Origin: "https://scanner.example.com" },
-    },
-  );
-  const cross = new Request(
-    "https://scanner.example.com/api/auth/logout",
-    {
-      method: "POST",
-      headers: { Origin: "https://evil.example" },
-    },
-  );
-  const missing = new Request(
-    "https://scanner.example.com/api/auth/logout",
-    {
-      method: "POST",
-    },
-  );
+  const same = new Request("https://scanner.example.com/api/auth/logout", {
+    method: "POST",
+    headers: { Origin: "https://scanner.example.com" },
+  });
+  const cross = new Request("https://scanner.example.com/api/auth/logout", {
+    method: "POST",
+    headers: { Origin: "https://evil.example" },
+  });
+  const missing = new Request("https://scanner.example.com/api/auth/logout", {
+    method: "POST",
+  });
 
   assert.equal(isSameOrigin(same), true);
   assert.equal(isSameOrigin(cross), false);
@@ -152,13 +132,10 @@ test("logout invalidates the existing session token", async () => {
   const match = setCookie.match(/qvas_session=([^;]+)/);
   assert.ok(match?.[1]);
 
-  const logoutRequest = new Request(
-    "https://scanner.example.com/api/auth/logout",
-    {
-      method: "POST",
-      headers: { Cookie: `qvas_session=${match[1]}` },
-    },
-  );
+  const logoutRequest = new Request("https://scanner.example.com/api/auth/logout", {
+    method: "POST",
+    headers: { Cookie: `qvas_session=${match[1]}` },
+  });
   await destroySession(logoutRequest, db);
   assert.equal(db.rows.size, 0);
 });
