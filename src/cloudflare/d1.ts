@@ -379,10 +379,10 @@ export async function appendMarketEvents(
     eventAt: string;
     observedAt: string;
     source: string;
-    sourceEventAt: string | null;
-    sourceObservedAt: string | null;
-    timestampQuality: string;
-    quarantined: boolean;
+    sourceEventAt?: string | null;
+    sourceObservedAt?: string | null;
+    timestampQuality?: string;
+    quarantined?: boolean;
   }>,
 ): Promise<number> {
   if (!events.length) return 0;
@@ -448,9 +448,9 @@ export async function appendMarketEvents(
           event.eventAt,
           event.observedAt,
           event.source,
-          event.sourceEventAt,
-          event.sourceObservedAt,
-          event.timestampQuality,
+          event.sourceEventAt ?? event.eventAt,
+          event.sourceObservedAt ?? event.observedAt,
+          event.timestampQuality ?? "valid",
           event.quarantined ? 1 : 0,
         ),
     );
