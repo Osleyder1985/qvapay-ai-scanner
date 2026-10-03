@@ -37,6 +37,8 @@ jobs:
         run: npm run quality
       - name: Run repository governance checks
         run: npm run governance:check
+      - name: Run Cloudflare architecture contract
+        run: npm run architecture:check
 
   cloudflare-runtime-smoke:
     runs-on: ubuntu-latest
