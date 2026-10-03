@@ -307,8 +307,7 @@ export function calculateCurrencyAnalytics(
     completedOfferIdsInOrder.slice(-windowSize),
   );
   const terminalEvents = all.filter(
-    (event) =>
-      event.event === "completed" || event.event === "cancelled",
+    (event) => event.event === "completed" || event.event === "cancelled",
   );
   const terminalOfferIdsInOrder: string[] = [];
   const terminalOfferIdsSeen = new Set<string>();
@@ -325,8 +324,8 @@ export function calculateCurrencyAnalytics(
   const terminalOfferIds = new Set(
     terminalOfferIdsInOrder.slice(-windowSize),
   );
-  const windowEvents = all.filter((event) =>
-    terminalOfferIds.has(event.offerUuid),
+  const windowEvents = all.filter(
+    (event) => terminalOfferIds.has(event.offerUuid),
   );
   const completed = completedTradesFromEvents(windowEvents).filter((trade) =>
     completedOfferIds.has(trade.offerUuid),
