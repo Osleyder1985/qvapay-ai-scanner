@@ -14,6 +14,11 @@ import {
   requireSession,
   type SessionDatabase,
 } from "./access.js";
+import {
+  clearLoginRateLimit,
+  pruneLoginRateLimits,
+  recordFailedLogin,
+} from "./auth-rate-limit.js";
 
 export interface AuthRouteEnv {
   DB: SessionDatabase;
@@ -75,7 +80,44 @@ export async function handleAuthRoutes(
         password.length > 500 ||
         !credentialsMatch(env, username, password)
       ) {
+        try {
+          await pruneLoginRateLimits(env.DB);
+          const decision = await recordFailedLogin(
+            env.DB,
+            request,
+            username,
+            env.AUTH_PASSWORD,
+          );
+          if (!decision.allowed) {
+            return json(
+              { error: "Demasiados intentos fallidos. Inténtelo más tarde." },
+              429,
+              { "Retry-After": String(decision.retryAfterSeconds) },
+            );
+          }
+        } catch (error) {
+          console.error("Authentication rate limiter failed:", error);
+          return json(
+            { error: "El servicio de autenticación no está disponible." },
+            503,
+          );
+        }
         return json({ error: "Credenciales inválidas." }, 401);
+      }
+
+      try {
+        await clearLoginRateLimit(
+          env.DB,
+          request,
+          username,
+          env.AUTH_PASSWORD,
+        );
+      } catch (error) {
+        console.error("Authentication rate limiter cleanup failed:", error);
+        return json(
+          { error: "El servicio de autenticación no está disponible." },
+          503,
+        );
       }
 
       return await createSession(request, env.DB, username);
