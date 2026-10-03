@@ -29,6 +29,9 @@ jobs:
           command: deploy --tag "${{ github.sha }}" --message "GitHub commit ${{ github.sha }}"
 
       - name: Verify deployment status
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           npx wrangler deployments status --name qvapay-ai-scanner --json > deployment-status.json
