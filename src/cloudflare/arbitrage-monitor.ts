@@ -56,8 +56,6 @@ interface StateRow {
 
 const INTERVAL_MS = 10_000;
 
-const INTERVAL_MS = 10_000;
-
 function readConfig(db: D1Database): Promise<MonitorConfig> {
   return db
     .prepare(
