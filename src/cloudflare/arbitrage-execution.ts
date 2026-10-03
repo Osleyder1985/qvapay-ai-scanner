@@ -12,6 +12,7 @@ import {
   type QvaPayHttpEnv,
 } from "./qvapay-http.js";
 import type { D1Database } from "./d1.js";
+import { parseQvaPayBalance } from "./qvapay-balance.js";
 
 interface ExecutionConfig {
   autoEnabled: boolean;
@@ -95,17 +96,8 @@ async function readQusdBalance(env: QvaPayHttpEnv): Promise<number | null> {
   const response = await qvapay(env, "/v2/balance", { method: "POST" });
   if (!response.ok) return null;
   const payload = await readQvaPayPayload(response);
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    return null;
-  }
-  const record = payload as Record<string, unknown>;
-  const direct = Number(record.balance);
-  const nested =
-    record.data && typeof record.data === "object"
-      ? Number((record.data as Record<string, unknown>).balance)
-      : Number.NaN;
-  const balance = Number.isFinite(direct) ? direct : nested;
-  return Number.isFinite(balance) && balance >= 0 ? balance : null;
+  const parsed = parseQvaPayBalance(payload);
+  return parsed.ok ? parsed.balance?.balanceUsd ?? null : null;
 }
 
 async function applyOffer(
