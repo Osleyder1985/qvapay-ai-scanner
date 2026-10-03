@@ -80,7 +80,8 @@ function syncCountdownDeadline() {
     ? Date.parse(S.arbitrage.state.nextRunAt)
     : NaN;
   if (Number.isFinite(next)) {
-    arbitrageCountdownDeadline = next;
+    const maxDeadline = Date.now() + monitorIntervalSeconds() * 1000;
+    arbitrageCountdownDeadline = Math.min(next, maxDeadline);
     return;
   }
   if (!Number.isFinite(arbitrageCountdownDeadline) || arbitrageCountdownDeadline <= Date.now()) {
