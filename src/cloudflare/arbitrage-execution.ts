@@ -46,8 +46,8 @@ function nowIso(): string {
 async function readExecutionState(db: D1Database): Promise<ExecutionStateRow> {
   const row = await db
     .prepare(
-      "SELECT apply_window_json, last_action_at, last_action FROM arbitrage_execution_state " +
-        "WHERE id = 1",
+      "SELECT apply_window_json, last_action_at, last_action " +
+        "FROM arbitrage_execution_state WHERE id = 1",
     )
     .first<ExecutionStateRow>();
   return row ?? {
