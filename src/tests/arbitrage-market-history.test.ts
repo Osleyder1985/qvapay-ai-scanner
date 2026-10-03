@@ -693,7 +693,10 @@ test("separa precios de referencia por lado y conserva freshness", () => {
   assert.equal(result.referencePrices.sell?.stale, true);
   assert.equal(result.referencePrices.buy?.quality.sampleCount, 4);
   assert.equal(result.referencePrices.buy?.quality.usableSampleCount, 3);
-  assert.equal(result.referencePrices.buy?.quality.invalidFieldExcludedCount, 1);
+  assert.equal(
+    result.referencePrices.buy?.quality.invalidFieldExcludedCount,
+    1,
+  );
   assert.equal(result.referencePrices.buy?.quality.outlierExcludedCount, 0);
   assert.equal(result.referencePrices.buy?.quality.excludedSampleCount, 1);
   assert.equal(result.referencePrices.buy?.quality.belowMinimumSample, true);
