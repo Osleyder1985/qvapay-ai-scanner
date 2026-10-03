@@ -31,11 +31,7 @@ function fakeDatabase(initial: SessionRow[] = []): SessionDatabase & {
                 query.startsWith("CREATE INDEX")
               )
                 return {};
-              if (
-                query.startsWith(
-                  "DELETE FROM auth_sessions WHERE expires_at",
-                )
-              ) {
+              if (query.startsWith("DELETE FROM auth_sessions WHERE expires_at")) {
                 const [expiresAt, username] = values as [string, string];
                 for (const [key, row] of rows) {
                   if (
@@ -62,11 +58,7 @@ function fakeDatabase(initial: SessionRow[] = []): SessionDatabase & {
                 });
                 return {};
               }
-              if (
-                query.startsWith(
-                  "DELETE FROM auth_sessions WHERE token_hash",
-                )
-              ) {
+              if (query.startsWith("DELETE FROM auth_sessions WHERE token_hash")) {
                 rows.delete(String(values[0]));
                 return {};
               }
