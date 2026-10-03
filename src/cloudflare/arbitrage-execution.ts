@@ -46,6 +46,22 @@ async function ensureExecutionState(db: D1Database): Promise<void> {
     .prepare(
       "CREATE TABLE IF NOT EXISTS arbitrage_execution_state " +
         "(id INTEGER PRIMARY KEY CHECK (id = 1), apply_window_json TEXT NOT NULL DEFAULT '[]', " +
+        "last_action_at TEXT, last_action TEXT, updated_at TEXT NOT NULL)",
+    )
+    .run();
+  await db
+    .prepare(
+      "INSERT OR IGNORE INTO arbitrage_execution_state (id, updated_at) " +
+        "VALUES (1, CURRENT_TIMESTAMP)",
+    )
+    .run();
+}
+
+async function ensureExecutionState(db: D1Database): Promise<void> {
+  await db
+    .prepare(
+      "CREATE TABLE IF NOT EXISTS arbitrage_execution_state " +
+        "(id INTEGER PRIMARY KEY CHECK (id = 1), apply_window_json TEXT NOT NULL DEFAULT '[]', " +
           "last_action_at TEXT, last_action TEXT, updated_at TEXT NOT NULL)",
     )
     .run();
@@ -157,6 +173,7 @@ export async function executeArbitrageCandidates(
     };
   }
 
+  await ensureExecutionState(db);
   await ensureExecutionState(db);
   const state = await readExecutionState(db);
   const recent = recentApplyTimestamps(state.apply_window_json);
