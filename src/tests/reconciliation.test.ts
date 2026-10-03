@@ -74,7 +74,9 @@ test("detects delayed or missing counterparts without mutating any layer", () =>
   assert.deepEqual(report.operationMissingEvents, ["operation-only"]);
   assert.deepEqual(report.operationMissingFinance, ["operation-only"]);
   assert.deepEqual(report.financeMissingOperations, ["finance-only"]);
-  assert.deepEqual(report.marketHistoryUnmatchedCompletedEvents, ["event-only"]);
+  assert.deepEqual(report.marketHistoryUnmatchedCompletedEvents, [
+    "event-only",
+  ]);
 });
 
 test("quarantined events do not participate in cross-layer reconciliation", () => {
