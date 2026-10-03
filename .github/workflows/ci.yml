@@ -36,10 +36,7 @@ jobs:
       - name: Run quality gates
         run: |
           set -o pipefail
-          npm run lint
-          npx prettier --write "src/**/*.ts" "package.json" "tsconfig.json"
-          git diff -- src/cloudflare/arbitrage-monitor.ts src/cloudflare/arbitrage-monitor-routes.ts
-          exit 1
+          npm run quality 2>&1 | tee quality-output.log
       - name: Run repository governance checks
         run: npm run governance:check
       - name: Run Cloudflare architecture contract
