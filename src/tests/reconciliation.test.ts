@@ -57,8 +57,7 @@ test("reconciles complete event, operation, finance and market-history evidence"
   assert.deepEqual(report.marketHistoryUnmatchedCompletedEvents, []);
   assert.equal(report.idempotent, true);
   assert.deepEqual(report.discrepancies, []);
-},
-);
+});
 
 test("detects delayed or missing counterparts without mutating any layer", () => {
   const report = reconcileLayerState({
@@ -80,8 +79,7 @@ test("detects delayed or missing counterparts without mutating any layer", () =>
   assert.deepEqual(report.marketHistoryUnmatchedCompletedEvents, [
     "event-only",
   ]);
-},
-);
+});
 
 test("quarantined events do not participate in cross-layer reconciliation", () => {
   const quarantined = {
@@ -98,8 +96,7 @@ test("quarantined events do not participate in cross-layer reconciliation", () =
 
   assert.deepEqual(report.completedEventIds, []);
   assert.deepEqual(report.eventMissingOperations, []);
-},
-);
+});
 
 test("reconciliation output is deterministic across input order", () => {
   const first = reconcileLayerState({
@@ -158,7 +155,7 @@ test("emits machine-readable gap categories with source IDs and timestamps", () 
     report.discrepancies.map((item) => item.category),
     [
       "conflicting_identity",
-    "event_missing_operation",
+      "event_missing_operation",
       "finance_missing_operation",
       "market_history_unmatched_event",
       "operation_missing_event",
@@ -180,8 +177,7 @@ test("emits machine-readable gap categories with source IDs and timestamps", () 
         item.timestamps.every((value) => Number.isFinite(Date.parse(value))),
     ),
   );
-},
-);
+});
 
 test("detects conflicting operation identity", () => {
   const report = reconcileLayerState({
@@ -238,5 +234,4 @@ test("detects duplicate identities without mutating source layers", () => {
     2,
   );
   assert.deepEqual(second, first);
-},
-);
+});
