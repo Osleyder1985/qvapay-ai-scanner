@@ -25,6 +25,7 @@ import { handleArbitrageHistoryRoutes } from "./arbitrage-history-routes.js";
 import { handleArbitrageRoutes } from "./arbitrage-routes.js";
 import { ingestArbitrageWebhook } from "./arbitrage-event-ingestion.js";
 import { handleArbitrageMonitorRoutes } from "./arbitrage-monitor-routes.js";
+import { logInternalError, publicError } from "./error-contract.js";
 
 interface DurableObjectNamespaceLike {
   idFromName(name: string): unknown;
@@ -228,10 +229,9 @@ export async function routeRequest(
       const response = await handleApi(request, env);
       if (response) return response;
     } catch (error) {
-      return json(
-        { error: "No se pudo completar la solicitud." },
-        errorStatus(error),
-      );
+      const code = errorStatus(error) === 500 ? "UPSTREAM_CONTRACT_ERROR" : "INTERNAL_ERROR";
+      logInternalError("worker.api_request_failed", code);
+      return json(publicError(code, { requestPath: url.pathname }), errorStatus(error));
     }
   }
 
