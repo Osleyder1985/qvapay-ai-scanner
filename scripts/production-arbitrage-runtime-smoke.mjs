@@ -71,6 +71,21 @@ function assertBase(body, label) {
   }
 }
 
+function schedulerDeadline(body) {
+  const stateDeadline = body?.state?.nextRunAt ?? null;
+  const alarmDeadline = body?.durableObject?.nextAlarmAt ?? null;
+  const candidates = [stateDeadline, alarmDeadline]
+    .filter(Boolean)
+    .map((value) => ({ value, ms: Date.parse(value) }))
+    .filter((entry) => Number.isFinite(entry.ms) && entry.ms > Date.now())
+    .sort((left, right) => left.ms - right.ms);
+  return candidates[0]?.value ?? null;
+}
+
+async function sleep(ms) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 const first = await getMonitor();
 const firstScheduler = await getSchedulerAudit();
 assertBase(first, "initial GET");
@@ -90,10 +105,23 @@ if (Number.isFinite(firstDue) && firstDue > Date.now() && secondChanged) {
 }
 
 const interval = a.intervalSeconds;
-const initialSchedulerDeadline = firstScheduler?.state?.nextRunAt ?? firstScheduler?.durableObject?.nextAlarmAt ?? null;
-if (!initialSchedulerDeadline || Number.isNaN(Date.parse(initialSchedulerDeadline))) {
-  throw new Error("Scheduler audit did not expose a valid nextRunAt/nextAlarmAt.");
+let initialSchedulerDeadline = schedulerDeadline(firstScheduler);
+const bootstrapDeadline = Date.now() + 90_000;
+
+while (!initialSchedulerDeadline && Date.now() < bootstrapDeadline) {
+  console.log("Waiting for the scheduled cron to bootstrap the Durable Object alarm...");
+  await sleep(2000);
+  const scheduler = await getSchedulerAudit();
+  if (scheduler?.state?.lastError) {
+    throw new Error("Production scheduler audit reports lastError during bootstrap: " + scheduler.state.lastError);
+  }
+  initialSchedulerDeadline = schedulerDeadline(scheduler);
 }
+
+if (!initialSchedulerDeadline) {
+  throw new Error("Scheduler audit did not expose a future nextRunAt/nextAlarmAt after the cron bootstrap window.");
+}
+
 console.log("Authoritative scheduler deadline:", initialSchedulerDeadline);
 const authoritativeDueMs = Date.parse(initialSchedulerDeadline);
 const deadline = Math.max(Date.now() + 15_000, authoritativeDueMs + 75_000);
@@ -102,14 +130,14 @@ let observedTransition = false;
 let finalSchedulerDeadline = initialSchedulerDeadline;
 
 while (Date.now() < deadline) {
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+  await sleep(2000);
   const current = await getMonitor();
   const scheduler = await getSchedulerAudit();
   assertBase(current, "scheduler poll");
   const s = snapshot(current);
   const schedulerState = scheduler?.state ?? {};
-  const schedulerDeadline = schedulerState.nextRunAt ?? scheduler?.durableObject?.nextAlarmAt ?? null;
-  if (schedulerDeadline) finalSchedulerDeadline = schedulerDeadline;
+  const schedulerNext = schedulerDeadline(scheduler);
+  if (schedulerNext) finalSchedulerDeadline = schedulerNext;
 
   if (schedulerState.lastError) {
     throw new Error("Production scheduler audit reports lastError: " + schedulerState.lastError);
