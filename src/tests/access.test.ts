@@ -153,7 +153,7 @@ test("central Cloudflare gate protects private routes and mutations", async () =
       idFromName: () => "id",
       get: () => ({ fetch: async () => new Response("{}") }),
     },
-  };
+  } as unknown as Parameters<typeof routeRequest>[1];
 
   const health = await routeRequest(
     new Request("https://scanner.example.com/api/health"),
