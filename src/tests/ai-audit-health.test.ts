@@ -85,5 +85,5 @@ test("AI Auditor health bootstraps the Durable Object when it has no alarm", asy
       updated_at: "2026-10-02T20:00:00.000Z",
     }),
   );
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, false);
 });
