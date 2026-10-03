@@ -368,7 +368,9 @@ export async function runArbitrageMonitor(
     await saveState(db, {
       status: "error",
       lastError: message,
-      nextRunAt: new Date(Date.now() + config.intervalSeconds * 1000).toISOString(),
+      nextRunAt: new Date(
+        Date.now() + config.intervalSeconds * 1000,
+      ).toISOString(),
     });
     return { ok: false, error: message };
   }
