@@ -69,7 +69,7 @@ function env(state: Record<string, unknown> | null) {
 
 test("AI Auditor health is degraded when monitor state is missing", async () => {
   const result = await auditHealth(env(null));
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, false);
 });
 
 test("AI Auditor health bootstraps the Durable Object when it has no alarm", async () => {
