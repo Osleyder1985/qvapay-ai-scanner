@@ -360,6 +360,10 @@ export interface MarketEventRow {
   event_at: string;
   observed_at: string;
   source: string;
+  source_event_at: string | null;
+  source_observed_at: string | null;
+  timestamp_quality: string;
+  quarantined: number;
 }
 
 export async function appendMarketEvents(
