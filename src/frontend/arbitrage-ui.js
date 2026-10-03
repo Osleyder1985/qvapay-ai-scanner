@@ -86,8 +86,7 @@ function syncCountdownDeadline() {
     ? Date.parse(S.arbitrage.state.nextRunAt)
     : NaN;
   if (Number.isFinite(next)) {
-    const maxDeadline = Date.now() + monitorIntervalSeconds() * 1000;
-    arbitrageCountdownDeadline = Math.min(next, maxDeadline);
+    arbitrageCountdownDeadline = next;
     return;
   }
   if (!Number.isFinite(arbitrageCountdownDeadline) || arbitrageCountdownDeadline <= Date.now()) {
@@ -215,7 +214,7 @@ async function saveArbitrageConfig() {
     return;
   }
   try {
-    await api("/api/arbitrage/monitor", {
+    const saved = await api("/api/arbitrage/monitor", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -228,8 +227,32 @@ async function saveArbitrageConfig() {
         cupBudget,
       }),
     });
-    await fetchArbitrageMonitor({ silent: false });
+    // Reflect the saved cadence immediately instead of waiting for the next
+    // Durable Object alarm to update the state row.
+    S.arbitrage = {
+      ...(S.arbitrage || {}),
+      config: {
+        ...(S.arbitrage?.config || {}),
+        minMarginPercent: saved.minMarginPercent,
+        coin: saved.coin,
+        intervalSeconds: saved.intervalSeconds,
+        autoEnabled: saved.autoEnabled,
+        maxBuyRate: saved.maxBuyRate,
+        minSellRate: saved.minSellRate,
+        cupBudget: saved.cupBudget,
+      },
+      state: {
+        ...(S.arbitrage?.state || {}),
+        nextRunAt: saved.nextRunAt,
+        status: "scheduled",
+        lastError: null,
+      },
+    };
+    arbitrageCountdownDeadline = Date.parse(saved.nextRunAt);
     nav();
+    drawArbitrage();
+    toast("Configuración de arbitraje guardada · intervalo " + intervalSeconds + " s", "success");
+    await fetchArbitrageMonitor({ silent: true });
   } catch (e) {
     toast("No se pudo actualizar el monitor: " + errorText(e), "error");
   }
@@ -248,8 +271,9 @@ function monitorTick() {
   const seconds = nextSeconds();
   drawArbitrage();
   if (seconds === 0) {
-    // Keep the configured interval while the request is in flight.
-    arbitrageCountdownDeadline = Date.now() + monitorIntervalSeconds() * 1000;
+    // Do not manufacture a new 10-second deadline while the server is running.
+    // The next deadline must come from the persisted monitor state.
+    arbitrageCountdownDeadline = null;
     void fetchArbitrageMonitor({ silent: true });
   }
 }

@@ -87,10 +87,12 @@ export async function handleAccountRoutes(
         ? parseQvaPayP2PCollection(ownOffersPayload, 0, 1)
         : null;
       // La identidad de usuario se toma del contexto P2P propio; /v2/info identifica la aplicación.
+      const firstOwnOffer = ownCollection?.data?.[0] ?? null;
+      // /p2p?my=1 includes offers where the authenticated account is either
+      // the owner (User) or the peer (Peer). If a peer exists, that Peer is
+      // the authenticated account; otherwise User is the owner account.
       const ownerUser = parseP2POwnerIdentity(
-        ownCollection?.data?.[0]?.User ??
-          ownCollection?.data?.[0]?.Peer ??
-          null,
+        firstOwnOffer?.Peer ?? firstOwnOffer?.User ?? null,
       );
       const contract = evaluateQvaPayAccountContract({
         identityStatus: info.status,
