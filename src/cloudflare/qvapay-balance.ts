@@ -17,28 +17,13 @@ export interface QvaPayBalanceParseResult {
 }
 
 /**
- * Valida las formas documentadas y compatibles de POST /v2/balance.
+ * Valida exclusivamente las formas documentadas de POST /v2/balance:
+ * { "balance": number } o { "message": string, "data": number }.
  *
- * El campo representa el balance actual en USD. Se aceptan también valores
- * numéricos primitivos y el envelope genérico { message, data }.
+ * El campo representa el balance actual en USD. No se aceptan strings,
+ * booleanos, valores no finitos, valores negativos ni envelopes anidados.
  */
 export function parseQvaPayBalance(payload: unknown): QvaPayBalanceParseResult {
-  if (typeof payload === "number" || typeof payload === "string") {
-    const value = typeof payload === "number" ? payload : Number(payload.trim());
-    if (!Number.isFinite(value) || value < 0) {
-      return {
-        ok: false,
-        balance: null,
-        reason: "El balance recibido no es un número USD válido.",
-      };
-    }
-    return {
-      ok: true,
-      balance: { balanceUsd: value },
-      reason: null,
-    };
-  }
-
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return {
       ok: false,
@@ -62,12 +47,7 @@ export function parseQvaPayBalance(payload: unknown): QvaPayBalanceParseResult {
     typeof record.message === "string" &&
     Object.prototype.hasOwnProperty.call(record, "data")
   ) {
-    const data = record.data;
-    if (data && typeof data === "object" && !Array.isArray(data)) {
-      value = (data as Record<string, unknown>).balance;
-    } else {
-      value = data;
-    }
+    value = record.data;
   } else {
     return {
       ok: false,
