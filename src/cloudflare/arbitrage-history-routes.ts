@@ -13,6 +13,7 @@ import {
 } from "./d1.js";
 import {
   calculateCurrencyAnalytics,
+  reconcileMarketEventLifecycle,
   type NormalizedMarketEvent,
 } from "../backend/arbitrage-market-history.js";
 import { reconcileArbitrageHistory } from "./arbitrage-event-ingestion.js";
@@ -75,7 +76,9 @@ export async function handleArbitrageHistoryRoutes(
   }
 
   const rows = await listMarketEventsForAnalytics(env.DB, coin, windowSize);
-  const analytics = calculateCurrencyAnalytics(rows.map(toEvent), coin, {
+  const events = rows.map(toEvent);
+  const lifecycle = reconcileMarketEventLifecycle(events);
+  const analytics = calculateCurrencyAnalytics(events, coin, {
     windowSize,
   });
 
@@ -83,5 +86,9 @@ export async function handleArbitrageHistoryRoutes(
     coin,
     analytics,
     eventCount: rows.length,
+    lifecycle: {
+      invalidTransitionCount: lifecycle.violations.length,
+      invalidTransitions: lifecycle.violations,
+    },
   });
 }
