@@ -26,20 +26,47 @@ function fakeDatabase(initial: SessionRow[] = []): SessionDatabase & {
         bind(...values: unknown[]) {
           return {
             async run() {
-              if (query.startsWith("CREATE TABLE") || query.startsWith("CREATE INDEX")) return {};
-              if (query.startsWith("DELETE FROM auth_sessions WHERE expires_at")) {
+              if (
+                query.startsWith("CREATE TABLE") ||
+                query.startsWith("CREATE INDEX")
+              )
+                return {};
+              if (
+                query.startsWith(
+                  "DELETE FROM auth_sessions WHERE expires_at",
+                )
+              ) {
                 const [expiresAt, username] = values as [string, string];
                 for (const [key, row] of rows) {
-                  if (row.expiresAt <= expiresAt || row.username === username) rows.delete(key);
+                  if (
+                    row.expiresAt <= expiresAt ||
+                    row.username === username
+                  )
+                    rows.delete(key);
                 }
                 return {};
               }
               if (query.startsWith("INSERT INTO auth_sessions")) {
-                const [tokenHash, username, , expiresAt, lastSeenAt] = values as [string,string,string,string,string];
-                rows.set(tokenHash, { tokenHash, username, expiresAt, lastSeenAt });
+                const [
+                  tokenHash,
+                  username,
+                  ,
+                  expiresAt,
+                  lastSeenAt,
+                ] = values as [string, string, string, string, string];
+                rows.set(tokenHash, {
+                  tokenHash,
+                  username,
+                  expiresAt,
+                  lastSeenAt,
+                });
                 return {};
               }
-              if (query.startsWith("DELETE FROM auth_sessions WHERE token_hash")) {
+              if (
+                query.startsWith(
+                  "DELETE FROM auth_sessions WHERE token_hash",
+                )
+              ) {
                 rows.delete(String(values[0]));
                 return {};
               }
@@ -53,7 +80,12 @@ function fakeDatabase(initial: SessionRow[] = []): SessionDatabase & {
             async first<T = unknown>() {
               if (query.includes("SELECT username, expires_at")) {
                 const row = rows.get(String(values[0]));
-                return row ? ({ username: row.username, expiresAt: row.expiresAt } as T) : null;
+                return row
+                  ? ({
+                      username: row.username,
+                      expiresAt: row.expiresAt,
+                    } as T)
+                  : null;
               }
               return null;
             },
@@ -65,16 +97,21 @@ function fakeDatabase(initial: SessionRow[] = []): SessionDatabase & {
 }
 
 test("rejects an expired session and deletes its token", async () => {
-  const db = fakeDatabase([{
-    tokenHash: "expired-hash",
-    username: "admin",
-    expiresAt: "2026-10-03T03:59:59.000Z",
-    lastSeenAt: "2026-10-03T03:00:00.000Z",
-  }]);
+  const db = fakeDatabase([
+    {
+      tokenHash: "expired-hash",
+      username: "admin",
+      expiresAt: "2026-10-03T03:59:59.000Z",
+      lastSeenAt: "2026-10-03T03:00:00.000Z",
+    },
+  ]);
 
-  const request = new Request("https://scanner.example.com/api/auth/session", {
-    headers: { Cookie: "qvas_session=expired-token" },
-  });
+  const request = new Request(
+    "https://scanner.example.com/api/auth/session",
+    {
+      headers: { Cookie: "qvas_session=expired-token" },
+    },
+  );
 
   const result = await requireSession(request, db);
   assert.equal(result.ok, false);
@@ -82,17 +119,26 @@ test("rejects an expired session and deletes its token", async () => {
 });
 
 test("requires an explicit matching Origin for mutations", () => {
-  const same = new Request("https://scanner.example.com/api/auth/logout", {
-    method: "POST",
-    headers: { Origin: "https://scanner.example.com" },
-  });
-  const cross = new Request("https://scanner.example.com/api/auth/logout", {
-    method: "POST",
-    headers: { Origin: "https://evil.example" },
-  });
-  const missing = new Request("https://scanner.example.com/api/auth/logout", {
-    method: "POST",
-  });
+  const same = new Request(
+    "https://scanner.example.com/api/auth/logout",
+    {
+      method: "POST",
+      headers: { Origin: "https://scanner.example.com" },
+    },
+  );
+  const cross = new Request(
+    "https://scanner.example.com/api/auth/logout",
+    {
+      method: "POST",
+      headers: { Origin: "https://evil.example" },
+    },
+  );
+  const missing = new Request(
+    "https://scanner.example.com/api/auth/logout",
+    {
+      method: "POST",
+    },
+  );
 
   assert.equal(isSameOrigin(same), true);
   assert.equal(isSameOrigin(cross), false);
@@ -110,10 +156,13 @@ test("logout invalidates the existing session token", async () => {
   const match = setCookie.match(/qvas_session=([^;]+)/);
   assert.ok(match?.[1]);
 
-  const logoutRequest = new Request("https://scanner.example.com/api/auth/logout", {
-    method: "POST",
-    headers: { Cookie: `qvas_session=${match[1]}` },
-  });
+  const logoutRequest = new Request(
+    "https://scanner.example.com/api/auth/logout",
+    {
+      method: "POST",
+      headers: { Cookie: `qvas_session=${match[1]}` },
+    },
+  );
   await destroySession(logoutRequest, db);
   assert.equal(db.rows.size, 0);
 });
