@@ -6,7 +6,10 @@
  * @status active
  */
 
-import { parseQvaPayUserIdentity, type QvaPayUserIdentity } from "./qvapay-user.js";
+import {
+  parseQvaPayUserIdentity,
+  type QvaPayUserIdentity,
+} from "./qvapay-user.js";
 import { parseQvaPayBalance } from "./qvapay-balance.js";
 
 export type QvaPayAccountIntegrationStatus = "verified" | "degraded" | "failed";
