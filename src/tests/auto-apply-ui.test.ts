@@ -1,19 +1,13 @@
-/**
- * @file auto-apply-ui.test.ts
- * @path src/tests/auto-apply-ui.test.ts
- * @description Evita que la UI ofrezca escritura para Auto-Apply mientras el backend la rechaza.
- * @module tests
- * @status test
- */
-
-import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { test } from "node:test";
+import { join } from "node:path";
+import test from "node:test";
+import assert from "node:assert/strict";
 
-test("does not render unavailable Auto-Apply configuration controls", () => {
-  const source = readFileSync("src/frontend/pages.js", "utf8");
+const root = join(process.cwd(), "src", "frontend");
 
-  assert.equal(source.includes("Configuración no disponible en Cloudflare"), true);
-  assert.equal(source.includes("No se pueden guardar reglas"), true);
-  assert.equal(source.includes("Guardar reglas"), false);
+test("Auto-Apply UI does not expose unavailable configuration controls", () => {
+  const source = readFileSync(join(root, "pages.js"), "utf8");
+  assert.match(source, /Configuración no disponible en Cloudflare/);
+  assert.match(source, /No se pueden guardar reglas/);
+  assert.doesNotMatch(source, /Guardar reglas/);
 });
