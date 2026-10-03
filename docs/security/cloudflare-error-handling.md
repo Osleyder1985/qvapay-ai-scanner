@@ -34,3 +34,8 @@ El Worker separa los diagnósticos internos de los mensajes que atraviesan la fr
 El cliente recibe solamente el código y el mensaje público. Para investigar un incidente se utilizan los eventos sanitizados del Worker y la evidencia de CI/Cloudflare. Esto evita convertir los endpoints públicos en un canal de exfiltración de mensajes de runtime.
 
 La sanitización es fail-closed: si un estado persistente contiene un valor histórico que no pertenece al catálogo, la API lo sustituye por MONITOR_RUN_FAILED en lugar de devolver el texto histórico.
+
+
+## Trazabilidad
+
+Issue #136: contrato de errores públicos y sanitización de diagnósticos verificados mediante CI.
