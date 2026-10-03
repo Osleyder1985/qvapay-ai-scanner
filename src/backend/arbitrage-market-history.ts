@@ -429,7 +429,10 @@ function referencePriceStatistics(
         trades.length > 1
           ? new Date(newestEventAt!).getTime() -
             new Date(
-              trades.map((trade) => trade.completedAt).sort().at(0)!,
+              trades
+                .map((trade) => trade.completedAt)
+                .sort()
+                .at(0)!,
             ).getTime()
           : 0,
       belowMinimumSample: candidateSampleCount < minimumSampleCount,
