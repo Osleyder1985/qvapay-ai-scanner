@@ -37,6 +37,10 @@ function event(
     eventAt: "2026-10-02T11:59:00.000Z",
     observedAt: "2026-10-02T11:59:01.000Z",
     source: "stream",
+    sourceEventAt: "2026-10-02T11:59:00Z",
+    sourceObservedAt: "2026-10-02T11:59:01Z",
+    timestampQuality: "valid",
+    quarantined: false,
     ...overrides,
   };
 }
@@ -94,6 +98,28 @@ test("deduplica el mismo lifecycle entre webhook y reconciliación", () => {
   assert.ok(webhook);
   assert.ok(reconciliation);
   assert.equal(deduplicateMarketEvents([webhook, reconciliation]).length, 1);
+});
+
+test("prefiere una observación válida frente a una futura en cuarentena", () => {
+  const quarantined = event({
+    offerUuid: "clock-skew",
+    observedAt: "2026-10-02T12:05:00Z",
+    eventAt: "2026-10-02T12:15:00Z",
+    timestampQuality: "future_skew",
+    quarantined: true,
+  });
+  const valid = event({
+    offerUuid: "clock-skew",
+    observedAt: "2026-10-02T12:01:00Z",
+    eventAt: "2026-10-02T12:00:00Z",
+    timestampQuality: "valid",
+    quarantined: false,
+  });
+
+  const result = deduplicateMarketEvents([quarantined, valid]);
+  assert.equal(result.length, 1);
+  assert.equal(result[0]?.quarantined, false);
+  assert.equal(result[0]?.eventAt, "2026-10-02T12:00:00Z");
 });
 
 test("conserva el payload completado de la observación más reciente", () => {
@@ -738,6 +764,112 @@ test("mantiene unknown cuando faltan cantidad o receive", () => {
   assert.equal(result.amount, null);
   assert.equal(result.receive, null);
   assert.equal(result.rate, null);
+});
+
+test("detecta y conserva un evento futuro dentro de la tolerancia", () => {
+  const result = normalizeMarketEvent(
+    {
+      offerUuid: "future-within-tolerance",
+      event: "completed",
+      coin: "BANK_CUP",
+      amount: 10,
+      receive: 10000,
+      eventAt: "2026-10-02T12:04:00Z",
+      observedAt: "2026-10-02T12:00:00Z",
+      source: "webhook",
+    },
+    NOW,
+  );
+  assert.ok(result);
+  assert.equal(result.timestampQuality, "valid");
+  assert.equal(result.quarantined, false);
+  assert.equal(result.sourceEventAt, "2026-10-02T12:04:00Z");
+  assert.equal(result.sourceObservedAt, "2026-10-02T12:00:00Z");
+});
+
+test("cuarentena eventos muy futuros sin alterar su timestamp de origen", () => {
+  const result = normalizeMarketEvent(
+    {
+      offerUuid: "future-severe",
+      event: "completed",
+      coin: "BANK_CUP",
+      amount: 10,
+      receive: 10000,
+      eventAt: "2026-10-02T12:10:00Z",
+      observedAt: "2026-10-02T12:00:00Z",
+      source: "webhook",
+    },
+    NOW,
+  );
+  assert.ok(result);
+  assert.equal(result.timestampQuality, "future_skew");
+  assert.equal(result.quarantined, true);
+  assert.equal(result.sourceEventAt, "2026-10-02T12:10:00Z");
+  assert.equal(result.eventAt, "2026-10-02T12:10:00.000Z");
+});
+
+test("excluye eventos en cuarentena de la reconciliación y los expone para observabilidad", () => {
+  const result = reconcileMarketEventLifecycle([
+    event({
+      offerUuid: "quarantined",
+      event: "completed",
+      eventAt: "2026-10-02T12:10:00Z",
+      observedAt: "2026-10-02T12:00:00Z",
+      timestampQuality: "future_skew",
+      quarantined: true,
+    }),
+    event({
+      offerUuid: "valid",
+      event: "completed",
+      eventAt: "2026-10-02T11:59:00Z",
+      observedAt: "2026-10-02T12:00:00Z",
+    }),
+  ]);
+  assert.equal(result.events.length, 1);
+  assert.equal(result.events[0]?.offerUuid, "valid");
+  assert.equal(result.quarantinedEvents.length, 1);
+  assert.equal(result.quarantinedEvents[0]?.offerUuid, "quarantined");
+});
+
+test("rechaza timestamps malformados y conserva el fallback determinista", () => {
+  const result = normalizeMarketEvent(
+    {
+      offerUuid: "malformed",
+      event: "completed",
+      coin: "BANK_CUP",
+      amount: 10,
+      receive: 10000,
+      eventAt: "not-a-date",
+      updatedAt: "2026-10-02T11:00:00Z",
+      observedAt: "2026-10-02T11:00:01Z",
+      source: "webhook",
+    },
+    NOW,
+  );
+  assert.ok(result);
+  assert.equal(result.eventAt, "2026-10-02T11:00:00.000Z");
+  assert.equal(result.timestampQuality, "valid");
+  assert.equal(result.quarantined, false);
+});
+
+test("rechaza eventos sin ningún timestamp utilizable", () => {
+  assert.equal(
+    normalizeMarketEvent(
+      {
+        offerUuid: "missing-timestamp",
+        event: "completed",
+        coin: "BANK_CUP",
+        amount: 10,
+        receive: 10000,
+        eventAt: "not-a-date",
+        updatedAt: "also-not-a-date",
+        createdAt: "",
+        source: "webhook",
+      },
+      NOW,
+    ),
+    null,
+  );
 });
 
 test("no marca como stale un evento observado en el futuro", () => {

@@ -27,6 +27,8 @@ export interface RawMarketEvent {
   source: unknown;
 }
 
+export type MarketEventTimestampQuality = "valid" | "future_skew";
+
 export interface NormalizedMarketEvent {
   dedupeKey: string;
   eventId: string | null;
@@ -42,6 +44,10 @@ export interface NormalizedMarketEvent {
   eventAt: string;
   observedAt: string;
   source: MarketEventSource;
+  sourceEventAt: string | null;
+  sourceObservedAt: string | null;
+  timestampQuality: MarketEventTimestampQuality;
+  quarantined: boolean;
 }
 
 export interface CompletedTrade {
@@ -74,6 +80,8 @@ export interface CurrencyExecutionAnalytics {
   newestObservedAt: string | null;
   stale: boolean;
 }
+
+export const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
 
 const EVENTS = new Set<MarketEventType>([
   "created",
@@ -108,6 +116,7 @@ export interface MarketLifecycleViolation {
 export interface MarketLifecycleResolution {
   events: NormalizedMarketEvent[];
   violations: MarketLifecycleViolation[];
+  quarantinedEvents: NormalizedMarketEvent[];
 }
 
 function text(value: unknown): string {
@@ -162,6 +171,8 @@ export function normalizeMarketEvent(
   const event = normalizeEventName(raw.event ?? raw.status);
   const coin = text(raw.coin).toUpperCase();
   const source = text(raw.source).toLowerCase() as MarketEventSource;
+  const sourceEventAt = text(raw.eventAt) || null;
+  const sourceObservedAt = text(raw.observedAt) || null;
   const eventAt =
     timestamp(raw.eventAt) ??
     timestamp(raw.updatedAt) ??
@@ -185,6 +196,12 @@ export function normalizeMarketEvent(
   const rate = amount !== null && receive !== null ? receive / amount : null;
 
   const eventId = text(raw.eventId) || null;
+  const eventTimestampMs = new Date(eventAt).getTime();
+  const observedTimestampMs = new Date(observedAt).getTime();
+  const timestampQuality: MarketEventTimestampQuality =
+    eventTimestampMs > observedTimestampMs + CLOCK_SKEW_TOLERANCE_MS
+      ? "future_skew"
+      : "valid";
   // La identidad del ciclo de vida prevalece para la analítica.
   // Los IDs de evento pueden diferir entre webhook, stream y reconciliación.
   const dedupeKey = stableKey([offerUuid, event]);
@@ -204,6 +221,10 @@ export function normalizeMarketEvent(
     eventAt,
     observedAt,
     source,
+    sourceEventAt,
+    sourceObservedAt,
+    timestampQuality,
+    quarantined: timestampQuality === "future_skew",
   };
 }
 
@@ -228,11 +249,13 @@ export function deduplicateMarketEvents(
     // fecha de creación. Para el resto de estados, conservar la observación
     // más reciente, que es la que puede contener el payload final corregido.
     const shouldReplace =
-      event.event === "created"
-        ? eventAt < currentEventAt ||
-          (eventAt === currentEventAt && observedAt > currentObservedAt)
-        : observedAt > currentObservedAt ||
-          (observedAt === currentObservedAt && eventAt > currentEventAt);
+      current.quarantined !== event.quarantined
+        ? current.quarantined
+        : event.event === "created"
+          ? eventAt < currentEventAt ||
+            (eventAt === currentEventAt && observedAt > currentObservedAt)
+          : observedAt > currentObservedAt ||
+            (observedAt === currentObservedAt && eventAt > currentEventAt);
 
     if (shouldReplace) canonical.set(lifecycleKey, event);
   }
@@ -288,6 +311,7 @@ export function reconcileMarketEventLifecycle(
 
   const accepted: NormalizedMarketEvent[] = [];
   const violations: MarketLifecycleViolation[] = [];
+  const quarantinedEvents = canonical.filter((event) => event.quarantined);
   for (const offerEvents of byOffer.values()) {
     offerEvents.sort(
       (a, b) =>
@@ -297,6 +321,7 @@ export function reconcileMarketEventLifecycle(
     );
     let previous: NormalizedMarketEvent | null = null;
     for (const event of offerEvents) {
+      if (event.quarantined) continue;
       if (previous && !LIFECYCLE_TRANSITIONS[previous.event].has(event.event)) {
         violations.push({
           offerUuid: event.offerUuid,
@@ -326,7 +351,7 @@ export function reconcileMarketEventLifecycle(
       a.offerUuid.localeCompare(b.offerUuid) ||
       a.event.localeCompare(b.event),
   );
-  return { events: accepted, violations };
+  return { events: accepted, violations, quarantinedEvents };
 }
 
 export function completedTradesFromEvents(

@@ -271,6 +271,7 @@ test("D1 analytics query scopes terminal operations by coin and window", async (
   await listMarketEventsForAnalytics(db, "bank_cup", 500);
 
   assert.ok(queries[0]?.includes("event IN ('completed', 'cancelled')"));
+  assert.ok(queries[0]?.includes("quarantined = 0"));
   assert.ok(!queries[0]?.includes("ABS(rate - (receive / amount))"));
   assert.ok(queries[0]?.includes("GROUP BY offer_uuid"));
   assert.ok(queries[0]?.includes("ORDER BY MAX(event_at) DESC"));
