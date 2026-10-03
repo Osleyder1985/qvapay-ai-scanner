@@ -73,10 +73,6 @@ export interface CurrencyReferencePriceStatistics {
   newestEventAt: string | null;
   newestObservedAt: string | null;
   stale: boolean;
-  referencePrices: {
-    buy: CurrencyReferencePriceStatistics | null;
-    sell: CurrencyReferencePriceStatistics | null;
-  };
 }
 
 export interface CurrencyExecutionAnalytics {
@@ -98,6 +94,10 @@ export interface CurrencyExecutionAnalytics {
   newestEventAt: string | null;
   newestObservedAt: string | null;
   stale: boolean;
+  referencePrices: {
+    buy: CurrencyReferencePriceStatistics | null;
+    sell: CurrencyReferencePriceStatistics | null;
+  };
 }
 
 export const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
