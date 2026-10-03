@@ -13,7 +13,7 @@
     "dev": "npm run build && npm start",
     "test": "npm run build && node --test dist/tests/*.test.js",
     "lint": "tsc --noEmit",
-    "format:check": "prettier --write \"src/**/*.ts\" \"package.json\" \"tsconfig.json\"; git diff -- src/backend/reconciliation.ts src/tests/reconciliation.test.ts",
+    "format:check": "prettier --check \"src/**/*.ts\" \"package.json\" \"tsconfig.json\"",
     "quality": "npm run lint && npm run format:check && npm test",
     "deploy:cloudflare": "npm run build && npx wrangler deploy",
     "dev:cloudflare": "npx wrangler dev",
