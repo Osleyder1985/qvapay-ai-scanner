@@ -70,186 +70,15 @@ interface StateRow {
  * before the corresponding D1 migrations were applied. Migrations remain the
  * canonical schema; this idempotent safety net writes only when tables are absent.
  */
-export async function ensureArbitrageMonitorSchema(
-  db: D1Database,
-): Promise<void> {
-  // D1 schema migrations are canonical. The runtime repair path must not issue
-  // DDL on every health/monitor read because DDL inside a batch can make an
-  // otherwise healthy production monitor fail with a generic 503.
-  const tableResult = await db
-    .prepare(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?, ?)",
-    )
-    .bind(
-      "arbitrage_monitor_config",
-      "arbitrage_monitor_state",
-      "market_events",
-    )
-    .all<{ name: string }>();
-  const tables = new Set(tableResult.results.map((row) => row.name));
-
-  if (!tables.has("arbitrage_monitor_config")) {
-    await db
-      .prepare(
-        `CREATE TABLE arbitrage_monitor_config (
-          id INTEGER PRIMARY KEY CHECK (id = 1),
-          enabled INTEGER NOT NULL DEFAULT 1,
-          min_margin_percent REAL NOT NULL DEFAULT 5,
-          coin TEXT NOT NULL DEFAULT 'BANK_CUP',
-          interval_seconds INTEGER NOT NULL DEFAULT 10 CHECK (interval_seconds BETWEEN 5 AND 300),
-          auto_enabled INTEGER NOT NULL DEFAULT 0 CHECK (auto_enabled IN (0,1)),
-          max_buy_rate REAL,
-          min_sell_rate REAL,
-          cup_budget REAL NOT NULL DEFAULT 0 CHECK (cup_budget >= 0),
-          schedule_enabled INTEGER NOT NULL DEFAULT 0,
-          timezone TEXT NOT NULL DEFAULT 'UTC',
-          start_local TEXT,
-          end_local TEXT,
-          active_days_json TEXT NOT NULL DEFAULT '[1,2,3,4,5,6,7]',
-          updated_at TEXT NOT NULL
-        )`,
-      )
-      .run();
-  }
-
-  if (!tables.has("arbitrage_monitor_state")) {
-    await db
-      .prepare(
-        `CREATE TABLE arbitrage_monitor_state (
-          id INTEGER PRIMARY KEY CHECK (id = 1),
-          status TEXT NOT NULL DEFAULT 'starting',
-          scan_id TEXT,
-          scanned_at TEXT,
-          next_run_at TEXT,
-          last_success_at TEXT,
-          last_error TEXT,
-          payload_json TEXT,
-          updated_at TEXT NOT NULL
-        )`,
-      )
-      .run();
-  }
-
-  if (!tables.has("market_events")) {
-    await db
-      .prepare(
-        `CREATE TABLE market_events (
-          dedupe_key TEXT PRIMARY KEY,
-          event_id TEXT,
-          offer_uuid TEXT NOT NULL,
-          event TEXT NOT NULL,
-          status TEXT,
-          side TEXT,
-          coin TEXT NOT NULL,
-          amount REAL,
-          available_amount REAL,
-          receive REAL,
-          rate REAL,
-          event_at TEXT NOT NULL,
-          observed_at TEXT NOT NULL,
-          source TEXT NOT NULL CHECK (source IN ('stream', 'webhook', 'reconciliation')),
-          source_event_at TEXT,
-          source_observed_at TEXT,
-          timestamp_quality TEXT NOT NULL DEFAULT 'valid',
-          quarantined INTEGER NOT NULL DEFAULT 0,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )`,
-      )
-      .run();
-  }
-
-  // Index creation is deliberately sequential and idempotent as well.
-  for (const statement of [
-    `CREATE INDEX IF NOT EXISTS idx_arbitrage_monitor_state_scanned_at
-       ON arbitrage_monitor_state (scanned_at DESC)`,
-    `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_at
-       ON market_events (coin, event_at DESC)`,
-    `CREATE INDEX IF NOT EXISTS idx_market_events_offer_uuid
-       ON market_events (offer_uuid)`,
-    `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event
-       ON market_events (coin, event)`,
-    `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_completion
-       ON market_events (coin, event, event_at DESC, observed_at DESC, offer_uuid)`,
-  ]) {
-    await db.prepare(statement).run();
-  }
-
-  await db
-    .prepare(
-      `INSERT OR IGNORE INTO arbitrage_monitor_config
-       (id, enabled, min_margin_percent, coin, interval_seconds,
-        schedule_enabled, timezone, active_days_json, updated_at)
-       VALUES (1, 1, 5, 'BANK_CUP', 10, 0, 'UTC',
-               '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
-    )
-    .run();
-  await db
-    .prepare(
-      `INSERT OR IGNORE INTO arbitrage_monitor_state
-       (id, status, updated_at)
-       VALUES (1, 'starting', CURRENT_TIMESTAMP)`,
-    )
-    .run();
-}
-
-export async function ensureArbitrageExecutionConfigColumns(
-  db: D1Database,
-): Promise<void> {
-  let columns: { results: Array<{ name: string }> };
-  try {
-    columns = await db
-      .prepare('PRAGMA table_info("arbitrage_monitor_config")')
-      .all<{ name: string }>();
-  } catch {
-    return;
-  }
-  const existingColumns = new Set(
-    columns.results.map((column) => String(column.name)),
-  );
-  const missing = [
-    [
-      "auto_enabled",
-      "ALTER TABLE arbitrage_monitor_config ADD COLUMN auto_enabled INTEGER NOT NULL DEFAULT 0",
-    ],
-    [
-      "max_buy_rate",
-      "ALTER TABLE arbitrage_monitor_config ADD COLUMN max_buy_rate REAL",
-    ],
-    [
-      "min_sell_rate",
-      "ALTER TABLE arbitrage_monitor_config ADD COLUMN min_sell_rate REAL",
-    ],
-    [
-      "cup_budget",
-      "ALTER TABLE arbitrage_monitor_config ADD COLUMN cup_budget REAL NOT NULL DEFAULT 0",
-    ],
-  ] as const;
-  for (const [column, statement] of missing) {
-    if (existingColumns.has(column)) continue;
-    await db.prepare(statement).run();
-  }
-}
-
 async function readConfig(db: D1Database): Promise<MonitorConfig> {
-  let row: MonitorRow | null;
-  try {
-    row = await db
-      .prepare(
-        `SELECT enabled, min_margin_percent, coin, interval_seconds,
-                auto_enabled, max_buy_rate, min_sell_rate, cup_budget,
-                schedule_enabled, timezone, start_local, end_local, active_days_json
-         FROM arbitrage_monitor_config WHERE id = 1`,
-      )
-      .first<MonitorRow>();
-  } catch {
-    row = await db
-      .prepare(
-        `SELECT enabled, min_margin_percent, coin, schedule_enabled, timezone,
-              start_local, end_local, active_days_json
-         FROM arbitrage_monitor_config WHERE id = 1`,
-      )
-      .first<MonitorRow>();
-  }
+  const row = await db
+    .prepare(
+      `SELECT enabled, min_margin_percent, coin, interval_seconds,
+              auto_enabled, max_buy_rate, min_sell_rate, cup_budget,
+              schedule_enabled, timezone, start_local, end_local, active_days_json
+       FROM arbitrage_monitor_config WHERE id = 1`,
+    )
+    .first<MonitorRow>();
 
   if (!row) {
     return {
@@ -392,7 +221,6 @@ export async function runArbitrageMonitor(
   db: D1Database,
   env: ArbitrageMonitorEnv,
 ): Promise<{ ok: boolean; payload?: unknown; error?: string }> {
-  await ensureArbitrageMonitorSchema(db);
   const config = await readConfig(db);
   if (!config.enabled) {
     await saveState(db, { status: "disabled", lastError: null });
@@ -494,7 +322,6 @@ export async function monitorState(db: D1Database): Promise<{
   config: MonitorConfig;
   state: StateRow | null;
 }> {
-  await ensureArbitrageMonitorSchema(db);
   const config = await readConfig(db);
   const state = await db
     .prepare(
@@ -507,7 +334,6 @@ export async function monitorState(db: D1Database): Promise<{
 }
 
 export async function getMonitorIntervalMs(db: D1Database): Promise<number> {
-  await ensureArbitrageMonitorSchema(db);
   const config = await readConfig(db);
   return config.intervalSeconds * 1000;
 }
