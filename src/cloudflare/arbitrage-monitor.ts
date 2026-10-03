@@ -65,7 +65,6 @@ interface StateRow {
   updated_at: string;
 }
 
-
 /**
  * Repairs the monitor/runtime event schema if a deployment reached the Worker
  * before the corresponding D1 migrations were applied. Migrations remain the
@@ -102,10 +101,13 @@ export async function ensureArbitrageMonitorSchema(
   }
 
   await db.prepare(
-    "CREATE TABLE IF NOT EXISTS arbitrage_execution_state (id INTEGER PRIMARY KEY CHECK (id = 1), apply_window_json TEXT NOT NULL DEFAULT '[]', last_action_at TEXT, last_action TEXT, updated_at TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS arbitrage_execution_state " +
+      "(id INTEGER PRIMARY KEY CHECK (id = 1), apply_window_json TEXT NOT NULL DEFAULT '[]', " +
+      "last_action_at TEXT, last_action TEXT, updated_at TEXT NOT NULL)",
   ).run();
   await db.prepare(
-    "INSERT OR IGNORE INTO arbitrage_execution_state (id, updated_at) VALUES (1, CURRENT_TIMESTAMP)",
+    "INSERT OR IGNORE INTO arbitrage_execution_state (id, updated_at) " +
+      "VALUES (1, CURRENT_TIMESTAMP)",
   ).run();
 
   const results = await db.batch([
@@ -192,8 +194,11 @@ export async function ensureArbitrageMonitorSchema(
   const seedResults = await db.batch([
     db.prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_config
-       (id, enabled, min_margin_percent, coin, interval_seconds, auto_enabled, max_buy_rate, min_sell_rate, cup_budget, schedule_enabled, timezone, active_days_json, updated_at)
-       VALUES (1, 1, 5, 'BANK_CUP', 10, 0, NULL, NULL, 0, 0, 'UTC', '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
+       (id, enabled, min_margin_percent, coin, interval_seconds, auto_enabled,
+        max_buy_rate, min_sell_rate, cup_budget, schedule_enabled, timezone,
+        active_days_json, updated_at)
+       VALUES (1, 1, 5, 'BANK_CUP', 10, 0, NULL, NULL, 0, 0, 'UTC',
+               '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
     ),
     db.prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_state
@@ -211,8 +216,9 @@ async function readConfig(db: D1Database): Promise<MonitorConfig> {
   try {
     row = await db
       .prepare(
-        `SELECT enabled, min_margin_percent, coin, interval_seconds, schedule_enabled, timezone,
-              start_local, end_local, active_days_json
+        `SELECT enabled, min_margin_percent, coin, interval_seconds,
+                auto_enabled, max_buy_rate, min_sell_rate, cup_budget,
+                schedule_enabled, timezone, start_local, end_local, active_days_json
          FROM arbitrage_monitor_config WHERE id = 1`,
       )
       .first<MonitorRow>();
@@ -331,7 +337,8 @@ async function saveState(
 ): Promise<void> {
   const current = await db
     .prepare(
-      "SELECT scan_id, scanned_at, next_run_at, last_success_at, last_error, payload_json FROM arbitrage_monitor_state WHERE id = 1",
+      "SELECT scan_id, scanned_at, next_run_at, last_success_at, " +
+        "last_error, payload_json FROM arbitrage_monitor_state WHERE id = 1",
     )
     .first<StateRow>();
   await db
@@ -378,7 +385,9 @@ export async function runArbitrageMonitor(
   }
 
   const request = new Request(
-    `https://internal/api/arbitrage/scan?minMarginPercent=${encodeURIComponent(config.minMarginPercent)}&coin=${encodeURIComponent(config.coin)}`,
+    `https://internal/api/arbitrage/scan?minMarginPercent=${encodeURIComponent(
+      config.minMarginPercent,
+    )}&coin=${encodeURIComponent(config.coin)}`,
     { method: "GET" },
   );
   const response = await handleArbitrageRoutes(
@@ -409,9 +418,15 @@ export async function runArbitrageMonitor(
     return { ok: false, error: message };
   }
 
-  let execution = { applied: [] as string[], skipped: [] as string[], message: "Ejecución automática desactivada." };
+  let execution = {
+    applied: [] as string[],
+    skipped: [] as string[],
+    message: "Ejecución automática desactivada.",
+  };
   if (config.autoEnabled) {
-    const offers = Array.isArray(payload.marketOffers) ? payload.marketOffers : [];
+    const offers = Array.isArray(payload.marketOffers)
+      ? payload.marketOffers
+      : [];
     execution = await executeArbitrageCandidates(
       db,
       env,
@@ -461,7 +476,8 @@ export async function monitorState(db: D1Database): Promise<{
   const config = await readConfig(db);
   const state = await db
     .prepare(
-      "SELECT status, scan_id, scanned_at, next_run_at, last_success_at, last_error, payload_json, updated_at FROM arbitrage_monitor_state WHERE id = 1",
+      "SELECT status, scan_id, scanned_at, next_run_at, last_success_at, " +
+        "last_error, payload_json, updated_at FROM arbitrage_monitor_state WHERE id = 1",
     )
     .first<StateRow>();
   return { config, state };
