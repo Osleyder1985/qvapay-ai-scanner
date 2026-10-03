@@ -194,8 +194,7 @@ export async function executeArbitrageCandidates(
   for (const candidate of sellQusdCandidates) {
     if (selected.length >= slots) break;
     const capital = Number(candidate.capitalRequiredFiat);
-    if (!Number.isFinite(capital) || cupPlanned + capital > config.cupBudget)
-      continue;
+    if (!Number.isFinite(capital) || cupPlanned + capital > config.cupBudget) continue;
     selected.push(candidate);
     cupPlanned += capital;
   }
