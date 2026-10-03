@@ -58,6 +58,24 @@ for (const relative of required) {
   if (!fs.existsSync(path.join(root, relative))) failures.push(`Archivo de gobernanza ausente: ${relative}`);
 }
 
+const branchStrategyPath = path.join(root, "docs/governance/branch-strategy.md");
+const ciWorkflowPath = path.join(root, ".github/workflows/ci.yml");
+if (!fs.existsSync(branchStrategyPath)) {
+  failures.push("Política de ramas ausente: docs/governance/branch-strategy.md");
+} else {
+  const branchStrategy = fs.readFileSync(branchStrategyPath, "utf8");
+  if (!branchStrategy.includes("production/cloudflare") || !branchStrategy.includes("fuente única de verdad")) {
+    failures.push("La política de ramas no declara production/cloudflare como fuente única de verdad.");
+  }
+}
+if (!fs.existsSync(ciWorkflowPath)) {
+  failures.push("Workflow CI ausente: .github/workflows/ci.yml");
+} else {
+  const ciWorkflow = fs.readFileSync(ciWorkflowPath, "utf8");
+  if (!ciWorkflow.includes("github.ref == 'refs/heads/production/cloudflare'")) {
+    failures.push("El despliegue de Cloudflare no está restringido explícitamente a production/cloudflare.");
+  }
+}
 const openapi = fs.readFileSync(path.join(root, "docs/api/openapi.yaml"), "utf8");
 for (const key of ["openapi:", "info:", "paths:"]) {
   if (!new RegExp(`^\\s*${key}`, "m").test(openapi)) failures.push(`OpenAPI sin sección requerida: ${key}`);
