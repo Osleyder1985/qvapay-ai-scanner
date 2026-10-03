@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  checks: read
 
 concurrency:
   group: cloudflare-production
@@ -20,6 +21,33 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Wait for Cloudflare Workers Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in {1..60}; do
+            response="$(curl --fail-with-body --silent --show-error               -H "Accept: application/vnd.github+json"               -H "Authorization: Bearer $GH_TOKEN"               -H "X-GitHub-Api-Version: 2026-03-10"               "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=Workers%20Builds%3A%20qvapay-ai-scanner")"
+
+            status="$(printf '%s' "$response" | jq -r '.check_runs[0].status // "missing"')"
+            conclusion="$(printf '%s' "$response" | jq -r '.check_runs[0].conclusion // ""')"
+
+            if [ "$status" = "completed" ]; then
+              if [ "$conclusion" != "success" ]; then
+                echo "Cloudflare Workers Build failed with conclusion: $conclusion"
+                exit 1
+              fi
+              echo "Cloudflare Workers Build completed successfully for $GITHUB_SHA."
+              exit 0
+            fi
+
+            echo "Waiting for Cloudflare Workers Build for $GITHUB_SHA (attempt $attempt/60; status=$status)."
+            sleep 10
+          done
+
+          echo "Timed out waiting for the Cloudflare Workers Build check."
+          exit 1
 
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v4
