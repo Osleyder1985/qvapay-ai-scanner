@@ -280,7 +280,10 @@ export function reconcileLayerState(input: {
     }
   }
 
-  const nowMs = timestamp(input.now ?? new Date()) ?? Date.now();
+  const nowMs =
+    input.now instanceof Date
+      ? input.now.getTime()
+      : timestamp(input.now ?? new Date()) ?? Date.now();
   const staleAfterMs = input.staleAfterMs ?? STALE_LIFECYCLE_THRESHOLD_MS;
   const nonTerminal = new Set(["created", "reopened", "applied", "paid"]);
   const latestByOffer = new Map<string, NormalizedMarketEvent>();
