@@ -95,7 +95,7 @@ export async function ensureArbitrageMonitorSchema(
         end_local TEXT,
         active_days_json TEXT NOT NULL DEFAULT '[1,2,3,4,5,6,7]',
         updated_at TEXT NOT NULL
-      )`,
+        )`,
     ),
       db.prepare(
         `CREATE TABLE IF NOT EXISTS arbitrage_monitor_state (
@@ -108,7 +108,7 @@ export async function ensureArbitrageMonitorSchema(
         last_error TEXT,
         payload_json TEXT,
         updated_at TEXT NOT NULL
-      )`,
+        )`,
     ),
       db.prepare(
         `CREATE TABLE IF NOT EXISTS market_events (
@@ -131,7 +131,7 @@ export async function ensureArbitrageMonitorSchema(
         timestamp_quality TEXT NOT NULL DEFAULT 'valid',
         quarantined INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )`,
+        )`,
     ),
       db.prepare(
         `CREATE INDEX IF NOT EXISTS idx_arbitrage_monitor_state_scanned_at
