@@ -122,6 +122,9 @@ Cada estadística agregada y cada referencia por lado incluye `quality` con:
 - `sampleCount`: observaciones de ciclo `completed` consideradas;
 - `usableSampleCount`: operaciones válidas que realmente entraron en la estadística;
 - `missingFieldCount`: cantidad de campos `amount`, `receive` o `rate` ausentes entre las observaciones candidatas;
+- `invalidFieldExcludedCount`: observaciones excluidas por datos numéricos incompletos o inválidos;
+- `lifecycleCompleteCount`: operaciones completadas utilizables con estado terminal observado;
+- `timeSpanMs`: duración entre la primera y la última operación utilizable;
 - `excludedSampleCount`: observaciones candidatas excluidas de la estadística;
 - `staleObservationCount`: observaciones cuyo `observed_at` supera `maxAgeMs`;
 - `coverageStartAt` / `coverageEndAt`: intervalo temporal cubierto por las operaciones utilizables;
