@@ -22,16 +22,6 @@ function errorStatus(error: unknown): number {
     : 502;
 }
 
-function upstreamMessage(payload: unknown): string | null {
-  if (!payload || typeof payload !== "object") return null;
-  const record = payload as JsonRecord;
-  for (const key of ["error", "message", "detail", "reason"]) {
-    const value = record[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
-  }
-  return null;
-}
-
 /**
  * Atiende las rutas de cuenta e identidad de la aplicación autenticada.
  */
@@ -92,10 +82,6 @@ export async function handleAccountRoutes(
     try {
       const upstream = await qvapay(env, "/v2/info", { method: "POST" });
       const payload = await readQvaPayPayload(upstream);
-      const record =
-        payload && typeof payload === "object" && !Array.isArray(payload)
-          ? (payload as JsonRecord)
-          : null;
       const identity = parseQvaPayApplicationIdentity(payload);
 
       return json(
