@@ -168,7 +168,9 @@ export function reconcileLayerState(input: {
         [uuid],
         operationEntries
           .filter(([entryId]) => entryId === uuid)
-          .map(([, entry]) => text(entry.payload.updated_at ?? entry.payload.created_at)),
+          .map(([, entry]) =>
+            text(entry.payload.updated_at ?? entry.payload.created_at),
+          ),
       );
     }
   }
