@@ -12,7 +12,7 @@ async function getMonitor() {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(baseUrl + "/api/arbitrage/monitor", {
+    const response = await fetch(baseUrl + "/api/ai-audit/arbitrage-scheduler", {
       headers: { Authorization: "Bearer " + token, Accept: "application/json" },
       signal: controller.signal,
     });
