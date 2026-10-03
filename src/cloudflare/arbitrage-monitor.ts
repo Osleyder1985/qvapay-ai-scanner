@@ -191,48 +191,51 @@ async function readConfig(db: D1Database): Promise<MonitorConfig> {
       )
       .first<MonitorRow>();
   } catch {
-    row = (await db
+    row = await db
       .prepare(
         `SELECT enabled, min_margin_percent, coin, schedule_enabled, timezone,
               start_local, end_local, active_days_json
          FROM arbitrage_monitor_config WHERE id = 1`,
       )
-      .first<MonitorRow>()) as MonitorRow | null;
+      .first<MonitorRow>();
   }
 
-  if (row) {
-      if (!row) {
-        return {
-          enabled: false,
-          minMarginPercent: 5,
-          coin: "BANK_CUP",
-          scheduleEnabled: false,
-          timezone: "UTC",
-          startLocal: null,
-          endLocal: null,
-          activeDays: [1, 2, 3, 4, 5, 6, 7],
-        };
-      }
-      let activeDays = [1, 2, 3, 4, 5, 6, 7];
-      try {
-        const parsed = JSON.parse(row.active_days_json);
-        if (Array.isArray(parsed))
-          activeDays = parsed.map(Number).filter((n) => n >= 1 && n <= 7);
-      } catch {
-        /* use all days */
-      }
-      return {
-        enabled: row.enabled === 1,
-        minMarginPercent: Number(row.min_margin_percent),
-        coin: String(row.coin).toUpperCase(),
-        intervalSeconds: Math.min(300, Math.max(5, Number(row.interval_seconds) || 10)),
-        scheduleEnabled: row.schedule_enabled === 1,
-        timezone: row.timezone || "UTC",
-        startLocal: row.start_local,
-        endLocal: row.end_local,
-        activeDays,
-      };
-    });
+  if (!row) {
+    return {
+      enabled: false,
+      minMarginPercent: 5,
+      coin: "BANK_CUP",
+      intervalSeconds: 10,
+      scheduleEnabled: false,
+      timezone: "UTC",
+      startLocal: null,
+      endLocal: null,
+      activeDays: [1, 2, 3, 4, 5, 6, 7],
+    };
+  }
+
+  let activeDays = [1, 2, 3, 4, 5, 6, 7];
+  try {
+    const parsed = JSON.parse(row.active_days_json);
+    if (Array.isArray(parsed))
+      activeDays = parsed.map(Number).filter((n) => n >= 1 && n <= 7);
+  } catch {
+    /* use all days */
+  }
+  return {
+    enabled: row.enabled === 1,
+    minMarginPercent: Number(row.min_margin_percent),
+    coin: String(row.coin).toUpperCase(),
+    intervalSeconds: Math.min(
+      300,
+      Math.max(5, Number(row.interval_seconds) || 10),
+    ),
+    scheduleEnabled: row.schedule_enabled === 1,
+    timezone: row.timezone || "UTC",
+    startLocal: row.start_local,
+    endLocal: row.end_local,
+    activeDays,
+  };
 }
 
 function localParts(
