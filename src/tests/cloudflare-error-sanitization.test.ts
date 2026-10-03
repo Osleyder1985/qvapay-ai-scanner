@@ -10,7 +10,7 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import { publicError } from "../cloudflare/error-contract.js";
 import { handleDiagnosticsRoutes } from "../cloudflare/diagnostics-routes.js";
-import { handleArbitrageMonitorRoutes } from "../cloudflare/arbitrage-monitor-routes.js";
+import { handleArbitrageMonitorRoutes, sanitizeMonitorError } from "../cloudflare/arbitrage-monitor-routes.js";
 
 function json(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
@@ -92,4 +92,10 @@ test("monitor configuration failures expose only a stable public code", async ()
   assert.equal(body.error, "La configuración del monitor no está disponible.");
   assert.equal(body.code, "MONITOR_CONFIG_ROW_MISSING");
   assert.equal(JSON.stringify(body).includes("id=1"), false);
+});
+
+test("legacy monitor error text is normalized to the public monitor failure code", () => {
+  assert.equal(sanitizeMonitorError("database password=secret"), "MONITOR_RUN_FAILED");
+  assert.equal(sanitizeMonitorError("MONITOR_RUN_FAILED"), "MONITOR_RUN_FAILED");
+  assert.equal(sanitizeMonitorError(null), null);
 });
