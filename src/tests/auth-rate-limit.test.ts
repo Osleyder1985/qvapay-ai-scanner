@@ -97,9 +97,9 @@ function fakeDatabase(): SessionDatabase & { rows: Map<string, Row> } {
             async first<T = unknown>() {
               if (query.includes("SELECT blocked_until")) {
                 const row = rows.get(String(values[0]));
-                return (row
-                  ? { blockedUntil: row.blockedUntil }
-                  : null) as T | null;
+                return (
+                  row ? { blockedUntil: row.blockedUntil } : null
+                ) as T | null;
               }
               return null;
             },
