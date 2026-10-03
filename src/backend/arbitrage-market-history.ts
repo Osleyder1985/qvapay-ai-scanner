@@ -336,8 +336,11 @@ function percentile(sorted: number[], p: number): number | null {
 
 function referencePriceStatistics(
   trades: CompletedTrade[],
+  candidateEvents: NormalizedMarketEvent[],
+  allEvents: NormalizedMarketEvent[],
   now: Date,
-  maxAgeMs?: number,
+  maxAgeMs: number | undefined,
+  minimumSampleSize: number,
 ): CurrencyReferencePriceStatistics | null {
   if (!trades.length) return null;
 
@@ -401,6 +404,14 @@ function referencePriceStatistics(
       Number.isFinite(newestObservedMs)
         ? nowMs - newestObservedMs > maxAgeMs
         : false,
+    quality: buildStatisticsQuality(
+      trades,
+      candidateEvents,
+      allEvents,
+      now,
+      maxAgeMs,
+      minimumSampleSize,
+    ),
   };
 }
 
@@ -544,80 +555,6 @@ function buildStatisticsQuality(
     outlierExcludedCount: 0,
     minimumSampleSize,
     belowMinimumSample: trades.length < minimumSampleSize,
-  };
-}
-
-function referencePriceStatistics(
-  trades: CompletedTrade[],
-  candidateEvents: NormalizedMarketEvent[],
-  allEvents: NormalizedMarketEvent[],
-  now: Date,
-  maxAgeMs: number | undefined,
-  minimumSampleSize: number,
-): CurrencyReferencePriceStatistics | null {
-  if (!trades.length) return null;
-  const rates = trades
-    .map((trade) => trade.rate)
-    .filter((rate) => Number.isFinite(rate) && rate > 0)
-    .sort((a, b) => a - b);
-  const volume = trades.reduce(
-    (sum, trade) =>
-      Number.isFinite(trade.amount) && trade.amount > 0
-        ? sum + trade.amount
-        : sum,
-    0,
-  );
-  const weightedValue = trades.reduce(
-    (sum, trade) =>
-      Number.isFinite(trade.rate) &&
-      trade.rate > 0 &&
-      Number.isFinite(trade.amount) &&
-      trade.amount > 0
-        ? sum + trade.rate * trade.amount
-        : sum,
-    0,
-  );
-  const newestEventAt = trades.map((trade) => trade.completedAt).sort().at(-1);
-  const newestObservedAt = trades.map((trade) => trade.observedAt).sort().at(-1);
-  const newestObservedMs = newestObservedAt
-    ? new Date(newestObservedAt).getTime()
-    : NaN;
-  const nowMs = now.getTime();
-
-  return {
-    sampleCount: trades.length,
-    tradedVolumeQusd: volume,
-    minRate: rates.at(0) ?? null,
-    maxRate: rates.at(-1) ?? null,
-    meanRate:
-      rates.length > 0
-        ? rates.reduce((sum, rate) => sum + rate, 0) / rates.length
-        : null,
-    medianRate: percentile(rates, 0.5),
-    percentiles: {
-      p10: percentile(rates, 0.1),
-      p25: percentile(rates, 0.25),
-      p50: percentile(rates, 0.5),
-      p75: percentile(rates, 0.75),
-      p90: percentile(rates, 0.9),
-    },
-    vwap: volume > 0 ? weightedValue / volume : null,
-    newestEventAt: newestEventAt ?? null,
-    newestObservedAt: newestObservedAt ?? null,
-    stale:
-      maxAgeMs !== undefined &&
-      Number.isFinite(nowMs) &&
-      Number.isFinite(newestObservedMs)
-        ? nowMs - newestObservedMs > maxAgeMs
-        : false,
-    quality: buildStatisticsQuality(
-      trades,
-      candidateEvents,
-      allEvents,
-      now,
-      maxAgeMs,
-      minimumSampleSize,
-    ),
   };
 }
 
