@@ -7,6 +7,7 @@
  */
 
 import { d1Health, type D1Database } from "./d1.js";
+import { logInternalError, publicError } from "./error-contract.js";
 
 type JsonResponse = (payload: unknown, status?: number) => Response;
 
@@ -23,13 +24,8 @@ export async function handleDiagnosticsRoutes(
     try {
       return json(await d1Health(env.DB));
     } catch (error) {
-      return json(
-        {
-          ok: false,
-          error: "D1 no está disponible o no tiene el esquema aplicado.",
-        },
-        503,
-      );
+      logInternalError("diagnostics.d1_health_failed", "D1_UNAVAILABLE");
+      return json({ ok: false, ...publicError("D1_UNAVAILABLE") }, 503);
     }
   }
 
