@@ -307,7 +307,10 @@ export async function handleAiAuditRoutes(
       let payload: Record<string, unknown> = {};
       if (current.state?.payload_json) {
         try {
-          payload = JSON.parse(current.state.payload_json) as Record<string, unknown>;
+          payload = JSON.parse(current.state.payload_json) as Record<
+            string,
+            unknown
+          >;
         } catch {
           payload = {};
         }
@@ -331,8 +334,12 @@ export async function handleAiAuditRoutes(
           updatedAt: current.state?.updated_at ?? null,
         },
         snapshot: {
-          marketOffers: Array.isArray(payload.marketOffers) ? payload.marketOffers.length : 0,
-          opportunities: Array.isArray(payload.opportunities) ? payload.opportunities.length : 0,
+          marketOffers: Array.isArray(payload.marketOffers)
+            ? payload.marketOffers.length
+            : 0,
+          opportunities: Array.isArray(payload.opportunities)
+            ? payload.opportunities.length
+            : 0,
         },
       });
     }
