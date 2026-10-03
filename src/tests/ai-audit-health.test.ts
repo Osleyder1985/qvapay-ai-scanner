@@ -113,7 +113,7 @@ test("AI Auditor health and monitor state are strictly read-only", async () => {
   assert.ok(queries.length > 0);
   assert.ok(
     queries.every(
-      (query) => !/\\b(CREATE|ALTER|DROP|REINDEX|VACUUM)\\b/i.test(query),
+      (query) => !/\b(CREATE|ALTER|DROP|REINDEX|VACUUM)\b/i.test(query),
     ),
   );
 });
