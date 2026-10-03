@@ -7,7 +7,7 @@
 
 ## Regla general
 
-El repositorio contiene documentación reproducible, no artefactos de interfaz de un asistente. No se deben almacenar referencias internas de ChatGPT ni formatos de renderizado como `cite...`, `url...` o `entity...`.
+El repositorio contiene documentación reproducible, no artefactos de interfaz de un asistente. No se deben almacenar referencias internas de ChatGPT ni formatos de renderizado propios de una interfaz de asistente.
 
 Las fuentes externas se registran como referencias Markdown normales o en una bibliografía controlada. Cada afirmación normativa o técnica dependiente de una fuente externa debe permitir que otra persona localice la fuente sin depender del historial de una conversación.
 
@@ -19,7 +19,7 @@ Las fuentes externas se registran como referencias Markdown normales o en una bi
 
 ## Formatos prohibidos
 
-- Tokens `cite...`, `url...`, `entity...`.
+- Marcadores internos de citación de herramientas de asistencia.
 - Identificadores internos de herramientas o conversaciones.
 - Citas cuyo destino sólo exista dentro de una interfaz de asistente.
 
