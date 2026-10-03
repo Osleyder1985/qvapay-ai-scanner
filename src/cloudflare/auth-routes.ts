@@ -89,6 +89,12 @@ export async function handleAuthRoutes(
             env.AUTH_PASSWORD,
           );
           if (!decision.allowed) {
+            console.warn(
+              JSON.stringify({
+                event: "auth.login_rate_limited",
+                retryAfterSeconds: decision.retryAfterSeconds,
+              }),
+            );
             return json(
               { error: "Demasiados intentos fallidos. Inténtelo más tarde." },
               429,
