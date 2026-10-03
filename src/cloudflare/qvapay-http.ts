@@ -41,11 +41,22 @@ export function qvapayHeaders(env: QvaPayHttpEnv): Record<string, string> {
 /**
  * Lee JSON de una respuesta QvaPay sin propagar errores de parseo.
  */
-export async function readQvaPayPayload(response: Response): Promise<unknown> {
+export async function readQvaPayPayload(
+  response: Response,
+  options: { scalarAsBalance?: boolean } = {},
+): Promise<unknown> {
   const text = await response.text();
   if (!text) return {};
   try {
-    return JSON.parse(text);
+    const parsed = JSON.parse(text);
+    if (
+      options.scalarAsBalance &&
+      (typeof parsed === "number" || typeof parsed === "string") &&
+      Number.isFinite(Number(parsed))
+    ) {
+      return { balance: Number(parsed) };
+    }
+    return parsed;
   } catch {
     return { message: text };
   }
