@@ -10,6 +10,7 @@ let arbitrageMonitorTimer = null;
 let arbitrageLastScanId = null;
 let arbitrageLoading = false;
 let arbitrageCountdownDeadline = null;
+let arbitrageServerClockOffsetMs = 0;
 
 function monitorIntervalSeconds() {
   const configured = Number(S.arbitrage?.config?.intervalSeconds ?? 10);
@@ -97,7 +98,14 @@ function syncCountdownDeadline() {
 function nextSeconds() {
   syncCountdownDeadline();
   return Number.isFinite(arbitrageCountdownDeadline)
-    ? Math.max(0, Math.ceil((arbitrageCountdownDeadline - Date.now()) / 1000))
+    ? Math.max(
+        0,
+        Math.ceil(
+          (arbitrageCountdownDeadline -
+            (Date.now() + arbitrageServerClockOffsetMs)) /
+            1000,
+        ),
+      )
     : null;
 }
 
@@ -109,7 +117,9 @@ function drawArbitrage() {
   const countdown = nextSeconds();
   const state = S.arbitrage?.state;
   if (status) {
-    if (state?.status === "error") {
+    if (state?.status === "scanning") {
+      status.textContent = "MONITOR SERVER · escaneando mercado…";
+    } else if (state?.status === "error") {
       const detail = state?.lastError ? " · " + state.lastError : "";
       status.textContent = "⚠ ERROR" + detail + " · reintentando en " + (countdown ?? 10) + " s";
     } else if (countdown !== null) {
@@ -122,7 +132,11 @@ function drawArbitrage() {
   }
 
   const countdownBox = $("arbitrageCountdown");
-  if (countdownBox) countdownBox.textContent = countdown === null ? "—" : String(countdown);
+  if (countdownBox) {
+    countdownBox.textContent =
+      countdown === null && state?.status === "scanning" ? "0" :
+      countdown === null ? "—" : String(countdown);
+  }
 }
 
 async function fetchArbitrageMonitor({ silent = true } = {}) {
@@ -131,6 +145,12 @@ async function fetchArbitrageMonitor({ silent = true } = {}) {
   try {
     const previousScan = S.arbitrage?.state?.scanId;
     const data = await api("/api/arbitrage/monitor");
+    if (data.serverNow) {
+      const serverNow = Date.parse(data.serverNow);
+      if (Number.isFinite(serverNow)) {
+        arbitrageServerClockOffsetMs = serverNow - Date.now();
+      }
+    }
     S.arbitrage = data;
     syncCountdownDeadline();
     if (data.state?.scanId && data.state.scanId !== previousScan) {
