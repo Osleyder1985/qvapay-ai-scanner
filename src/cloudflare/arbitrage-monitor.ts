@@ -82,8 +82,8 @@ export async function ensureArbitrageMonitorSchema(
     !names.has("market_events")
   ) {
     const results = await db.batch([
+        db.prepare(
       db.prepare(
-    db.prepare(
       `CREATE TABLE IF NOT EXISTS arbitrage_monitor_config (
         id INTEGER PRIMARY KEY CHECK (id = 1),
         enabled INTEGER NOT NULL DEFAULT 1,
@@ -98,7 +98,7 @@ export async function ensureArbitrageMonitorSchema(
         updated_at TEXT NOT NULL
       )`,
     ),
-    db.prepare(
+      db.prepare(
       `CREATE TABLE IF NOT EXISTS arbitrage_monitor_state (
         id INTEGER PRIMARY KEY CHECK (id = 1),
         status TEXT NOT NULL DEFAULT 'starting',
@@ -111,7 +111,7 @@ export async function ensureArbitrageMonitorSchema(
         updated_at TEXT NOT NULL
       )`,
     ),
-    db.prepare(
+      db.prepare(
       `CREATE TABLE IF NOT EXISTS market_events (
         dedupe_key TEXT PRIMARY KEY,
         event_id TEXT,
@@ -134,27 +134,27 @@ export async function ensureArbitrageMonitorSchema(
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       )`,
     ),
-    db.prepare(
+      db.prepare(
       `CREATE INDEX IF NOT EXISTS idx_arbitrage_monitor_state_scanned_at
        ON arbitrage_monitor_state (scanned_at DESC)`,
     ),
-    db.prepare(
+      db.prepare(
       `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_at
        ON market_events (coin, event_at DESC)`,
     ),
-    db.prepare(
+      db.prepare(
       `CREATE INDEX IF NOT EXISTS idx_market_events_offer_uuid
        ON market_events (offer_uuid)`,
     ),
-    db.prepare(
+      db.prepare(
       `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event
        ON market_events (coin, event)`,
     ),
-    db.prepare(
+      db.prepare(
       `CREATE INDEX IF NOT EXISTS idx_market_events_coin_event_completion
        ON market_events (coin, event, event_at DESC, observed_at DESC, offer_uuid)`,
     ),
-    ]);
+      ]);
     if (results.some((result) => result.success !== true)) {
       throw new Error("ARBITRAGE_RUNTIME_SCHEMA_ENSURE_FAILED");
     }
