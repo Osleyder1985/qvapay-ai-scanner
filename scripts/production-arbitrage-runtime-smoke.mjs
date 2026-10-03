@@ -95,7 +95,8 @@ if (!initialSchedulerDeadline || Number.isNaN(Date.parse(initialSchedulerDeadlin
   throw new Error("Scheduler audit did not expose a valid nextRunAt/nextAlarmAt.");
 }
 console.log("Authoritative scheduler deadline:", initialSchedulerDeadline);
-const deadline = Date.now() + (interval + 75) * 1000;
+const authoritativeDueMs = Date.parse(initialSchedulerDeadline);
+const deadline = Math.max(Date.now() + 15_000, authoritativeDueMs + 75_000);
 let previous = b;
 let observedTransition = false;
 let finalSchedulerDeadline = initialSchedulerDeadline;
