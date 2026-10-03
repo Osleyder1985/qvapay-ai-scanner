@@ -14,6 +14,7 @@ import {
   requireSession,
   type SessionDatabase,
 } from "./access.js";
+import { logInternalError, publicError } from "./error-contract.js";
 import {
   clearLoginRateLimit,
   pruneLoginRateLimits,
@@ -66,9 +67,9 @@ export async function handleAuthRoutes(
           : "";
 
       if (!env.AUTH_USERNAME || !env.AUTH_PASSWORD) {
-        console.error("Authentication secrets are not configured.");
+        logInternalError("auth.configuration_missing", "AUTH_SERVICE_UNAVAILABLE");
         return json(
-          { error: "El servicio de autenticación no está configurado." },
+          publicError("AUTH_SERVICE_UNAVAILABLE"),
           503,
         );
       }
@@ -102,9 +103,9 @@ export async function handleAuthRoutes(
             );
           }
         } catch (error) {
-          console.error("Authentication rate limiter failed:", error);
+          logInternalError("auth.rate_limiter_failed", "AUTH_SERVICE_UNAVAILABLE");
           return json(
-            { error: "El servicio de autenticación no está disponible." },
+            publicError("AUTH_SERVICE_UNAVAILABLE"),
             503,
           );
         }
@@ -114,7 +115,7 @@ export async function handleAuthRoutes(
       try {
         await clearLoginRateLimit(env.DB, request, username, env.AUTH_PASSWORD);
       } catch (error) {
-        console.error("Authentication rate limiter cleanup failed:", error);
+        logInternalError("auth.rate_limiter_cleanup_failed", "AUTH_SERVICE_UNAVAILABLE");
         return json(
           { error: "El servicio de autenticación no está disponible." },
           503,
@@ -123,9 +124,9 @@ export async function handleAuthRoutes(
 
       return await createSession(request, env.DB, username);
     } catch (error) {
-      console.error("Authentication session creation failed:", error);
+      logInternalError("auth.session_creation_failed", "AUTH_SESSION_CREATE_FAILED");
       return json(
-        { error: "El servicio de autenticación no pudo crear la sesión." },
+        publicError("AUTH_SESSION_CREATE_FAILED"),
         503,
       );
     }
