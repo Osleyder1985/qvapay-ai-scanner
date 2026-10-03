@@ -7,7 +7,11 @@
  */
 
 import {
+  listFinanceEntries,
+  listMarketEvents,
   listMarketEventsForAnalytics,
+  listOperations,
+  queryMarketHistory,
   type D1Database,
   type MarketEventRow,
 } from "./d1.js";
@@ -18,6 +22,7 @@ import {
 } from "../backend/arbitrage-market-history.js";
 import { reconcileArbitrageHistory } from "./arbitrage-event-ingestion.js";
 import type { QvaPayHttpEnv } from "./qvapay-http.js";
+import { reconcileLayerState } from "../backend/reconciliation.js";
 
 interface RouteEnv extends QvaPayHttpEnv {
   DB: D1Database;
@@ -63,6 +68,27 @@ export async function handleArbitrageHistoryRoutes(
   ) {
     const result = await reconcileArbitrageHistory(env);
     return json(result, 200);
+  }
+
+  if (
+    request.method === "GET" &&
+    url.pathname === "/api/arbitrage/reconciliation"
+  ) {
+    const coin = url.searchParams.get("coin")?.trim().toUpperCase() || undefined;
+    const [eventRows, operations, finance, marketHistory] = await Promise.all([
+      listMarketEvents(env.DB, coin, 10000),
+      listOperations(env.DB),
+      listFinanceEntries(env.DB),
+      queryMarketHistory(env.DB, coin, undefined, 1000),
+    ]);
+    const events = eventRows.map(toEvent);
+    const report = reconcileLayerState({
+      events,
+      operations,
+      finance,
+      marketHistory,
+    });
+    return json(report, 200);
   }
 
   if (request.method !== "GET") return null;
