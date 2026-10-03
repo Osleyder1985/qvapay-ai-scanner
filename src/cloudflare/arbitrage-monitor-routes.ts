@@ -146,11 +146,44 @@ export async function handleArbitrageMonitorRoutes(
     const body = (await request.json()) as Record<string, unknown>;
     const margin = Number(body.minMarginPercent ?? 5);
     const intervalSeconds = Number(body.intervalSeconds ?? 10);
+    const autoEnabled = Boolean(body.autoEnabled ?? false);
+    const maxBuyRate =
+      body.maxBuyRate == null || body.maxBuyRate === ""
+        ? null
+        : Number(body.maxBuyRate);
+    const minSellRate =
+      body.minSellRate == null || body.minSellRate === ""
+        ? null
+        : Number(body.minSellRate);
+    const cupBudget = Number(body.cupBudget ?? 0);
     const coin = String(body.coin ?? "BANK_CUP")
       .trim()
       .toUpperCase();
     if (!Number.isFinite(margin) || margin < 0)
       return json({ error: "minMarginPercent inválido." }, 400);
+    if (
+      typeof body.autoEnabled !== "undefined" &&
+      typeof body.autoEnabled !== "boolean"
+    )
+      return json({ error: "autoEnabled inválido." }, 400);
+    if (
+      maxBuyRate !== null &&
+      (!Number.isFinite(maxBuyRate) || maxBuyRate <= 0)
+    )
+      return json(
+        { error: "maxBuyRate debe ser mayor que 0 o estar vacío." },
+        400,
+      );
+    if (
+      minSellRate !== null &&
+      (!Number.isFinite(minSellRate) || minSellRate <= 0)
+    )
+      return json(
+        { error: "minSellRate debe ser mayor que 0 o estar vacío." },
+        400,
+      );
+    if (!Number.isFinite(cupBudget) || cupBudget < 0)
+      return json({ error: "cupBudget debe ser un número no negativo." }, 400);
     if (
       !Number.isInteger(intervalSeconds) ||
       intervalSeconds < 5 ||
@@ -166,10 +199,21 @@ export async function handleArbitrageMonitorRoutes(
     const now = new Date().toISOString();
     const result = await env.DB.prepare(
       `UPDATE arbitrage_monitor_config
-       SET min_margin_percent = ?, coin = ?, interval_seconds = ?, enabled = 1, updated_at = ?
+       SET min_margin_percent = ?, coin = ?, interval_seconds = ?,
+           auto_enabled = ?, max_buy_rate = ?, min_sell_rate = ?,
+           cup_budget = ?, enabled = 1, updated_at = ?
        WHERE id = 1`,
     )
-      .bind(margin, coin, intervalSeconds, now)
+      .bind(
+        margin,
+        coin,
+        intervalSeconds,
+        autoEnabled ? 1 : 0,
+        maxBuyRate,
+        minSellRate,
+        cupBudget,
+        now,
+      )
       .run();
 
     if (Number(result.meta?.changes ?? 0) !== 1) {
@@ -182,6 +226,10 @@ export async function handleArbitrageMonitorRoutes(
       minMarginPercent: margin,
       coin,
       intervalSeconds,
+      autoEnabled,
+      maxBuyRate,
+      minSellRate,
+      cupBudget,
       nextRunAt: new Date(Date.now() + intervalSeconds * 1000).toISOString(),
     });
   } catch (error) {

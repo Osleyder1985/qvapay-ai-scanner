@@ -8,6 +8,48 @@
 
 import { evaluateQvaPayAccountContract } from "./qvapay-account-contract.js";
 import { parseQvaPayApplicationIdentity } from "./qvapay-identity.js";
+import { parseQvaPayP2PCollection } from "./qvapay-contracts.js";
+
+function parseP2POwnerIdentity(payload: unknown): {
+  uuid: string;
+  username: string;
+  name: string | null;
+  rating_avg: number | null;
+  rating_count: number | null;
+  telegram_verified: boolean | null;
+  phone_verified: boolean | null;
+  kyc: boolean | null;
+  vip: boolean | null;
+  golden_check: boolean | null;
+} | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+  const record = payload as Record<string, unknown>;
+  const uuid = typeof record.uuid === "string" ? record.uuid.trim() : "";
+  const username =
+    typeof record.username === "string" ? record.username.trim() : "";
+  if (!uuid || !username) return null;
+  const numberOrNull = (value: unknown): number | null =>
+    typeof value === "number" && Number.isFinite(value) ? value : null;
+  return {
+    uuid,
+    username,
+    name: typeof record.name === "string" ? record.name.trim() || null : null,
+    rating_avg: numberOrNull(record.rating_avg),
+    rating_count: numberOrNull(record.rating_count),
+    telegram_verified:
+      typeof record.telegram_verified === "boolean"
+        ? record.telegram_verified
+        : null,
+    phone_verified:
+      typeof record.phone_verified === "boolean" ? record.phone_verified : null,
+    kyc: typeof record.kyc === "boolean" ? record.kyc : null,
+    vip: typeof record.vip === "boolean" ? record.vip : null,
+    golden_check:
+      typeof record.golden_check === "boolean" ? record.golden_check : null,
+  };
+}
 import {
   qvapay,
   readQvaPayPayload,
@@ -33,12 +75,23 @@ export async function handleAccountRoutes(
 ): Promise<Response | null> {
   if (url.pathname === "/api/account" && request.method === "GET") {
     try {
-      const [balance, info] = await Promise.all([
+      const [balance, info, ownOffers] = await Promise.all([
         qvapay(env, "/v2/balance", { method: "POST" }),
         qvapay(env, "/v2/info", { method: "POST" }),
+        qvapay(env, "/p2p?my=1&take=1&page=1", { method: "GET" }),
       ]);
       const balancePayload = await readQvaPayPayload(balance);
       const infoPayload = await readQvaPayPayload(info);
+      const ownOffersPayload = await readQvaPayPayload(ownOffers);
+      const ownCollection = ownOffers.ok
+        ? parseQvaPayP2PCollection(ownOffersPayload, 0, 1)
+        : null;
+      // La identidad de usuario se toma del contexto P2P propio; /v2/info identifica la aplicación.
+      const ownerUser = parseP2POwnerIdentity(
+        ownCollection?.data?.[0]?.User ??
+          ownCollection?.data?.[0]?.Peer ??
+          null,
+      );
       const contract = evaluateQvaPayAccountContract({
         identityStatus: info.status,
         identityPayload: infoPayload,
@@ -49,13 +102,21 @@ export async function handleAccountRoutes(
       return json({
         account: {
           balanceUsd: contract.balanceUsd,
-          user: contract.user,
-          identitySource: contract.user ? "qvapay_v2_info" : "unavailable",
+          user: ownerUser,
+          identitySource: ownerUser ? "qvapay_p2p_owner" : "unavailable",
           identityHttpStatus: info.status,
-          identityOk: info.ok,
+          identityOk: ownerUser !== null,
           identityError: contract.identityError
             ? { httpStatus: info.status, message: contract.identityError }
             : null,
+          p2pUser: ownerUser,
+          application: {
+            uuid: parseQvaPayApplicationIdentity(infoPayload)?.uuid ?? null,
+            name: parseQvaPayApplicationIdentity(infoPayload)?.name ?? null,
+            active: parseQvaPayApplicationIdentity(infoPayload)?.active ?? null,
+            enabled:
+              parseQvaPayApplicationIdentity(infoPayload)?.enabled ?? null,
+          },
           balanceSource:
             contract.balanceUsd !== null
               ? "qvapay_v2_balance"

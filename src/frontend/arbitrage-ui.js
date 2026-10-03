@@ -27,11 +27,14 @@ function arbitragePercent(value) {
 function drawArbitrageMarket() {
   const box = $("arbitrageMarketResults");
   if (!box) return;
-  const offers = S.arbitrage?.marketOffers || [];
+  const offers = [
+    ...(S.arbitrage?.marketOffers || []),
+    ...(S.arbitrage?.marketBuyOffers || []),
+  ];
   const margin = Number(S.arbitrage?.marketSimulation?.minMarginPercent ?? S.arbitrage?.config?.minMarginPercent ?? 5);
 
   if (!offers.length) {
-    box.innerHTML = '<div class="empty-inline">No hay ofertas SELL abiertas para ' +
+    box.innerHTML = '<div class="empty-inline">No hay ofertas abiertas para ' +
       esc(S.arbitrage?.marketSimulation?.coin || S.arbitrage?.config?.coin || "la moneda seleccionada") +
       ' en el último escaneo.</div>';
     return;
@@ -40,8 +43,8 @@ function drawArbitrageMarket() {
   box.innerHTML =
     '<div class="table-wrap arbitrage-table-wrap"><table class="market-table arbitrage-table">' +
     '<thead><tr>' +
-    '<th>Oferta SELL</th><th>QUSD disponible</th><th>Compra · QUSD/CUP</th><th>Capital CUP</th>' +
-    '<th>Venta objetivo · QUSD/CUP</th><th>Retorno CUP</th><th>Ganancia CUP</th><th>Margen</th>' +
+    '<th>Oferta</th><th>QUSD disponible</th><th>Tasa QUSD/CUP</th><th>Capital CUP</th>' +
+    '<th>Venta objetivo · QUSD/CUP</th><th>Retorno CUP</th><th>Ganancia CUP</th><th>Margen</th><th>Acción</th>' +
     '</tr></thead><tbody>' +
     offers.map((offer) => {
       const min = Number(offer.orderMinQusd);
@@ -51,7 +54,7 @@ function drawArbitrageMarket() {
           ' — ' + (Number.isFinite(max) ? arbitrageMoney(max) : 'sin máximo') + ' QUSD'
         : 'Sin límite adicional';
       return '<tr>' +
-        '<td><span class="type sell">SELL</span><small>' + esc(offer.uuid) + '</small></td>' +
+        '<td><span class="type ' + esc(String(offer.type || 'sell').toLowerCase()) + '">' + esc(String(offer.type || 'sell').toUpperCase()) + '</span><small>' + esc(offer.uuid) + '</small></td>' +
         '<td><strong>' + arbitrageMoney(offer.availableQusd) + '</strong><small>' + esc(limitText) + '</small></td>' +
         '<td><strong>' + arbitrageMoney(offer.purchaseRate) + '</strong><small>CUP por 1 QUSD</small></td>' +
         '<td><strong>' + arbitrageMoney(offer.capitalRequiredFiat) + '</strong><small>CUP</small></td>' +
@@ -59,6 +62,7 @@ function drawArbitrageMarket() {
         '<td><strong>' + arbitrageMoney(offer.targetSaleProceedsFiat) + '</strong><small>CUP</small></td>' +
         '<td><strong class="arbitrage-profit">+' + arbitrageMoney(offer.projectedGrossProfitFiat) + '</strong><small>CUP</small></td>' +
         '<td><strong class="arbitrage-profit">+' + arbitragePercent(offer.projectedGrossMarginPercent ?? margin) + '</strong><small>sobre capital</small></td>' +
+        '<td><button class="button primary compact" type="button" onclick="applyArbitrageOffer(\'' + esc(String(offer.uuid)) + '\')">Aceptar</button></td>' +
         '</tr>';
     }).join("") +
     '</tbody></table></div>';
@@ -155,10 +159,32 @@ async function fetchArbitrageMonitor({ silent = true } = {}) {
   }
 }
 
+async function applyArbitrageOffer(id) {
+  const offer = (S.arbitrage?.marketOffers || []).find((item) => String(item.uuid) === String(id));
+  if (!offer) return toast("La oferta ya no está disponible en el snapshot.", "error");
+  const rate = Number(offer.purchaseRate);
+  const side = String(offer.type || "sell").toLowerCase();
+  const action = side === "buy" ? "vender QUSD" : "comprar QUSD";
+  if (!confirm("Aceptar esta oferta para " + action + " a " + arbitrageMoney(rate) + "?")) return;
+  try {
+    await api("/api/p2p/" + encodeURIComponent(id) + "/apply", { method: "POST" });
+    toast("Oferta aceptada por QvaPay.", "success");
+    await fetchArbitrageMonitor({ silent: false });
+  } catch (e) {
+    toast("No se pudo aceptar la oferta: " + errorText(e), "error");
+  }
+}
+
 async function saveArbitrageConfig() {
-  const margin = Number($("arbMargin")?.value || 5);
-  const intervalSeconds = Number($("arbInterval")?.value || 10);
-  const coin = ($("arbCoin")?.value || "BANK_CUP").trim().toUpperCase() || "BANK_CUP";
+  const margin = Number($("settingsArbMargin")?.value || 5);
+  const intervalSeconds = Number($("settingsArbInterval")?.value || 10);
+  const coin = ($("settingsArbCoin")?.value || "BANK_CUP").trim().toUpperCase() || "BANK_CUP";
+  const cupBudget = Number($("settingsArbCupBudget")?.value || 0);
+  const maxBuyRateValue = $("settingsArbMaxBuyRate")?.value?.trim() ?? "";
+  const minSellRateValue = $("settingsArbMinSellRate")?.value?.trim() ?? "";
+  const maxBuyRate = maxBuyRateValue === "" ? null : Number(maxBuyRateValue);
+  const minSellRate = minSellRateValue === "" ? null : Number(minSellRateValue);
+  const autoEnabled = Boolean($("settingsArbAutoEnabled")?.checked);
   if (!Number.isFinite(margin) || margin < 0) {
     toast("El margen debe ser un número no negativo.", "error");
     return;
@@ -167,16 +193,50 @@ async function saveArbitrageConfig() {
     toast("El intervalo debe estar entre 5 y 300 segundos.", "error");
     return;
   }
+  if (!Number.isFinite(cupBudget) || cupBudget < 0) {
+    toast("El presupuesto CUP debe ser un número no negativo.", "error");
+    return;
+  }
+  if (maxBuyRate !== null && (!Number.isFinite(maxBuyRate) || maxBuyRate <= 0)) {
+    toast("La tasa máxima de compra debe ser mayor que 0.", "error");
+    return;
+  }
+  if (minSellRate !== null && (!Number.isFinite(minSellRate) || minSellRate <= 0)) {
+    toast("La tasa mínima de venta debe ser mayor que 0.", "error");
+    return;
+  }
+  if (autoEnabled && maxBuyRate === null && minSellRate === null) {
+    toast("Configura al menos una tasa límite antes de activar el bot.", "error");
+    return;
+  }
   try {
     await api("/api/arbitrage/monitor", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ minMarginPercent: margin, coin, intervalSeconds }),
+      body: JSON.stringify({
+        minMarginPercent: margin,
+        coin,
+        intervalSeconds,
+        autoEnabled,
+        maxBuyRate,
+        minSellRate,
+        cupBudget,
+      }),
     });
     await fetchArbitrageMonitor({ silent: false });
+    nav();
   } catch (e) {
     toast("No se pudo actualizar el monitor: " + errorText(e), "error");
   }
+}
+
+function bindArbitrageSettings() {
+  const form = $("arbitrageSettingsForm");
+  if (!form) return;
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    await saveArbitrageConfig();
+  };
 }
 
 function monitorTick() {
@@ -217,6 +277,8 @@ function bindArbitrage() {
 }
 
 window.loadArbitrage = fetchArbitrageMonitor;
+window.applyArbitrageOffer = applyArbitrageOffer;
+window.bindArbitrageSettings = bindArbitrageSettings;
 window.runArbitrageDemo = runArbitrageDemo;
 window.startArbitragePolling = startArbitragePolling;
 window.stopArbitragePolling = stopArbitragePolling;

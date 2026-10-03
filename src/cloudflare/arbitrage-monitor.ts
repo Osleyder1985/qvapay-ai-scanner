@@ -7,6 +7,7 @@
  */
 
 import { handleArbitrageRoutes } from "./arbitrage-routes.js";
+import { executeArbitrageCandidates } from "./arbitrage-execution.js";
 import { type D1Database } from "./d1.js";
 import type { QvaPayHttpEnv } from "./qvapay-http.js";
 
@@ -26,6 +27,10 @@ interface MonitorConfig {
   minMarginPercent: number;
   coin: string;
   intervalSeconds: number;
+  autoEnabled: boolean;
+  maxBuyRate: number | null;
+  minSellRate: number | null;
+  cupBudget: number;
   scheduleEnabled: boolean;
   timezone: string;
   startLocal: string | null;
@@ -38,6 +43,10 @@ interface MonitorRow {
   min_margin_percent: number;
   coin: string;
   interval_seconds: number;
+  auto_enabled: number;
+  max_buy_rate: number | null;
+  min_sell_rate: number | null;
+  cup_budget: number;
   schedule_enabled: number;
   timezone: string;
   start_local: string | null;
@@ -55,8 +64,6 @@ interface StateRow {
   payload_json: string | null;
   updated_at: string;
 }
-
-const INTERVAL_MS = 10_000;
 
 /**
  * Repairs the monitor/runtime event schema if a deployment reached the Worker
@@ -78,13 +85,34 @@ export async function ensureArbitrageMonitorSchema(
     )
     .all<{ name: string }>();
   const names = new Set(existing.results.map((row) => row.name));
-  if (
-    names.has("arbitrage_monitor_config") &&
-    names.has("arbitrage_monitor_state") &&
-    names.has("market_events")
-  ) {
-    return;
+  if (names.has("arbitrage_monitor_config")) {
+    for (const statement of [
+      "ALTER TABLE arbitrage_monitor_config ADD COLUMN auto_enabled INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE arbitrage_monitor_config ADD COLUMN max_buy_rate REAL",
+      "ALTER TABLE arbitrage_monitor_config ADD COLUMN min_sell_rate REAL",
+      "ALTER TABLE arbitrage_monitor_config ADD COLUMN cup_budget REAL NOT NULL DEFAULT 0",
+    ]) {
+      try {
+        await db.prepare(statement).run();
+      } catch {
+        // Column already exists; migrations remain canonical.
+      }
+    }
   }
+
+  await db
+    .prepare(
+      "CREATE TABLE IF NOT EXISTS arbitrage_execution_state " +
+        "(id INTEGER PRIMARY KEY CHECK (id = 1), apply_window_json TEXT NOT NULL DEFAULT '[]', " +
+        "last_action_at TEXT, last_action TEXT, updated_at TEXT NOT NULL)",
+    )
+    .run();
+  await db
+    .prepare(
+      "INSERT OR IGNORE INTO arbitrage_execution_state (id, updated_at) " +
+        "VALUES (1, CURRENT_TIMESTAMP)",
+    )
+    .run();
 
   const results = await db.batch([
     db.prepare(
@@ -94,6 +122,10 @@ export async function ensureArbitrageMonitorSchema(
         min_margin_percent REAL NOT NULL DEFAULT 5,
         coin TEXT NOT NULL DEFAULT 'BANK_CUP',
         interval_seconds INTEGER NOT NULL DEFAULT 10 CHECK (interval_seconds BETWEEN 5 AND 300),
+        auto_enabled INTEGER NOT NULL DEFAULT 0 CHECK (auto_enabled IN (0,1)),
+        max_buy_rate REAL,
+        min_sell_rate REAL,
+        cup_budget REAL NOT NULL DEFAULT 0 CHECK (cup_budget >= 0),
         schedule_enabled INTEGER NOT NULL DEFAULT 0,
         timezone TEXT NOT NULL DEFAULT 'UTC',
         start_local TEXT,
@@ -166,8 +198,11 @@ export async function ensureArbitrageMonitorSchema(
   const seedResults = await db.batch([
     db.prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_config
-       (id, enabled, min_margin_percent, coin, interval_seconds, schedule_enabled, timezone, active_days_json, updated_at)
-       VALUES (1, 1, 5, 'BANK_CUP', 10, 0, 'UTC', '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
+       (id, enabled, min_margin_percent, coin, interval_seconds, auto_enabled,
+        max_buy_rate, min_sell_rate, cup_budget, schedule_enabled, timezone,
+        active_days_json, updated_at)
+       VALUES (1, 1, 5, 'BANK_CUP', 10, 0, NULL, NULL, 0, 0, 'UTC',
+               '[1,2,3,4,5,6,7]', CURRENT_TIMESTAMP)`,
     ),
     db.prepare(
       `INSERT OR IGNORE INTO arbitrage_monitor_state
@@ -185,8 +220,9 @@ async function readConfig(db: D1Database): Promise<MonitorConfig> {
   try {
     row = await db
       .prepare(
-        `SELECT enabled, min_margin_percent, coin, interval_seconds, schedule_enabled, timezone,
-              start_local, end_local, active_days_json
+        `SELECT enabled, min_margin_percent, coin, interval_seconds,
+                auto_enabled, max_buy_rate, min_sell_rate, cup_budget,
+                schedule_enabled, timezone, start_local, end_local, active_days_json
          FROM arbitrage_monitor_config WHERE id = 1`,
       )
       .first<MonitorRow>();
@@ -206,6 +242,10 @@ async function readConfig(db: D1Database): Promise<MonitorConfig> {
       minMarginPercent: 5,
       coin: "BANK_CUP",
       intervalSeconds: 10,
+      autoEnabled: false,
+      maxBuyRate: null,
+      minSellRate: null,
+      cupBudget: 0,
       scheduleEnabled: false,
       timezone: "UTC",
       startLocal: null,
@@ -230,6 +270,10 @@ async function readConfig(db: D1Database): Promise<MonitorConfig> {
       300,
       Math.max(5, Number(row.interval_seconds) || 10),
     ),
+    autoEnabled: row.auto_enabled === 1,
+    maxBuyRate: row.max_buy_rate == null ? null : Number(row.max_buy_rate),
+    minSellRate: row.min_sell_rate == null ? null : Number(row.min_sell_rate),
+    cupBudget: Math.max(0, Number(row.cup_budget) || 0),
     scheduleEnabled: row.schedule_enabled === 1,
     timezone: row.timezone || "UTC",
     startLocal: row.start_local,
@@ -297,7 +341,8 @@ async function saveState(
 ): Promise<void> {
   const current = await db
     .prepare(
-      "SELECT scan_id, scanned_at, next_run_at, last_success_at, last_error, payload_json FROM arbitrage_monitor_state WHERE id = 1",
+      "SELECT scan_id, scanned_at, next_run_at, last_success_at, " +
+        "last_error, payload_json FROM arbitrage_monitor_state WHERE id = 1",
     )
     .first<StateRow>();
   await db
@@ -344,7 +389,9 @@ export async function runArbitrageMonitor(
   }
 
   const request = new Request(
-    `https://internal/api/arbitrage/scan?minMarginPercent=${encodeURIComponent(config.minMarginPercent)}&coin=${encodeURIComponent(config.coin)}`,
+    `https://internal/api/arbitrage/scan?minMarginPercent=${encodeURIComponent(
+      config.minMarginPercent,
+    )}&coin=${encodeURIComponent(config.coin)}`,
     { method: "GET" },
   );
   const response = await handleArbitrageRoutes(
@@ -375,6 +422,40 @@ export async function runArbitrageMonitor(
     return { ok: false, error: message };
   }
 
+  let execution = {
+    applied: [] as string[],
+    skipped: [] as string[],
+    message: "Ejecución automática desactivada.",
+  };
+  if (config.autoEnabled) {
+    const offers = [
+      ...(Array.isArray(payload.marketOffers) ? payload.marketOffers : []),
+      ...(Array.isArray(payload.marketBuyOffers)
+        ? payload.marketBuyOffers
+        : []),
+    ];
+    execution = await executeArbitrageCandidates(
+      db,
+      env,
+      {
+        autoEnabled: config.autoEnabled,
+        maxBuyRate: config.maxBuyRate,
+        minSellRate: config.minSellRate,
+        cupBudget: config.cupBudget,
+      },
+      offers as Array<{
+        uuid: string;
+        type: string;
+        amountQusd: number;
+        availableQusd: number;
+        purchaseRate: number;
+        capitalRequiredFiat: number;
+        onlyVip?: boolean;
+      }>,
+    );
+  }
+  payload.execution = execution;
+
   const scannedAt = String(
     (payload.marketSimulation as Record<string, unknown> | undefined)
       ?.scannedAt ?? new Date().toISOString(),
@@ -402,7 +483,9 @@ export async function monitorState(db: D1Database): Promise<{
   const config = await readConfig(db);
   const state = await db
     .prepare(
-      "SELECT status, scan_id, scanned_at, next_run_at, last_success_at, last_error, payload_json, updated_at FROM arbitrage_monitor_state WHERE id = 1",
+      "SELECT status, scan_id, scanned_at, next_run_at, last_success_at, " +
+        "last_error, payload_json, updated_at " +
+        "FROM arbitrage_monitor_state WHERE id = 1",
     )
     .first<StateRow>();
   return { config, state };
@@ -413,5 +496,3 @@ export async function getMonitorIntervalMs(db: D1Database): Promise<number> {
   const config = await readConfig(db);
   return config.intervalSeconds * 1000;
 }
-
-export { INTERVAL_MS };
