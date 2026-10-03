@@ -253,9 +253,9 @@ export function deduplicateMarketEvents(
         ? current.quarantined
         : event.event === "created"
           ? eventAt < currentEventAt ||
-          (eventAt === currentEventAt && observedAt > currentObservedAt)
-        : observedAt > currentObservedAt ||
-          (observedAt === currentObservedAt && eventAt > currentEventAt);
+            (eventAt === currentEventAt && observedAt > currentObservedAt)
+          : observedAt > currentObservedAt ||
+            (observedAt === currentObservedAt && eventAt > currentEventAt);
 
     if (shouldReplace) canonical.set(lifecycleKey, event);
   }
