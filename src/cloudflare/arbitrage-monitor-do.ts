@@ -40,9 +40,10 @@ export class ArbitrageMonitor {
           : Number.NaN;
         const now = Date.now();
         const intervalMs = await getMonitorIntervalMs(this.env.DB);
-        const nextRunAt = Number.isFinite(persistedNextRun) && persistedNextRun > now
-          ? persistedNextRun
-          : now + intervalMs;
+        const nextRunAt =
+          Number.isFinite(persistedNextRun) && persistedNextRun > now
+            ? persistedNextRun
+            : now + intervalMs;
         await this.ctx.storage.setAlarm(nextRunAt);
         return new Response("started");
       }
