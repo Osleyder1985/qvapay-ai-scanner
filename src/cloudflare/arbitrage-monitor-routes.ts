@@ -6,7 +6,10 @@
  * @status active
  */
 
-import { authorizeAiAuditor } from "./ai-audit-auth.js";
+import {
+  authorizeAiAuditor,
+  authorizeAiAuditorMutation,
+} from "./ai-audit-auth.js";
 import { monitorState, type ArbitrageMonitorEnv } from "./arbitrage-monitor.js";
 import {
   logInternalError,
@@ -80,7 +83,7 @@ export async function handleArbitrageMonitorRoutes(
 ): Promise<Response | null> {
   if (url.pathname === "/api/arbitrage/monitor/bootstrap") {
     if (request.method !== "POST") return null;
-    const auditor = await authorizeAiAuditor(
+    const auditor = await authorizeAiAuditorMutation(
       request,
       env.AI_AUDITOR_TOKEN_HASH,
     );
