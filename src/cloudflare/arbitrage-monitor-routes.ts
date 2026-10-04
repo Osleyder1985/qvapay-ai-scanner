@@ -243,5 +243,17 @@ export async function handleArbitrageMonitorRoutes(
 }
 
 export async function bootstrapArbitrageMonitor(env: Env): Promise<void> {
-  await stub(env).fetch(new Request("https://internal/start"));
+  const monitor = stub(env);
+  let lastAlarm: number | null = null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const start = await monitor.fetch(new Request("https://internal/start"));
+    if (!start.ok) {
+      throw new Error(`ARBITRAGE_MONITOR bootstrap failed: HTTP ${start.status}`);
+    }
+    lastAlarm = await readMonitorAlarm(env);
+    if (lastAlarm !== null && lastAlarm > Date.now()) return;
+  }
+  throw new Error(
+    `ARBITRAGE_MONITOR bootstrap did not expose a future alarm after retries (alarm=${String(lastAlarm)})`,
+  );
 }
