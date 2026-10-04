@@ -38,9 +38,11 @@ export class ArbitrageMonitor {
         const persistedNextRun = state?.next_run_at
           ? Date.parse(state.next_run_at)
           : Number.NaN;
-        const nextRunAt = Number.isFinite(persistedNextRun)
-          ? Math.max(Date.now(), persistedNextRun)
-          : Date.now() + (await getMonitorIntervalMs(this.env.DB));
+        const now = Date.now();
+        const intervalMs = await getMonitorIntervalMs(this.env.DB);
+        const nextRunAt = Number.isFinite(persistedNextRun) && persistedNextRun > now
+          ? persistedNextRun
+          : now + intervalMs;
         await this.ctx.storage.setAlarm(nextRunAt);
         return new Response("started");
       }
