@@ -36,6 +36,34 @@ async function getMonitor() {
   return getJson("/api/arbitrage/monitor");
 }
 
+async function bootstrapScheduler() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(baseUrl + "/api/arbitrage/monitor/bootstrap", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token,
+        Accept: "application/json",
+      },
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    let body;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      throw new Error("scheduler bootstrap returned non-JSON response (HTTP " + response.status + ").");
+    }
+    if (!response.ok) {
+      throw new Error("scheduler bootstrap returned HTTP " + response.status + ": " + JSON.stringify(body));
+    }
+    return body;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function getSchedulerAudit() {
   return getJson("/api/ai-audit/arbitrage-scheduler");
 }
@@ -95,6 +123,7 @@ console.log("Initial scheduler audit:", JSON.stringify(firstScheduler, null, 2))
 
 const second = await getMonitor();
 assertBase(second, "second GET");
+console.log("Requesting authenticated scheduler bootstrap:", JSON.stringify(await bootstrapScheduler(), null, 2));
 const b = snapshot(second);
 console.log("Immediate second GET:", JSON.stringify(b, null, 2));
 
