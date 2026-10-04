@@ -57,8 +57,9 @@ function pruneBuckets(now: number): void {
 async function authorize(
   request: Request,
   expectedTokenHash?: string,
+  allowedMethods: readonly string[] = ["GET"],
 ): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
-  if (request.method !== "GET") {
+  if (!allowedMethods.includes(request.method)) {
     return {
       ok: false,
       status: 405,
@@ -111,4 +112,14 @@ async function authorize(
   return { ok: true };
 }
 
-export { authorize as authorizeAiAuditor, sha256Hex as hashAiAuditorToken };
+export {
+  authorize as authorizeAiAuditor,
+  sha256Hex as hashAiAuditorToken,
+};
+
+export function authorizeAiAuditorMutation(
+  request: Request,
+  expectedTokenHash?: string,
+) {
+  return authorize(request, expectedTokenHash, ["POST"]);
+}
