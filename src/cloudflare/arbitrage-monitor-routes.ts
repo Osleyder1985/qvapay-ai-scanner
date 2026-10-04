@@ -248,7 +248,9 @@ export async function bootstrapArbitrageMonitor(env: Env): Promise<void> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const start = await monitor.fetch(new Request("https://internal/start"));
     if (!start.ok) {
-      throw new Error(`ARBITRAGE_MONITOR bootstrap failed: HTTP ${start.status}`);
+      throw new Error(
+        `ARBITRAGE_MONITOR bootstrap failed: HTTP ${start.status}`,
+      );
     }
     lastAlarm = await readMonitorAlarm(env);
     if (lastAlarm !== null && lastAlarm > Date.now()) return;
