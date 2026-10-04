@@ -78,6 +78,21 @@ export async function handleArbitrageMonitorRoutes(
   url: URL,
   json: Json,
 ): Promise<Response | null> {
+  if (url.pathname === "/api/arbitrage/monitor/bootstrap") {
+    if (request.method !== "POST") return null;
+    const auditor = await authorizeAiAuditor(
+      request,
+      env.AI_AUDITOR_TOKEN_HASH,
+    );
+    if (!auditor.ok) return json({ error: auditor.error }, auditor.status);
+    try {
+      await bootstrapArbitrageMonitor(env);
+      return json({ ok: true, mode: "scheduler-bootstrap" });
+    } catch {
+      return operationalError("MONITOR_STATE_READ_FAILED", json);
+    }
+  }
+
   if (url.pathname !== "/api/arbitrage/monitor") return null;
 
   if (request.method === "GET") {
